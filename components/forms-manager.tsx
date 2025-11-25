@@ -23,6 +23,7 @@ export function FormsManager() {
   const [userRole, setUserRole] = useState<string>("admin")
   const [userId, setUserId] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
     fetchUserRole()
@@ -71,6 +72,53 @@ export function FormsManager() {
     }
   }
 
+  const createNewForm = async () => {
+    setIsCreating(true)
+    const supabase = createClient()
+
+    const { data: newForm, error } = await supabase
+      .from("forms")
+      .insert({
+        name: `Form ${forms.length + 1}`,
+        owner_id: userId,
+        lead_limit: 20,
+        is_active: true,
+      })
+      .select()
+      .single()
+
+    if (!error && newForm) {
+      const defaultContent = [
+        { form_id: newForm.id, key: "page_title", value: '"New Form"' },
+        { form_id: newForm.id, key: "page_subtitle", value: '"Enter your website URL"' },
+        { form_id: newForm.id, key: "url_placeholder", value: '"https://example.com"' },
+        { form_id: newForm.id, key: "submit_button", value: '"Get Recommendations"' },
+        {
+          form_id: newForm.id,
+          key: "ai_system_prompt",
+          value: '"You are an expert consultant. Provide clear recommendations in plain text without markdown."',
+        },
+        { form_id: newForm.id, key: "ai_result_format", value: '"text"' },
+      ]
+
+      await supabase.from("form_content").insert(defaultContent)
+      await fetchForms(userId, userRole)
+    }
+
+    setIsCreating(false)
+  }
+
+  const deleteForm = async (formId: string) => {
+    if (!confirm("Are you sure you want to delete this form?")) return
+
+    const supabase = createClient()
+    const { error } = await supabase.from("forms").delete().eq("id", formId)
+
+    if (!error) {
+      await fetchForms(userId, userRole)
+    }
+  }
+
   const copyFormLink = (formId: string) => {
     const link = `${window.location.origin}/form/${formId}`
     navigator.clipboard.writeText(link)
@@ -88,16 +136,20 @@ export function FormsManager() {
   }
 
   const isSuperAdmin = userRole === "superadmin"
+  const mainFormId = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Forms</h2>
-          <p className="text-muted-foreground">
-            {isSuperAdmin ? "View all user forms and statistics" : "Manage your form"}
-          </p>
+          <p className="text-muted-foreground">{isSuperAdmin ? "Manage all forms" : "Manage your form"}</p>
         </div>
+        {isSuperAdmin && (
+          <Button onClick={createNewForm} disabled={isCreating}>
+            {isCreating ? "Creating..." : "Create New Form"}
+          </Button>
+        )}
       </div>
 
       {isSuperAdmin && (
@@ -131,67 +183,72 @@ export function FormsManager() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {forms.map((form) => (
-          <Card key={form.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{form.name}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {isSuperAdmin && form.owner && <div className="text-xs mt-1">Owner: {form.owner.email}</div>}
-                    Created {new Date(form.created_at).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-                <Badge variant={form.is_active ? "default" : "secondary"}>
-                  {form.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Leads:</span>
-                <span className="font-medium">
-                  {form.lead_count} / {form.lead_limit}
-                </span>
-              </div>
+        {forms.map((form) => {
+          const isMainForm = form.id === mainFormId
 
-              {(form.owner_id === userId || !isSuperAdmin) && (
-                <>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 bg-transparent"
-                      onClick={() => copyFormLink(form.id)}
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy Link
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => window.open(`/form/${form.id}`, "_blank")}>
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
+          return (
+            <Card key={form.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">
+                      {form.name}
+                      {isMainForm && (
+                        <Badge className="ml-2" variant="outline">
+                          Main
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {isSuperAdmin && form.owner && <div className="text-xs mt-1">Owner: {form.owner.email}</div>}
+                      Created {new Date(form.created_at).toLocaleDateString()}
+                    </CardDescription>
                   </div>
+                  <Badge variant={form.is_active ? "default" : "secondary"}>
+                    {form.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Leads:</span>
+                  <span className="font-medium">
+                    {form.lead_count} / {form.lead_limit}
+                  </span>
+                </div>
 
-                  <Button size="sm" variant="secondary" className="w-full" onClick={() => copyEmbedCode(form.id)}>
-                    Copy Embed Code
-                  </Button>
-                </>
-              )}
+                {(form.owner_id === userId || isSuperAdmin) && (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 bg-transparent"
+                        onClick={() => copyFormLink(form.id)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy Link
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => window.open(`/form/${form.id}`, "_blank")}>
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </div>
 
-              {isSuperAdmin && form.owner_id !== userId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => window.open(`/form/${form.id}`, "_blank")}
-                >
-                  <ExternalLink className="h-3 w-3 mr-2" />
-                  View Form
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                    <Button size="sm" variant="secondary" className="w-full" onClick={() => copyEmbedCode(form.id)}>
+                      Copy Embed Code
+                    </Button>
+
+                    {!isMainForm && form.owner_id === userId && (
+                      <Button size="sm" variant="destructive" className="w-full" onClick={() => deleteForm(form.id)}>
+                        Delete Form
+                      </Button>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {forms.length === 0 && (

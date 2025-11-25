@@ -58,14 +58,18 @@ export function EmailCaptureStep({ leadId, result, onSuccess }: EmailCaptureStep
           },
           body: JSON.stringify({
             email,
-            result: result.text,
-            imageUrl: result.imageUrl,
+            resultText: result.text,
+            resultImageUrl: result.imageUrl || null,
+            resultType: result.type,
             url: leadData?.url || "",
           }),
         })
 
+        const emailResult = await response.json()
+        console.log("[v0] Email send result:", emailResult)
+
         if (!response.ok) {
-          console.error("[v0] Email send failed:", await response.text())
+          console.error("[v0] Email send failed:", emailResult)
         }
       } catch (error) {
         console.error("[v0] Error sending email:", error)

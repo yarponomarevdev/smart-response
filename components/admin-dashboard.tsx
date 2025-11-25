@@ -47,25 +47,16 @@ export function AdminDashboard() {
           </p>
         </div>
 
-        <Tabs defaultValue={isSuperAdmin ? "forms" : "myform"} className="space-y-6">
+        <Tabs defaultValue="myform" className="space-y-6">
           <TabsList>
-            {isSuperAdmin && <TabsTrigger value="forms">All Forms</TabsTrigger>}
-            {!isSuperAdmin && <TabsTrigger value="myform">My Form</TabsTrigger>}
+            <TabsTrigger value="myform">{isSuperAdmin ? "My Forms" : "My Form"}</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="content">Content</TabsTrigger>
           </TabsList>
 
-          {isSuperAdmin && (
-            <TabsContent value="forms" className="space-y-4">
-              <FormsManager />
-            </TabsContent>
-          )}
-
-          {!isSuperAdmin && (
-            <TabsContent value="myform" className="space-y-4">
-              <FormsManager />
-            </TabsContent>
-          )}
+          <TabsContent value="myform" className="space-y-4">
+            <FormsManager />
+          </TabsContent>
 
           <TabsContent value="leads" className="space-y-4">
             <LeadsTable />

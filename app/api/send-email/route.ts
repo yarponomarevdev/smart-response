@@ -5,6 +5,7 @@ export async function POST(request: NextRequest) {
     const { email, resultText, resultImageUrl, resultType, url } = await request.json()
 
     console.log("[v0] Email request received for:", email)
+    console.log("[v0] Result type:", resultType)
 
     if (!email || (!resultText && !resultImageUrl)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -13,14 +14,14 @@ export async function POST(request: NextRequest) {
     const { Resend } = await import("resend")
     const resend = new Resend(process.env.RESEND_API_KEY)
 
-    const fromEmail = "noreply@leadhero.com"
+    const fromEmail = "hello@vasilkov.digital"
 
     console.log("[v0] Sending email from:", fromEmail, "to:", email)
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: [email],
-      subject: "Your Interior Design Recommendations",
+      subject: "Your Personalized Recommendations - Lead Hero",
       html: generateEmailHTML(resultText, resultImageUrl, resultType, url),
     })
 
@@ -44,7 +45,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Your Interior Design Recommendations</title>
+        <title>Your Recommendations - Lead Hero</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #000000; color: #ffffff;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
@@ -53,7 +54,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171717; border-radius: 8px; overflow: hidden;">
                 <tr>
                   <td style="padding: 40px 40px 20px 40px; text-align: center;">
-                    <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #ffffff;">Your Interior Design Recommendations</h1>
+                    <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #ffffff;">Your Personalized Recommendations</h1>
                   </td>
                 </tr>
                 
@@ -75,7 +76,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                     ? `
                 <tr>
                   <td style="padding: 40px 40px 20px 40px;">
-                    <img src="${resultImageUrl}" alt="Interior Design Inspiration" style="max-width: 100%; height: auto; border-radius: 4px;" />
+                    <img src="${resultImageUrl}" alt="Generated Recommendation" style="max-width: 100%; height: auto; border-radius: 4px;" />
                   </td>
                 </tr>
                 `
@@ -99,7 +100,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 
                 <tr>
                   <td style="padding: 20px 40px 40px 40px; text-align: center;">
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
+                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://leadhero.com"}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
                       Get More Recommendations
                     </a>
                   </td>
@@ -108,7 +109,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 <tr>
                   <td style="padding: 20px 40px; text-align: center; border-top: 1px solid #262626;">
                     <p style="margin: 0; color: #737373; font-size: 12px;">
-                      You received this email because you requested interior design recommendations.
+                      You received this email because you requested personalized recommendations from Lead Hero.
                     </p>
                   </td>
                 </tr>

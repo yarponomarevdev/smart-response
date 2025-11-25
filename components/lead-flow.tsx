@@ -46,6 +46,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
       {step === "email" && <EmailCaptureStep leadId={leadId} result={result} onSuccess={() => setStep("success")} />}
       {step === "success" && (
         <SuccessStep
+          result={result}
           onRestart={() => {
             setUrl("")
             setLeadId("")

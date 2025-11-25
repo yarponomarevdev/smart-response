@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/spinner"
 interface LoadingStepProps {
   url: string
   leadId: string
-  formId?: string // Added formId prop
+  formId?: string
   onComplete: (result: { type: string; text: string; imageUrl?: string }) => void
 }
 
@@ -24,22 +24,40 @@ export function LoadingStep({ url, leadId, formId, onComplete }: LoadingStepProp
     const fetchMessages = async () => {
       const supabase = createClient()
 
-      let query
       if (formId) {
-        query = supabase
+        const { data } = await supabase
           .from("form_content")
-          .select("value")
+          .select("key, value")
           .eq("form_id", formId)
-          .eq("key", "loading_messages")
-          .single()
+          .in("key", ["loading_message_1", "loading_message_2", "loading_message_3"])
+
+        if (data && data.length > 0) {
+          const loadedMessages = data
+            .sort((a, b) => a.key.localeCompare(b.key))
+            .map((item) => item.value)
+            .filter((msg) => msg && msg.length > 0)
+
+          if (loadedMessages.length > 0) {
+            setMessages(loadedMessages)
+          }
+        }
       } else {
-        query = supabase.from("content").select("value").eq("key", "loading_messages").single()
-      }
+        // Fallback to old content table
+        const { data } = await supabase
+          .from("content")
+          .select("key, value")
+          .in("key", ["loading_message_1", "loading_message_2", "loading_message_3"])
 
-      const { data } = await query
+        if (data && data.length > 0) {
+          const loadedMessages = data
+            .sort((a, b) => a.key.localeCompare(b.key))
+            .map((item) => item.value)
+            .filter((msg) => msg && msg.length > 0)
 
-      if (data?.value.messages) {
-        setMessages(data.value.messages)
+          if (loadedMessages.length > 0) {
+            setMessages(loadedMessages)
+          }
+        }
       }
     }
 
