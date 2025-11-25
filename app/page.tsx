@@ -9,7 +9,6 @@ export default async function Home() {
   let mainFormId: string = SUPERADMIN_FORM_ID
 
   try {
-    // Try to fetch the superadmin's form dynamically
     const { data: forms, error } = await supabase
       .from("forms")
       .select("id")
@@ -24,9 +23,13 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
-      <AuthHeader />
-      <LeadFlow formId={mainFormId} />
+    <main className="min-h-screen grid grid-cols-12 gap-4 p-4">
+      <div className="col-span-12 flex justify-end items-start">
+        <AuthHeader />
+      </div>
+      <div className="col-span-12 flex items-center justify-center">
+        <LeadFlow formId={mainFormId} />
+      </div>
     </main>
   )
 }
