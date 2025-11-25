@@ -2,36 +2,31 @@
 
 import { useState } from "react"
 import { URLSubmissionStep } from "./url-submission-step"
-import { ApartmentSizeStep } from "./apartment-size-step"
 import { LoadingStep } from "./loading-step"
 import { ResultStep } from "./result-step"
 import { EmailCaptureStep } from "./email-capture-step"
 import { SuccessStep } from "./success-step"
 
-export type FlowStep = "url" | "apartment" | "loading" | "result" | "email" | "success"
+export type FlowStep = "url" | "loading" | "result" | "email" | "success"
 
-export function LeadFlow() {
+interface LeadFlowProps {
+  formId?: string
+}
+
+export function LeadFlow({ formId }: LeadFlowProps = {}) {
   const [step, setStep] = useState<FlowStep>("url")
   const [url, setUrl] = useState("")
   const [leadId, setLeadId] = useState("")
-  const [apartmentSize, setApartmentSize] = useState(0)
-  const [result, setResult] = useState<{ type: string; text: string }>({ type: "text", text: "" })
+  const [result, setResult] = useState<{ type: string; text: string; imageUrl?: string }>({ type: "text", text: "" })
 
   return (
     <div className="w-full max-w-2xl">
       {step === "url" && (
         <URLSubmissionStep
+          formId={formId}
           onSubmit={(submittedUrl, id) => {
             setUrl(submittedUrl)
             setLeadId(id)
-            setStep("apartment")
-          }}
-        />
-      )}
-      {step === "apartment" && (
-        <ApartmentSizeStep
-          onSubmit={(size) => {
-            setApartmentSize(size)
             setStep("loading")
           }}
         />
@@ -40,7 +35,7 @@ export function LeadFlow() {
         <LoadingStep
           url={url}
           leadId={leadId}
-          apartmentSize={apartmentSize}
+          formId={formId}
           onComplete={(generatedResult) => {
             setResult(generatedResult)
             setStep("result")
@@ -54,7 +49,6 @@ export function LeadFlow() {
           onRestart={() => {
             setUrl("")
             setLeadId("")
-            setApartmentSize(0)
             setResult({ type: "text", text: "" })
             setStep("url")
           }}

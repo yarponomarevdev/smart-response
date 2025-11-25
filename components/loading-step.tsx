@@ -7,11 +7,11 @@ import { Spinner } from "@/components/ui/spinner"
 interface LoadingStepProps {
   url: string
   leadId: string
-  apartmentSize: number
-  onComplete: (result: { type: string; text: string }) => void
+  formId?: string // Added formId prop
+  onComplete: (result: { type: string; text: string; imageUrl?: string }) => void
 }
 
-export function LoadingStep({ url, leadId, apartmentSize, onComplete }: LoadingStepProps) {
+export function LoadingStep({ url, leadId, formId, onComplete }: LoadingStepProps) {
   const [messageIndex, setMessageIndex] = useState(0)
   const [messages, setMessages] = useState([
     "Analyzing your link...",
@@ -23,7 +23,20 @@ export function LoadingStep({ url, leadId, apartmentSize, onComplete }: LoadingS
   useEffect(() => {
     const fetchMessages = async () => {
       const supabase = createClient()
-      const { data } = await supabase.from("content").select("value").eq("key", "loading_messages").single()
+
+      let query
+      if (formId) {
+        query = supabase
+          .from("form_content")
+          .select("value")
+          .eq("form_id", formId)
+          .eq("key", "loading_messages")
+          .single()
+      } else {
+        query = supabase.from("content").select("value").eq("key", "loading_messages").single()
+      }
+
+      const { data } = await query
 
       if (data?.value.messages) {
         setMessages(data.value.messages)
@@ -31,7 +44,7 @@ export function LoadingStep({ url, leadId, apartmentSize, onComplete }: LoadingS
     }
 
     fetchMessages()
-  }, [])
+  }, [formId])
 
   useEffect(() => {
     const messageInterval = setInterval(() => {
@@ -50,7 +63,7 @@ export function LoadingStep({ url, leadId, apartmentSize, onComplete }: LoadingS
           body: JSON.stringify({
             url,
             leadId,
-            apartmentSize,
+            formId,
           }),
         })
 
@@ -72,7 +85,7 @@ export function LoadingStep({ url, leadId, apartmentSize, onComplete }: LoadingS
     generateResult()
 
     return () => clearInterval(messageInterval)
-  }, [url, leadId, apartmentSize, onComplete, messages])
+  }, [url, leadId, formId, onComplete, messages])
 
   return (
     <div className="flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">

@@ -37,21 +37,37 @@ export function SuccessStep({ onRestart }: SuccessStepProps) {
   }, [])
 
   const handleShare = async () => {
-    const shareData = {
-      title: "Interior Design Recommendations",
-      text: content.shareText,
-      url: window.location.origin,
-    }
+    const shareText = content.shareText
+    const shareUrl = window.location.origin
+
+    console.log("[v0] Attempting to share:", shareText, shareUrl)
 
     if (navigator.share) {
       try {
-        await navigator.share(shareData)
-      } catch (err) {
-        console.log("Share cancelled")
+        await navigator.share({
+          title: "Interior Design Recommendations",
+          text: shareText,
+          url: shareUrl,
+        })
+        console.log("[v0] Share successful")
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("[v0] Share error:", err)
+          // Fallback to clipboard
+          await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+          alert("Link copied to clipboard!")
+        }
       }
     } else {
       // Fallback: copy to clipboard
-      navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+      try {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+        alert("Link copied to clipboard!")
+        console.log("[v0] Link copied to clipboard")
+      } catch (err) {
+        console.error("[v0] Clipboard error:", err)
+        alert("Could not copy link. Please copy manually: " + shareUrl)
+      }
     }
   }
 

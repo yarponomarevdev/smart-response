@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 
 interface EmailCaptureStepProps {
   leadId: string
-  result: { type: string; text: string }
+  result: { type: string; text: string; imageUrl: string }
   onSuccess: () => void
 }
 
@@ -18,22 +18,12 @@ export function EmailCaptureStep({ leadId, result, onSuccess }: EmailCaptureStep
   const [isValid, setIsValid] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [content, setContent] = useState({
-    title: "Want to save your recommendations?",
-    description: "Enter your email to receive a copy of your personalized design recommendations",
+    title: "Get Your Results",
+    description: "Enter your email to receive your personalized recommendations",
   })
 
   useEffect(() => {
-    const fetchContent = async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from("content").select("value").in("key", ["cta_title", "cta_description"])
-
-      if (data && data.length >= 2) {
-        setContent({
-          title: data[0]?.value.text || content.title,
-          description: data[1]?.value.text || content.description,
-        })
-      }
-    }
+    const fetchContent = async () => {}
 
     fetchContent()
   }, [])
@@ -55,16 +45,13 @@ export function EmailCaptureStep({ leadId, result, onSuccess }: EmailCaptureStep
 
     const supabase = createClient()
 
-    const { data: leadData, error: updateError } = await supabase
-      .from("leads")
-      .update({ email })
-      .eq("id", leadId)
-      .select()
-      .single()
+    const { error: updateError } = await supabase.from("leads").update({ email, status: "completed" }).eq("id", leadId)
 
-    if (!updateError && leadData) {
+    if (!updateError) {
+      const { data: leadData } = await supabase.from("leads").select("url").eq("id", leadId).single()
+
       try {
-        await fetch("/api/send-email", {
+        const response = await fetch("/api/send-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -72,9 +59,14 @@ export function EmailCaptureStep({ leadId, result, onSuccess }: EmailCaptureStep
           body: JSON.stringify({
             email,
             result: result.text,
-            url: leadData.url,
+            imageUrl: result.imageUrl,
+            url: leadData?.url || "",
           }),
         })
+
+        if (!response.ok) {
+          console.error("[v0] Email send failed:", await response.text())
+        }
       } catch (error) {
         console.error("[v0] Error sending email:", error)
       }

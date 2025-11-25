@@ -12,22 +12,45 @@ interface Lead {
   id: string
   url: string
   email: string
-  score: number
+  result_text: string | null
+  result_image_url: string | null
   status: string
   created_at: string
+  form_id: string | null
 }
 
 export function LeadsTable() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string>("admin")
 
   useEffect(() => {
-    fetchLeads()
+    fetchUserAndLeads()
   }, [])
 
-  const fetchLeads = async () => {
+  const fetchUserAndLeads = async () => {
     const supabase = createClient()
-    const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false })
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single()
+    const role = profile?.role || "admin"
+    setUserRole(role)
+
+    let query = supabase.from("leads").select("*").order("created_at", { ascending: false })
+
+    if (role === "admin") {
+      // Get user's form
+      const { data: userForm } = await supabase.from("forms").select("id").eq("owner_id", user.id).single()
+      if (userForm) {
+        query = query.eq("form_id", userForm.id)
+      }
+    }
+
+    const { data, error } = await query
 
     if (!error && data) {
       setLeads(data)
@@ -48,16 +71,16 @@ export function LeadsTable() {
 
   const handleExport = () => {
     const csv = [
-      ["URL", "Email", "Score", "Status", "Created At"],
+      ["URL", "Email", "Status", "Created At", "Result"],
       ...leads.map((lead) => [
         lead.url,
-        lead.email,
-        lead.score?.toString() || "",
+        lead.email || "",
         lead.status,
         new Date(lead.created_at).toLocaleString(),
+        lead.result_text || lead.result_image_url || "",
       ]),
     ]
-      .map((row) => row.join(","))
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
       .join("\n")
 
     const blob = new Blob([csv], { type: "text/csv" })
@@ -77,9 +100,11 @@ export function LeadsTable() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Leads</h2>
-          <p className="text-muted-foreground">{leads.length} total leads</p>
+          <p className="text-muted-foreground">
+            {leads.length} total {userRole === "superadmin" ? "leads across all forms" : "leads"}
+          </p>
         </div>
-        <Button onClick={handleExport} variant="outline">
+        <Button onClick={handleExport} variant="outline" disabled={leads.length === 0}>
           <Download className="mr-2 h-4 w-4" />
           Export CSV
         </Button>
@@ -91,8 +116,8 @@ export function LeadsTable() {
             <TableRow>
               <TableHead>URL</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Score</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Result</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -110,10 +135,23 @@ export function LeadsTable() {
                   <TableCell className="font-medium max-w-xs truncate">{lead.url}</TableCell>
                   <TableCell>{lead.email || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant={lead.score >= 80 ? "default" : "secondary"}>{lead.score || "-"}</Badge>
+                    <Badge variant={lead.status === "completed" ? "default" : "outline"}>{lead.status}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={lead.status === "processed" ? "default" : "outline"}>{lead.status}</Badge>
+                  <TableCell className="max-w-xs truncate">
+                    {lead.result_image_url ? (
+                      <a
+                        href={lead.result_image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        View Image
+                      </a>
+                    ) : lead.result_text ? (
+                      <span className="text-xs">{lead.result_text.substring(0, 50)}...</span>
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">

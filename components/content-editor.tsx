@@ -16,30 +16,64 @@ interface ContentItem {
 }
 
 export function ContentEditor() {
+  const [formId, setFormId] = useState<string | null>(null)
   const [content, setContent] = useState<Record<string, string>>({})
   const [loadingMessages, setLoadingMessages] = useState<string[]>([])
+  const [systemPrompt, setSystemPrompt] = useState<string>("")
   const [resultFormat, setResultFormat] = useState<string>("text")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    fetchContent()
+    fetchFormAndContent()
   }, [])
 
-  const fetchContent = async () => {
+  const fetchFormAndContent = async () => {
     const supabase = createClient()
-    const { data, error } = await supabase.from("content").select("*")
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    // Get user's form
+    const { data: userProfile } = await supabase.from("users").select("role").eq("id", user.id).single()
+
+    let form
+    if (userProfile?.role === "superadmin") {
+      // Get superadmin's main form
+      const { data } = await supabase.from("forms").select("id").eq("owner_id", user.id).single()
+      form = data
+    } else {
+      // Get regular admin's form
+      const { data } = await supabase.from("forms").select("id").eq("owner_id", user.id).single()
+      form = data
+    }
+
+    if (form) {
+      setFormId(form.id)
+      await fetchContent(form.id)
+    }
+    setIsLoading(false)
+  }
+
+  const fetchContent = async (fId: string) => {
+    const supabase = createClient()
+    const { data, error } = await supabase.from("form_content").select("*").eq("form_id", fId)
 
     if (!error && data) {
       const contentMap: Record<string, string> = {}
       let messages: string[] = []
+      let prompt = ""
       let format = "text"
 
       data.forEach((item: ContentItem) => {
         if (item.key === "loading_messages") {
           messages = item.value.messages || []
-        } else if (item.key === "result_format") {
-          format = item.value.type || "text"
+        } else if (item.key === "ai_system_prompt") {
+          prompt = item.value.text || ""
+        } else if (item.key === "ai_result_format") {
+          format = item.value.format || "text"
         } else {
           contentMap[item.key] = item.value.text || ""
         }
@@ -47,33 +81,46 @@ export function ContentEditor() {
 
       setContent(contentMap)
       setLoadingMessages(messages)
+      setSystemPrompt(prompt)
       setResultFormat(format)
     }
-    setIsLoading(false)
   }
 
   const handleSave = async () => {
+    if (!formId) return
+
     setIsSaving(true)
     const supabase = createClient()
 
     // Update text content
     for (const [key, value] of Object.entries(content)) {
       await supabase
-        .from("content")
-        .update({ value: { text: value } })
-        .eq("key", key)
+        .from("form_content")
+        .upsert({ form_id: formId, key, value: { text: value } }, { onConflict: "form_id,key" })
     }
 
     // Update loading messages
     await supabase
-      .from("content")
-      .update({ value: { messages: loadingMessages } })
-      .eq("key", "loading_messages")
+      .from("form_content")
+      .upsert(
+        { form_id: formId, key: "loading_messages", value: { messages: loadingMessages } },
+        { onConflict: "form_id,key" },
+      )
+
+    // Update AI settings
+    await supabase
+      .from("form_content")
+      .upsert(
+        { form_id: formId, key: "ai_system_prompt", value: { text: systemPrompt } },
+        { onConflict: "form_id,key" },
+      )
 
     await supabase
-      .from("content")
-      .update({ value: { type: resultFormat } })
-      .eq("key", "result_format")
+      .from("form_content")
+      .upsert(
+        { form_id: formId, key: "ai_result_format", value: { format: resultFormat } },
+        { onConflict: "form_id,key" },
+      )
 
     setIsSaving(false)
     alert("Content saved successfully!")
@@ -87,6 +134,10 @@ export function ContentEditor() {
 
   if (isLoading) {
     return <div className="text-center py-8">Loading content...</div>
+  }
+
+  if (!formId) {
+    return <div className="text-center py-8">No form found. Please create a form first.</div>
   }
 
   return (
@@ -111,14 +162,14 @@ export function ContentEditor() {
               <Label htmlFor="system_prompt">System Prompt (OpenAI)</Label>
               <Textarea
                 id="system_prompt"
-                value={content.system_prompt || ""}
-                onChange={(e) => setContent({ ...content, system_prompt: e.target.value })}
-                placeholder="Enter the system prompt for OpenAI to generate personalized recommendations..."
-                rows={4}
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="Enter the system prompt for OpenAI..."
+                rows={6}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                This prompt will be sent to OpenAI along with the user's URL and apartment size.
+                This prompt instructs the AI on how to analyze websites and generate recommendations.
               </p>
             </div>
 
@@ -131,52 +182,54 @@ export function ContentEditor() {
                 className="w-full h-10 px-3 rounded border border-input bg-background"
               >
                 <option value="text">Text</option>
-                <option value="image">Image</option>
+                <option value="image">Image (DALL-E)</option>
               </select>
               <p className="text-xs text-muted-foreground">
-                Choose whether results should be text or image. Note: Image generation requires specific models.
+                Choose whether results should be plain text or generated as an image using DALL-E 3.
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hero_title">Hero Title</Label>
+            <Label htmlFor="url_submission_title">URL Submission Title</Label>
             <Input
-              id="hero_title"
-              value={content.hero_title || ""}
-              onChange={(e) => setContent({ ...content, hero_title: e.target.value })}
+              id="url_submission_title"
+              value={content.url_submission_title || ""}
+              onChange={(e) => setContent({ ...content, url_submission_title: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hero_subtitle">Hero Subtitle</Label>
+            <Label htmlFor="url_submission_subtitle">URL Submission Subtitle</Label>
             <Textarea
-              id="hero_subtitle"
-              value={content.hero_subtitle || ""}
-              onChange={(e) => setContent({ ...content, hero_subtitle: e.target.value })}
+              id="url_submission_subtitle"
+              value={content.url_submission_subtitle || ""}
+              onChange={(e) => setContent({ ...content, url_submission_subtitle: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="apartment_size_title">Apartment Size Title</Label>
+            <Label htmlFor="url_submission_button">URL Submission Button Text</Label>
             <Input
-              id="apartment_size_title"
-              value={content.apartment_size_title || ""}
-              onChange={(e) => setContent({ ...content, apartment_size_title: e.target.value })}
+              id="url_submission_button"
+              value={content.url_submission_button || ""}
+              onChange={(e) => setContent({ ...content, url_submission_button: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="apartment_size_description">Apartment Size Description</Label>
-            <Textarea
-              id="apartment_size_description"
-              value={content.apartment_size_description || ""}
-              onChange={(e) => setContent({ ...content, apartment_size_description: e.target.value })}
+            <Label htmlFor="url_submission_note">URL Submission Note</Label>
+            <Input
+              id="url_submission_note"
+              value={content.url_submission_note || ""}
+              onChange={(e) => setContent({ ...content, url_submission_note: e.target.value })}
             />
           </div>
 
+          {/* Loading Messages */}
           <div className="space-y-2">
             <Label>Loading Messages</Label>
+            <p className="text-xs text-muted-foreground mb-2">Messages shown while AI generates the result</p>
             {loadingMessages.map((message, index) => (
               <Input
                 key={index}
@@ -187,6 +240,7 @@ export function ContentEditor() {
             ))}
           </div>
 
+          {/* Result fields */}
           <div className="space-y-2">
             <Label htmlFor="result_title">Result Title</Label>
             <Input
@@ -197,32 +251,52 @@ export function ContentEditor() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="result_description">Result Description</Label>
-            <Input
-              id="result_description"
-              value={content.result_description || ""}
-              onChange={(e) => setContent({ ...content, result_description: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cta_title">Email CTA Title</Label>
-            <Input
-              id="cta_title"
-              value={content.cta_title || ""}
-              onChange={(e) => setContent({ ...content, cta_title: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cta_description">Email CTA Description</Label>
+            <Label htmlFor="result_subtitle">Result Subtitle</Label>
             <Textarea
-              id="cta_description"
-              value={content.cta_description || ""}
-              onChange={(e) => setContent({ ...content, cta_description: e.target.value })}
+              id="result_subtitle"
+              value={content.result_subtitle || ""}
+              onChange={(e) => setContent({ ...content, result_subtitle: e.target.value })}
             />
           </div>
 
+          {/* Email Capture fields */}
+          <div className="space-y-2">
+            <Label htmlFor="email_title">Email Capture Title</Label>
+            <Input
+              id="email_title"
+              value={content.email_title || ""}
+              onChange={(e) => setContent({ ...content, email_title: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email_subtitle">Email Capture Subtitle</Label>
+            <Textarea
+              id="email_subtitle"
+              value={content.email_subtitle || ""}
+              onChange={(e) => setContent({ ...content, email_subtitle: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email_placeholder">Email Placeholder</Label>
+            <Input
+              id="email_placeholder"
+              value={content.email_placeholder || ""}
+              onChange={(e) => setContent({ ...content, email_placeholder: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email_button">Email Button Text</Label>
+            <Input
+              id="email_button"
+              value={content.email_button || ""}
+              onChange={(e) => setContent({ ...content, email_button: e.target.value })}
+            />
+          </div>
+
+          {/* Success fields */}
           <div className="space-y-2">
             <Label htmlFor="success_title">Success Title</Label>
             <Input
@@ -233,20 +307,20 @@ export function ContentEditor() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="success_description">Success Description</Label>
+            <Label htmlFor="success_subtitle">Success Subtitle</Label>
             <Textarea
-              id="success_description"
-              value={content.success_description || ""}
-              onChange={(e) => setContent({ ...content, success_description: e.target.value })}
+              id="success_subtitle"
+              value={content.success_subtitle || ""}
+              onChange={(e) => setContent({ ...content, success_subtitle: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="social_share_text">Social Share Text</Label>
+            <Label htmlFor="success_share_text">Social Share Text</Label>
             <Textarea
-              id="social_share_text"
-              value={content.social_share_text || ""}
-              onChange={(e) => setContent({ ...content, social_share_text: e.target.value })}
+              id="success_share_text"
+              value={content.success_share_text || ""}
+              onChange={(e) => setContent({ ...content, success_share_text: e.target.value })}
             />
           </div>
         </div>

@@ -6,13 +6,13 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
-import Link from "next/link"
 
 interface URLSubmissionStepProps {
   onSubmit: (url: string, leadId: string) => void
+  formId?: string // Added formId prop
 }
 
-export function URLSubmissionStep({ onSubmit }: URLSubmissionStepProps) {
+export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) {
   const [url, setUrl] = useState("")
   const [isValid, setIsValid] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -24,18 +24,28 @@ export function URLSubmissionStep({ onSubmit }: URLSubmissionStepProps) {
   useEffect(() => {
     const fetchContent = async () => {
       const supabase = createClient()
-      const { data } = await supabase.from("content").select("value").in("key", ["hero_title", "hero_subtitle"])
 
-      if (data) {
-        setContent({
-          title: data[0]?.value.text || content.title,
-          subtitle: data[1]?.value.text || content.subtitle,
-        })
+      if (formId) {
+        const { data } = await supabase
+          .from("form_content")
+          .select("key, value")
+          .eq("form_id", formId)
+          .in("key", ["page_title", "page_subtitle"])
+
+        if (data && data.length > 0) {
+          const titleData = data.find((item) => item.key === "page_title")
+          const subtitleData = data.find((item) => item.key === "page_subtitle")
+
+          setContent({
+            title: titleData?.value || content.title,
+            subtitle: subtitleData?.value || content.subtitle,
+          })
+        }
       }
     }
 
     fetchContent()
-  }, [])
+  }, [formId])
 
   const validateUrl = (value: string) => {
     if (!value) return false
@@ -60,12 +70,14 @@ export function URLSubmissionStep({ onSubmit }: URLSubmissionStepProps) {
     const formattedUrl = url.startsWith("http") ? url : `https://${url}`
 
     const supabase = createClient()
+
     const { data, error } = await supabase
       .from("leads")
       .insert({
         url: formattedUrl,
         email: "",
         status: "pending",
+        form_id: formId || null,
       })
       .select()
       .single()
@@ -102,14 +114,6 @@ export function URLSubmissionStep({ onSubmit }: URLSubmissionStepProps) {
       </form>
 
       <p className="text-sm text-muted-foreground">No credit card required • Takes less than 30 seconds</p>
-
-      <div className="pt-8 border-t border-border/50 w-full max-w-md">
-        <Link href="/auth/login">
-          <Button variant="outline" className="w-full h-12 text-base bg-transparent">
-            Login as Admin
-          </Button>
-        </Link>
-      </div>
     </div>
   )
 }
