@@ -1,4 +1,19 @@
--- Function to auto-create test form for new admins
+-- Исправляем функцию handle_new_user, чтобы использовать 'user' вместо 'admin'
+-- Constraint на таблице users разрешает только 'superadmin' или 'user', но не 'admin'
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.users (id, email, role)
+  values (
+    new.id,
+    new.email,
+    case when new.email = 'hello@vasilkov.digital' then 'superadmin' else 'user' end
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Исправляем функцию handle_new_admin_form, чтобы использовать 'user' вместо 'admin'
 create or replace function public.handle_new_admin_form()
 returns trigger as $$
 declare
@@ -59,8 +74,3 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Trigger to create test form for new users
-drop trigger if exists on_user_created_form on public.users;
-create trigger on_user_created_form
-  after insert on public.users
-  for each row execute procedure public.handle_new_admin_form();

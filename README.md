@@ -100,7 +100,7 @@ The email route can be adapted for any email service (Mailgun, AWS SES, etc.)
 ├── lib/supabase/
 │   ├── client.ts                # Browser Supabase client
 │   ├── server.ts                # Server Supabase client
-│   └── middleware.ts            # Auth middleware
+│   └── proxy.ts                 # Auth proxy
 └── scripts/
     └── 001_create_tables.sql    # Database schema
 \`\`\`

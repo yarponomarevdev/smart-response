@@ -2,14 +2,15 @@ import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LeadFlow } from "@/components/lead-flow"
 
-export default async function FormPage({ params }: { params: { id: string } }) {
+export default async function FormPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Fetch form details
   const { data: form, error } = await supabase
     .from("forms")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("is_active", true)
     .single()
 
@@ -37,7 +38,7 @@ export default async function FormPage({ params }: { params: { id: string } }) {
     <main className="flex min-h-screen flex-col items-center justify-center px-[10%] md:px-0">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
         <div className="col-span-12 md:col-start-3 md:col-span-8 lg:col-start-4 lg:col-span-6">
-          <LeadFlow formId={params.id} />
+          <LeadFlow formId={id} />
         </div>
       </div>
     </main>

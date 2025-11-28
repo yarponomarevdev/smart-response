@@ -28,7 +28,7 @@ alter table public.leads add column if not exists form_id uuid references public
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique not null,
-  role text default 'admin' check (role in ('superadmin', 'admin')),
+  role text default 'user' check (role in ('superadmin', 'user')),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -131,7 +131,7 @@ begin
   values (
     new.id,
     new.email,
-    case when new.email = 'hello@vasilkov.digital' then 'superadmin' else 'admin' end
+    case when new.email = 'hello@vasilkov.digital' then 'superadmin' else 'user' end
   );
   return new;
 end;
