@@ -81,17 +81,19 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
     const supabase = createClient()
 
-    const { data: form } = await supabase
+    const { data: forms, error: formError } = await supabase
       .from("forms")
       .select("lead_count, lead_limit, is_active")
       .eq("id", effectiveFormId)
-      .single()
+      .limit(1)
 
-    if (!form) {
+    if (formError || !forms || forms.length === 0) {
       setError("Форма не найдена")
       setIsLoading(false)
       return
     }
+
+    const form = forms[0]
 
     if (!form.is_active) {
       setError("Форма временно недоступна")
