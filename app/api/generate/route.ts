@@ -2,6 +2,21 @@ import { createClient } from "@/lib/supabase/server"
 
 export const maxDuration = 60
 
+// CORS заголовки для поддержки запросов с внешних сайтов
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+}
+
+// Обработка preflight запросов
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  })
+}
+
 async function fetchUrlContent(url: string): Promise<string> {
   try {
     const response = await fetch(url, {
@@ -33,12 +48,64 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { url, formId } = await req.json()
+    // Валидация входных данных
+    let body
+    try {
+      body = await req.json()
+    } catch (parseError) {
+      console.error("[v0] JSON parse error:", parseError)
+      return Response.json(
+        {
+          error: "Invalid JSON in request body",
+          details: parseError instanceof Error ? parseError.message : "Unknown parsing error",
+        },
+        { status: 400, headers: corsHeaders },
+      )
+    }
+
+    const { url, formId } = body
+
+    if (!url || !formId) {
+      console.error("[v0] Missing required fields:", { url: !!url, formId: !!formId })
+      return Response.json(
+        {
+          error: "Missing required fields",
+          details: "Both 'url' and 'formId' are required",
+        },
+        { status: 400, headers: corsHeaders },
+      )
+    }
+
+    // Проверка наличия API ключа OpenAI
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("[v0] OPENAI_API_KEY is not set")
+      return Response.json(
+        {
+          error: "Server configuration error",
+          details: "OpenAI API key is not configured",
+        },
+        { status: 500, headers: corsHeaders },
+      )
+    }
 
     const supabase = await createClient()
 
     // Fetch ALL content settings from form_content
-    const { data: contentData } = await supabase.from("form_content").select("key, value").eq("form_id", formId)
+    const { data: contentData, error: contentError } = await supabase
+      .from("form_content")
+      .select("key, value")
+      .eq("form_id", formId)
+
+    if (contentError) {
+      console.error("[v0] Supabase query error:", contentError)
+      return Response.json(
+        {
+          error: "Database error",
+          details: contentError.message || "Failed to fetch form content",
+        },
+        { status: 500, headers: corsHeaders },
+      )
+    }
 
     const getContent = (key: string, defaultValue: string) => {
       return contentData?.find((c) => c.key === key)?.value || defaultValue
@@ -76,22 +143,36 @@ IMPORTANT FORMATTING RULES:
       })
 
       if (!imageResponse.ok) {
-        const errorData = await imageResponse.json()
+        let errorData
+        try {
+          errorData = await imageResponse.json()
+        } catch {
+          errorData = { error: { message: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` } }
+        }
         console.error("[v0] DALL-E API error:", errorData)
-        throw new Error(`DALL-E API error: ${errorData.error?.message || "Unknown error"}`)
+        return Response.json(
+          {
+            error: "DALL-E API error",
+            details: errorData.error?.message || "Unknown error",
+          },
+          { status: imageResponse.status, headers: corsHeaders },
+        )
       }
 
       const imageData = await imageResponse.json()
       const imageUrl = imageData.data[0]?.url || ""
 
-      return Response.json({
-        success: true,
-        result: {
-          type: "image",
-          imageUrl: imageUrl,
-          text: `Generated based on: ${url}`,
+      return Response.json(
+        {
+          success: true,
+          result: {
+            type: "image",
+            imageUrl: imageUrl,
+            text: `Generated based on: ${url}`,
+          },
         },
-      })
+        { headers: corsHeaders },
+      )
     } else {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -117,30 +198,56 @@ IMPORTANT FORMATTING RULES:
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
+        }
         console.error("[v0] OpenAI API error:", errorData)
-        throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`)
+        return Response.json(
+          {
+            error: "OpenAI API error",
+            details: errorData.error?.message || "Unknown error",
+          },
+          { status: response.status, headers: corsHeaders },
+        )
       }
 
       const completion = await response.json()
       const generatedText = completion.choices[0]?.message?.content || ""
 
-      return Response.json({
-        success: true,
-        result: {
-          type: "text",
-          text: generatedText,
+      if (!generatedText) {
+        console.error("[v0] Empty response from OpenAI:", completion)
+        return Response.json(
+          {
+            error: "Empty response from OpenAI",
+            details: "No content generated",
+          },
+          { status: 500, headers: corsHeaders },
+        )
+      }
+
+      return Response.json(
+        {
+          success: true,
+          result: {
+            type: "text",
+            text: generatedText,
+          },
         },
-      })
+        { headers: corsHeaders },
+      )
     }
   } catch (error: any) {
     console.error("[v0] Generation error:", error)
+    console.error("[v0] Error stack:", error?.stack)
     return Response.json(
       {
         error: "Failed to generate result",
         details: error?.message || "Unknown error",
       },
-      { status: 500 },
+      { status: 500, headers: corsHeaders },
     )
   }
 }

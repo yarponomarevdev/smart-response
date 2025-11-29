@@ -1,5 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+// CORS заголовки для поддержки запросов с внешних сайтов
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+}
+
+// Обработка preflight запросов
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, resultText, resultImageUrl, resultType, url } = await request.json()
@@ -8,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Result type:", resultType)
 
     if (!email || (!resultText && !resultImageUrl)) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders })
     }
 
     const { Resend } = await import("resend")
@@ -27,14 +42,20 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("[v0] Resend error:", error)
-      return NextResponse.json({ error: "Failed to send email", details: error, success: false }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to send email", details: error, success: false },
+        { status: 500, headers: corsHeaders },
+      )
     }
 
     console.log("[v0] Email sent successfully:", data)
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({ success: true, data }, { headers: corsHeaders })
   } catch (error: any) {
     console.error("[v0] Error sending email:", error)
-    return NextResponse.json({ error: "Failed to send email", details: error.message, success: false }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to send email", details: error.message, success: false },
+      { status: 500, headers: corsHeaders },
+    )
   }
 }
 

@@ -53,7 +53,10 @@ export function LoadingStep({ url, formId, onComplete }: LoadingStepProps) {
 
     const generateResult = async () => {
       try {
-        const response = await fetch("/api/generate", {
+        // Используем абсолютный URL для работы в iframe на внешних сайтах
+        const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/generate` : "/api/generate"
+        
+        const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -64,6 +67,12 @@ export function LoadingStep({ url, formId, onComplete }: LoadingStepProps) {
           }),
         })
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+          console.error("[v0] Generation failed:", errorData)
+          throw new Error(errorData.error || errorData.details || "Failed to generate result")
+        }
+
         const data = await response.json()
 
         if (data.success && data.result) {
@@ -71,10 +80,15 @@ export function LoadingStep({ url, formId, onComplete }: LoadingStepProps) {
             onComplete(data.result)
           }, 1000)
         } else {
-          console.error("[v0] Generation failed:", data.error)
+          console.error("[v0] Generation failed:", data.error || data.details)
+          throw new Error(data.error || data.details || "Failed to generate result")
         }
       } catch (error) {
         console.error("[v0] Error calling generate API:", error)
+        // Показываем ошибку пользователю
+        if (error instanceof Error) {
+          console.error("[v0] Error details:", error.message)
+        }
       }
     }
 

@@ -52,7 +52,8 @@ export function EmailCaptureStep({ url, formId, result, onSuccess }: EmailCaptur
 
     // Send email
     try {
-      await fetch("/api/send-email", {
+      const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
+      await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

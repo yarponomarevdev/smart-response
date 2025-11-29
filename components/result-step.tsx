@@ -53,7 +53,8 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
 
     // Send email
     try {
-      await fetch("/api/send-email", {
+      const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
+      await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -65,7 +66,7 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
         }),
       })
     } catch (err) {
-      console.error("Error sending email:", err)
+      console.error("[v0] Error sending email:", err)
     }
 
     setIsUnlocked(true)
