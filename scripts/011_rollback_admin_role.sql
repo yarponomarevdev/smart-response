@@ -42,3 +42,5 @@ CREATE POLICY "forms_owner_delete"
 
 -- handle_new_user остаётся без изменений (логика та же)
 
+
+
