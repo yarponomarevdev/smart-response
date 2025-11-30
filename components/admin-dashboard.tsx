@@ -1,7 +1,7 @@
 /**
  * AdminDashboard - Главный компонент админ-панели
  * Показывает разный интерфейс в зависимости от роли:
- * - superadmin: управление главной формой, просмотр всех пользователей
+ * - superadmin: управление главной формой, создание форм (неограниченно), просмотр всех пользователей
  * - admin: управление своими формами (неограниченно), лиды, контент
  * - user: управление одной формой, лиды, контент
  */
@@ -68,7 +68,7 @@ export function AdminDashboard() {
   }
 
   const getPanelDescription = () => {
-    if (isSuperAdmin) return "Управление главной формой и просмотр всех пользователей"
+    if (isSuperAdmin) return "Управление главной формой, создание форм и просмотр всех пользователей"
     if (isAdmin) return "Управление вашими формами и лидами (неограниченное количество форм)"
     return "Управление вашей формой и лидами"
   }
@@ -87,6 +87,8 @@ export function AdminDashboard() {
             {isSuperAdmin ? (
               <>
                 <TabsTrigger value="content">Главная форма</TabsTrigger>
+                <TabsTrigger value="forms">Мои формы</TabsTrigger>
+                <TabsTrigger value="form-content">Контент</TabsTrigger>
                 <TabsTrigger value="leads">Лиды</TabsTrigger>
                 <TabsTrigger value="users">Пользователи</TabsTrigger>
               </>
@@ -103,6 +105,12 @@ export function AdminDashboard() {
             <>
               <TabsContent value="content" className="space-y-4">
                 <ContentEditor formId={MAIN_FORM_ID} />
+              </TabsContent>
+              <TabsContent value="forms" className="space-y-4">
+                <FormsManager />
+              </TabsContent>
+              <TabsContent value="form-content" className="space-y-4">
+                <ContentEditor />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable formId={MAIN_FORM_ID} />
