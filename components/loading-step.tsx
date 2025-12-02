@@ -140,19 +140,19 @@ export function LoadingStep({ url, formId, onComplete, onError }: LoadingStepPro
   // Отображение ошибки
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-6 animate-in fade-in duration-500 p-6">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10">
-          <AlertCircle className="h-8 w-8 text-destructive" />
+      <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 animate-in fade-in duration-500 p-4 sm:p-6">
+        <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-destructive/10">
+          <AlertCircle className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
         </div>
         <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold text-destructive">Произошла ошибка</h3>
-          <p className="text-sm text-muted-foreground max-w-md">{error}</p>
+          <h3 className="text-base sm:text-lg font-semibold text-destructive">Произошла ошибка</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-md px-4">{error}</p>
         </div>
         <Button 
           onClick={handleRetry} 
           disabled={isRetrying}
           variant="outline"
-          className="gap-2"
+          className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
         >
           <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
           {isRetrying ? 'Повторяем...' : 'Попробовать снова'}
@@ -162,9 +162,9 @@ export function LoadingStep({ url, formId, onComplete, onError }: LoadingStepPro
   }
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
-      <Spinner className="h-16 w-16" />
-      <p className="text-xl text-muted-foreground animate-pulse">{messages[messageIndex]}</p>
+    <div className="flex flex-col items-center justify-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
+      <Spinner className="h-12 w-12 sm:h-16 sm:w-16" />
+      <p className="text-lg sm:text-xl text-muted-foreground animate-pulse text-center">{messages[messageIndex]}</p>
     </div>
   )
 }

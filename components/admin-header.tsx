@@ -16,11 +16,12 @@ export function AdminHeader() {
 
   return (
     <header className="border-b border-border bg-card">
-      <div className="container mx-auto flex items-center justify-between p-4">
-        <h2 className="text-xl font-semibold">Lead Hero Admin</h2>
-        <Button onClick={handleLogout} variant="outline" size="sm">
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
+      <div className="container mx-auto flex items-center justify-between p-3 sm:p-4">
+        <h2 className="text-lg sm:text-xl font-semibold truncate">Lead Hero Admin</h2>
+        <Button onClick={handleLogout} variant="outline" size="sm" className="h-9 sm:h-10 text-xs sm:text-sm">
+          <LogOut className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Logout</span>
+          <span className="sm:hidden">Выход</span>
         </Button>
       </div>
     </header>

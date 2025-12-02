@@ -38,17 +38,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center px-[10%] md:px-0">
+    <div className="flex min-h-screen w-full items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
-        <div className="col-span-12 md:col-start-5 md:col-span-4">
+        <div className="col-span-12 sm:col-span-10 sm:col-start-2 md:col-start-5 md:col-span-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Вход</CardTitle>
-              <CardDescription>Введите данные для доступа к панели управления</CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Вход</CardTitle>
+              <CardDescription className="text-sm">Введите данные для доступа к панели управления</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin}>
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4 sm:gap-6">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -58,6 +58,7 @@ export default function LoginPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -68,13 +69,14 @@ export default function LoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-10 sm:h-11" disabled={isLoading}>
                     {isLoading ? "Вход..." : "Войти"}
                   </Button>
-                  <p className="text-center text-sm text-muted-foreground">
+                  <p className="text-center text-xs sm:text-sm text-muted-foreground">
                     Нет аккаунта?{" "}
                     <Link href="/auth/register" className="text-primary hover:underline">
                       Зарегистрироваться

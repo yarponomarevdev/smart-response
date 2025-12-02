@@ -222,11 +222,11 @@ export function FormsManager() {
   const isUnlimited = limitInfo?.limit === null
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Мои формы</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Мои формы</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {isUnlimited 
               ? `Всего форм: ${limitInfo?.currentCount || forms.length}` 
               : `Форм: ${limitInfo?.currentCount || forms.length} / ${limitInfo?.limit}`
@@ -234,7 +234,7 @@ export function FormsManager() {
           </p>
         </div>
         {(limitInfo?.canCreate || isUnlimited) && (
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Новая форма
           </Button>
@@ -249,30 +249,30 @@ export function FormsManager() {
       )}
 
       {/* Список форм */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {forms.map((form) => {
           const progressPercent = (form.lead_count / form.lead_limit) * 100
           const isLimitReached = form.lead_count >= form.lead_limit
 
           return (
-            <Card key={form.id} className="relative">
+            <Card key={form.id} className="relative overflow-hidden">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{form.name}</CardTitle>
+                    <CardTitle className="text-base sm:text-lg truncate">{form.name}</CardTitle>
                     <CardDescription className="text-xs font-mono truncate">
                       {form.id}
                     </CardDescription>
                   </div>
-                  <Badge variant={form.is_active ? "default" : "secondary"} className="ml-2 shrink-0">
+                  <Badge variant={form.is_active ? "default" : "secondary"} className="shrink-0 text-xs w-fit self-start sm:self-auto">
                     {form.is_active ? "Активна" : "Неактивна"}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {/* Прогресс лидов */}
                 <div>
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="flex justify-between text-xs sm:text-sm mb-1">
                     <span className="text-muted-foreground">Лиды</span>
                     <span className={isLimitReached ? "text-destructive font-medium" : ""}>
                       {form.lead_count} / {form.lead_limit}
@@ -294,36 +294,41 @@ export function FormsManager() {
 
                 {/* Действия */}
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => copyFormLink(form)}>
+                  <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Copy className="h-3 w-3 mr-1" />
-                    Ссылка
+                    <span className="hidden sm:inline">Ссылка</span>
+                    <span className="sm:hidden">Ссыл.</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")}>
+                  <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")} className="text-xs sm:text-sm h-8 sm:h-9">
                     <ExternalLink className="h-3 w-3 mr-1" />
-                    Открыть
+                    <span className="hidden sm:inline">Открыть</span>
+                    <span className="sm:hidden">Откр.</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)}>
+                  <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Code2 className="h-3 w-3 mr-1" />
-                    Код
+                    <span className="hidden sm:inline">Код</span>
+                    <span className="sm:hidden">Код</span>
                   </Button>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t">
-                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(form)}>
+                <div className="flex flex-wrap gap-2 pt-2 border-t">
+                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Settings className="h-3 w-3 mr-1" />
-                    Настройки
+                    <span className="hidden sm:inline">Настройки</span>
+                    <span className="sm:hidden">Настр.</span>
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => toggleFormActive(form)}
+                    className="text-xs sm:text-sm h-8 sm:h-9"
                   >
                     {form.is_active ? "Выкл" : "Вкл"}
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive h-8 sm:h-9"
                     onClick={() => openDeleteDialog(form)}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -351,10 +356,10 @@ export function FormsManager() {
 
       {/* Диалог встраивания */}
       <Dialog open={showEmbedDialog} onOpenChange={setShowEmbedDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Встроить форму на сайт</DialogTitle>
-            <DialogDescription>Скопируйте этот код и вставьте на ваш сайт</DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Встроить форму на сайт</DialogTitle>
+            <DialogDescription className="text-sm">Скопируйте этот код и вставьте на ваш сайт</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
@@ -363,12 +368,12 @@ export function FormsManager() {
               className="font-mono text-xs"
               rows={4}
             />
-            <div className="flex gap-2">
-              <Button onClick={copyEmbedCode} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={copyEmbedCode} className="flex-1 h-10 sm:h-11">
                 <Copy className="h-4 w-4 mr-2" />
                 Копировать код
               </Button>
-              <Button variant="outline" onClick={() => setShowEmbedDialog(false)}>
+              <Button variant="outline" onClick={() => setShowEmbedDialog(false)} className="h-10 sm:h-11">
                 Закрыть
               </Button>
             </div>
@@ -380,19 +385,19 @@ export function FormsManager() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Настройки формы</DialogTitle>
-            <DialogDescription>Измените название вашей формы</DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Настройки формы</DialogTitle>
+            <DialogDescription className="text-sm">Измените название вашей формы</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="formName">Название формы</Label>
-              <Input id="formName" value={formName} onChange={(e) => setFormName(e.target.value)} className="mt-2" />
+              <Input id="formName" value={formName} onChange={(e) => setFormName(e.target.value)} className="mt-2 h-10 sm:h-11" />
             </div>
-            <div className="flex gap-2">
-              <Button onClick={updateFormName} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={updateFormName} className="flex-1 h-10 sm:h-11">
                 Сохранить
               </Button>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)} className="h-10 sm:h-11">
                 Отмена
               </Button>
             </div>
@@ -404,19 +409,20 @@ export function FormsManager() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Удалить форму?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Удалить форму?</DialogTitle>
+            <DialogDescription className="text-sm">
               Форма &quot;{selectedForm?.name}&quot; будет удалена вместе со всеми лидами. Это действие нельзя отменить.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="w-full sm:w-auto h-10 sm:h-11">
               Отмена
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleDeleteForm}
               disabled={deleting === selectedForm?.id}
+              className="w-full sm:w-auto h-10 sm:h-11"
             >
               {deleting === selectedForm?.id ? (
                 <>
@@ -459,8 +465,8 @@ function CreateFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Создать новую форму</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl">Создать новую форму</DialogTitle>
+          <DialogDescription className="text-sm">
             Введите название для новой формы сбора лидов
           </DialogDescription>
         </DialogHeader>
@@ -472,11 +478,11 @@ function CreateFormDialog({
               value={newFormName} 
               onChange={(e) => setNewFormName(e.target.value)} 
               placeholder="Моя форма"
-              className="mt-2" 
+              className="mt-2 h-10 sm:h-11" 
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={onCreate} className="flex-1" disabled={creating}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={onCreate} className="flex-1 h-10 sm:h-11" disabled={creating}>
               {creating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -489,7 +495,7 @@ function CreateFormDialog({
                 </>
               )}
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-10 sm:h-11">
               Отмена
             </Button>
           </div>

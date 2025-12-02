@@ -25,7 +25,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
   })
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="w-full max-w-2xl mx-auto">
       {step === "url" && (
         <URLSubmissionStep
           formId={effectiveFormId}

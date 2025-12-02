@@ -79,14 +79,14 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
   }
 
   return (
-    <div className="flex flex-col items-center text-center space-y-8 animate-in fade-in duration-500 w-full">
+    <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4">
       <div className="space-y-2">
-        <h2 className="text-3xl font-bold">Ваш результат готов!</h2>
-        <p className="text-muted-foreground">Введите email для просмотра</p>
+        <h2 className="text-2xl sm:text-3xl font-bold">Ваш результат готов!</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">Введите email для просмотра</p>
       </div>
 
       <div className="w-full max-w-2xl">
-        <div className="bg-card rounded-lg border border-border p-6 relative overflow-hidden">
+        <div className="bg-card rounded-lg border border-border p-4 sm:p-6 relative overflow-hidden">
           {result.type === "image" && result.imageUrl ? (
             <div className="relative">
               <img
@@ -96,7 +96,7 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
               />
               {!isUnlocked && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white font-semibold text-lg bg-black/60 px-4 py-2 rounded">
+                  <p className="text-white font-semibold text-sm sm:text-lg bg-black/60 px-3 sm:px-4 py-2 rounded text-center">
                     Введите email для просмотра
                   </p>
                 </div>
@@ -105,10 +105,10 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
           ) : (
             <div className="prose prose-invert max-w-none text-left">
               {isUnlocked ? (
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">{result.text}</div>
+                <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{result.text}</div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm leading-relaxed text-muted-foreground blur-sm select-none">
+                  <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground blur-sm select-none">
                     {generatePreview(result.text, 300)}
                   </p>
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card" />
@@ -119,17 +119,17 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
         </div>
 
         {!isUnlocked && (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-4 sm:mt-6 space-y-4">
             <Input
               type="email"
               placeholder="your@email.com"
               value={email}
               onChange={(e) => handleChange(e.target.value)}
-              className="h-14 text-lg px-6 bg-card border-border"
+              className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-6 bg-card border-border"
               disabled={isLoading}
             />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={!isValid || isLoading} className="w-full h-14 text-lg font-semibold">
+            {error && <p className="text-sm text-destructive text-left">{error}</p>}
+            <Button type="submit" disabled={!isValid || isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
               {isLoading ? "Отправка..." : "Показать результат"}
             </Button>
             <p className="text-xs text-muted-foreground">Мы уважаем вашу приватность. Никакого спама.</p>

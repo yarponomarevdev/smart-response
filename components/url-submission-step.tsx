@@ -126,10 +126,10 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   }
 
   return (
-    <div className="flex flex-col items-center text-center space-y-8 animate-in fade-in duration-500">
-      <div className="space-y-4">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">{content.title}</h1>
-        <p className="text-lg text-muted-foreground text-balance max-w-xl">{content.subtitle}</p>
+    <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
+      <div className="space-y-3 sm:space-y-4">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance">{content.title}</h1>
+        <p className="text-base sm:text-lg text-muted-foreground text-balance max-w-xl">{content.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
@@ -139,17 +139,17 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
             placeholder={content.placeholder}
             value={url}
             onChange={(e) => handleChange(e.target.value)}
-            className="h-14 text-lg px-6 bg-card border-border"
+            className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-6 bg-card border-border"
             disabled={isLoading}
           />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={!isValid || isLoading} className="w-full h-14 text-lg font-semibold">
+        {error && <p className="text-sm text-destructive text-left">{error}</p>}
+        <Button type="submit" disabled={!isValid || isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
           {isLoading ? "Обработка..." : content.buttonText}
         </Button>
       </form>
 
-      <p className="text-sm text-muted-foreground">{content.disclaimer}</p>
+      <p className="text-xs sm:text-sm text-muted-foreground">{content.disclaimer}</p>
     </div>
   )
 }

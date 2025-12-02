@@ -76,27 +76,27 @@ export function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader />
-      <div className="container mx-auto p-6 space-y-8">
+      <div className="container mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">{getPanelTitle()}</h1>
-          <p className="text-muted-foreground">{getPanelDescription()}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{getPanelTitle()}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{getPanelDescription()}</p>
         </div>
 
-        <Tabs defaultValue={isSuperAdmin ? "content" : "form"} className="space-y-6">
-          <TabsList>
+        <Tabs defaultValue={isSuperAdmin ? "content" : "form"} className="space-y-4 sm:space-y-6">
+          <TabsList className="flex-wrap h-auto p-1">
             {isSuperAdmin ? (
               <>
-                <TabsTrigger value="content">Главная форма</TabsTrigger>
-                <TabsTrigger value="forms">Мои формы</TabsTrigger>
-                <TabsTrigger value="form-content">Контент</TabsTrigger>
-                <TabsTrigger value="leads">Лиды</TabsTrigger>
-                <TabsTrigger value="users">Пользователи</TabsTrigger>
+                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Главная форма</TabsTrigger>
+                <TabsTrigger value="forms" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
+                <TabsTrigger value="form-content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
+                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
+                <TabsTrigger value="users" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Пользователи</TabsTrigger>
               </>
             ) : (
               <>
-                <TabsTrigger value="form">Мои формы</TabsTrigger>
-                <TabsTrigger value="leads">Лиды</TabsTrigger>
-                <TabsTrigger value="content">Контент</TabsTrigger>
+                <TabsTrigger value="form" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
+                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
+                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
               </>
             )}
           </TabsList>

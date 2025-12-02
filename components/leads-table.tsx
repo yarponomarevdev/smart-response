@@ -149,21 +149,21 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
   }
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <Card className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Лиды</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Лиды</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {filteredLeads.length} {selectedFormId === "all" ? "всего" : "в выбранной форме"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {/* Фильтр по формам (только если есть несколько форм) */}
           {forms.length > 1 && !propFormId && (
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedFormId} onValueChange={setSelectedFormId}>
-                <SelectTrigger className="h-9 w-[200px]">
+                <SelectTrigger className="h-9 w-full sm:w-[200px]">
                   <SelectValue placeholder="Выберите форму" />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,44 +180,45 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
               </Select>
             </div>
           )}
-          <Button onClick={handleExport} variant="outline" disabled={filteredLeads.length === 0}>
+          <Button onClick={handleExport} variant="outline" disabled={filteredLeads.length === 0} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
             <Download className="mr-2 h-4 w-4" />
-            Экспорт CSV
+            <span className="hidden sm:inline">Экспорт CSV</span>
+            <span className="sm:hidden">CSV</span>
           </Button>
         </div>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>URL</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead>Результат</TableHead>
-              {forms.length > 1 && !propFormId && <TableHead>Форма</TableHead>}
-              <TableHead>Дата</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
+              <TableHead className="min-w-[150px]">URL</TableHead>
+              <TableHead className="min-w-[120px]">Email</TableHead>
+              <TableHead className="min-w-[100px]">Статус</TableHead>
+              <TableHead className="min-w-[150px]">Результат</TableHead>
+              {forms.length > 1 && !propFormId && <TableHead className="min-w-[100px]">Форма</TableHead>}
+              <TableHead className="min-w-[100px]">Дата</TableHead>
+              <TableHead className="text-right min-w-[80px]">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={forms.length > 1 ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={forms.length > 1 && !propFormId ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   Лидов пока нет
                 </TableCell>
               </TableRow>
             ) : (
               filteredLeads.map((lead) => (
                 <TableRow key={lead.id}>
-                  <TableCell className="font-medium max-w-xs truncate">{lead.url}</TableCell>
-                  <TableCell>{lead.email || "-"}</TableCell>
+                  <TableCell className="font-medium max-w-[150px] truncate text-xs sm:text-sm">{lead.url}</TableCell>
+                  <TableCell className="text-xs sm:text-sm">{lead.email || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant={lead.status === "completed" ? "default" : "outline"}>
+                    <Badge variant={lead.status === "completed" ? "default" : "outline"} className="text-xs">
                       {lead.status === "completed" ? "Завершен" : "В обработке"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">
+                  <TableCell className="max-w-[150px] truncate text-xs sm:text-sm">
                     {lead.result_image_url ? (
                       <a
                         href={lead.result_image_url}
@@ -234,13 +235,13 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                     )}
                   </TableCell>
                   {forms.length > 1 && !propFormId && (
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-xs sm:text-sm text-muted-foreground">
                       {getFormName(lead.form_id)}
                     </TableCell>
                   )}
-                  <TableCell>{new Date(lead.created_at).toLocaleDateString("ru-RU")}</TableCell>
+                  <TableCell className="text-xs sm:text-sm">{new Date(lead.created_at).toLocaleDateString("ru-RU")}</TableCell>
                   <TableCell className="text-right">
-                    <Button onClick={() => handleDelete(lead.id)} variant="ghost" size="sm">
+                    <Button onClick={() => handleDelete(lead.id)} variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>

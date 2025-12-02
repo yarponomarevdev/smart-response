@@ -11,8 +11,8 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen px-[10%] md:px-0">
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4 py-8">
+    <div className="min-h-screen px-4 sm:px-6 md:px-[10%] lg:px-0">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4 py-4 sm:py-6 md:py-8">
         <div className="col-span-12">
           <AdminDashboard />
         </div>

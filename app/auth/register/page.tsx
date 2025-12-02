@@ -42,19 +42,19 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center px-[10%] md:px-0">
+      <div className="flex min-h-screen w-full items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
         <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
-          <div className="col-span-12 md:col-start-5 md:col-span-4">
+          <div className="col-span-12 sm:col-span-10 sm:col-start-2 md:col-start-5 md:col-span-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">Проверьте почту</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-xl sm:text-2xl">Проверьте почту</CardTitle>
+                <CardDescription className="text-sm">
                   Мы отправили ссылку для подтверждения на {email}. После подтверждения вы сможете войти в систему.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Link href="/auth/login">
-                  <Button variant="outline" className="w-full bg-transparent">
+                  <Button variant="outline" className="w-full bg-transparent h-10 sm:h-11">
                     Вернуться к входу
                   </Button>
                 </Link>
@@ -67,17 +67,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center px-[10%] md:px-0">
+    <div className="flex min-h-screen w-full items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
-        <div className="col-span-12 md:col-start-5 md:col-span-4">
+        <div className="col-span-12 sm:col-span-10 sm:col-start-2 md:col-start-5 md:col-span-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Регистрация</CardTitle>
-              <CardDescription>Создайте аккаунт для управления формами</CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Регистрация</CardTitle>
+              <CardDescription className="text-sm">Создайте аккаунт для управления формами</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleRegister}>
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4 sm:gap-6">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -87,6 +87,7 @@ export default function RegisterPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -98,13 +99,14 @@ export default function RegisterPage() {
                       minLength={6}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-10 sm:h-11" disabled={isLoading}>
                     {isLoading ? "Регистрация..." : "Зарегистрироваться"}
                   </Button>
-                  <p className="text-center text-sm text-muted-foreground">
+                  <p className="text-center text-xs sm:text-sm text-muted-foreground">
                     Уже есть аккаунт?{" "}
                     <Link href="/auth/login" className="text-primary hover:underline">
                       Войти
