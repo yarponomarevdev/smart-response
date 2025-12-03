@@ -1,6 +1,8 @@
 "use server"
 
 import { createClient } from "@supabase/supabase-js"
+import { createClient as createServerClient } from "@/lib/supabase/server"
+import { isFormOwner } from "@/app/actions/forms"
 
 // Use service role to bypass RLS for server-side operations
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -18,17 +20,35 @@ interface CreateLeadParams {
 export async function createLead({ formId, email, url, resultText, resultImageUrl }: CreateLeadParams) {
   const isTestEmail = email.toLowerCase() === TEST_EMAIL.toLowerCase()
 
-  if (!isTestEmail) {
-    // Check if email already used for this form
-    const { data: existing } = await supabaseAdmin
-      .from("leads")
-      .select("id")
-      .eq("form_id", formId)
-      .eq("email", email)
-      .single()
+  // Проверяем, является ли текущий авторизованный пользователь владельцем формы
+  let isOwner = false
+  try {
+    const supabase = await createServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    
+    if (user) {
+      isOwner = await isFormOwner(user.id, formId)
+    }
+  } catch (error) {
+    // Если не удалось получить пользователя (например, анонимный запрос), продолжаем
+    console.error("Error checking form owner:", error)
+  }
 
-    if (existing) {
-      return { error: "Вы уже отправляли заявку с этого email" }
+  if (!isTestEmail) {
+    // Проверяем дубликаты email только если пользователь не является владельцем формы
+    if (!isOwner) {
+      const { data: existing } = await supabaseAdmin
+        .from("leads")
+        .select("id")
+        .eq("form_id", formId)
+        .eq("email", email)
+        .single()
+
+      if (existing) {
+        return { error: "Вы уже отправляли заявку с этого email" }
+      }
     }
   } else {
     await supabaseAdmin.from("leads").delete().eq("form_id", formId).eq("email", email)
@@ -49,8 +69,9 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     return { error: "Ошибка при сохранении заявки" }
   }
 
-  // Increment lead count (not for test email)
-  if (!isTestEmail) {
+  // Увеличиваем счетчик лидов только если это не тестовый email и не владелец формы
+  // Владелец формы может использовать свою форму неограниченное количество раз
+  if (!isTestEmail && !isOwner) {
     await supabaseAdmin.rpc("increment_lead_count", { form_id: formId })
   }
 

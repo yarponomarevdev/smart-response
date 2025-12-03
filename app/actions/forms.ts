@@ -127,6 +127,21 @@ export async function createUserForm(userId: string, userEmail: string, formName
 }
 
 /**
+ * Проверяет, является ли пользователь владельцем формы
+ */
+export async function isFormOwner(userId: string | null, formId: string): Promise<boolean> {
+  if (!userId) return false
+  
+  const { data: form } = await supabaseAdmin
+    .from("forms")
+    .select("owner_id")
+    .eq("id", formId)
+    .single()
+
+  return form?.owner_id === userId
+}
+
+/**
  * Удаляет форму пользователя
  */
 export async function deleteUserForm(userId: string, formId: string) {
