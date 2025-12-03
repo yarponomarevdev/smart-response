@@ -323,21 +323,21 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md">
-        <Button onClick={handleShare} variant="outline" className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md items-stretch sm:items-center">
+        <Button onClick={handleShare} variant="outline" className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base flex items-center justify-center">
           <Share2 className="mr-2 h-4 w-4" />
           {copied ? "Скопировано!" : "Поделиться"}
         </Button>
         <Button
           onClick={handleDownload}
           variant="outline"
-          className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base"
+          className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base flex items-center justify-center"
           disabled={downloading}
         >
           <Download className="mr-2 h-4 w-4" />
           {downloading ? "Загрузка..." : "Скачать"}
         </Button>
-        <Button onClick={onRestart} className="flex-1 h-11 sm:h-12 text-sm sm:text-base">
+        <Button onClick={onRestart} className="flex-1 h-11 sm:h-12 text-sm sm:text-base flex items-center justify-center">
           Проверить другой URL
         </Button>
       </div>
