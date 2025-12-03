@@ -36,22 +36,22 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     console.error("Error checking form owner:", error)
   }
 
-  if (!isTestEmail) {
-    // Проверяем дубликаты email только если пользователь не является владельцем формы
-    if (!isOwner) {
-      const { data: existing } = await supabaseAdmin
-        .from("leads")
-        .select("id")
-        .eq("form_id", formId)
-        .eq("email", email)
-        .single()
-
-      if (existing) {
-        return { error: "Вы уже отправляли заявку с этого email" }
-      }
-    }
-  } else {
+  if (isTestEmail || isOwner) {
+    // Для тестового email или владельца формы — удаляем предыдущую запись
+    // Владелец может тестировать свою форму сколько угодно раз
     await supabaseAdmin.from("leads").delete().eq("form_id", formId).eq("email", email)
+  } else {
+    // Для обычных пользователей проверяем дубликаты email
+    const { data: existing } = await supabaseAdmin
+      .from("leads")
+      .select("id")
+      .eq("form_id", formId)
+      .eq("email", email)
+      .single()
+
+    if (existing) {
+      return { error: "Вы уже отправляли заявку с этого email" }
+    }
   }
 
   // Create lead with all data

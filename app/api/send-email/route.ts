@@ -1,4 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { marked } from "marked"
+
+// Настраиваем marked для правильной обработки списков
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  headerIds: false,
+  mangle: false,
+})
 
 // CORS заголовки для поддержки запросов с внешних сайтов
 const corsHeaders = {
@@ -60,6 +69,9 @@ export async function POST(request: NextRequest) {
 }
 
 function generateEmailHTML(resultText: string, resultImageUrl: string | null, resultType: string, url: string) {
+  // Конвертируем markdown в HTML для email (используем глобальные настройки marked)
+  const htmlContent = resultText ? marked(resultText) : ""
+  
   return `
     <!DOCTYPE html>
     <html>
@@ -111,7 +123,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                   <td style="padding: 40px 40px 20px 40px;">
                     <div style="margin-bottom: 20px; padding: 20px; background-color: #262626; border-radius: 4px;">
                       <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #ffffff;">Your Recommendations</h3>
-                      <div style="margin: 0; color: #d4d4d4; font-size: 15px; line-height: 1.8; white-space: pre-wrap;">${resultText}</div>
+                      <div style="margin: 0; color: #d4d4d4; font-size: 15px; line-height: 1.8;">${htmlContent}</div>
                     </div>
                   </td>
                 </tr>

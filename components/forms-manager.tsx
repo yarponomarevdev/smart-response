@@ -26,6 +26,7 @@ interface Form {
   lead_limit: number
   created_at: string
   owner_id: string
+  actual_lead_count?: number // Реальное количество лидов из таблицы leads
 }
 
 interface FormLimitInfo {
@@ -73,7 +74,22 @@ export function FormsManager() {
         .order("created_at", { ascending: false })
 
       if (userForms) {
-        setForms(userForms)
+        // Для каждой формы получаем реальное количество лидов
+        const formsWithLeadCount = await Promise.all(
+          userForms.map(async (form) => {
+            const { count } = await supabase
+              .from("leads")
+              .select("*", { count: "exact", head: true })
+              .eq("form_id", form.id)
+            
+            return {
+              ...form,
+              actual_lead_count: count || 0,
+            }
+          })
+        )
+        
+        setForms(formsWithLeadCount)
       }
 
       // Проверяем лимит форм
@@ -102,7 +118,12 @@ export function FormsManager() {
     }
 
     if (result.form) {
-      setForms([result.form, ...forms])
+      // Добавляем реальное количество лидов (для новой формы всегда 0)
+      const formWithLeadCount = {
+        ...result.form,
+        actual_lead_count: 0,
+      }
+      setForms([formWithLeadCount, ...forms])
       setNewFormName("")
       setShowCreateDialog(false)
       
@@ -251,8 +272,10 @@ export function FormsManager() {
       {/* Список форм */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {forms.map((form) => {
-          const progressPercent = (form.lead_count / form.lead_limit) * 100
-          const isLimitReached = form.lead_count >= form.lead_limit
+          // Используем реальное количество лидов для отображения статистики
+          const actualLeads = form.actual_lead_count ?? form.lead_count
+          const progressPercent = (actualLeads / form.lead_limit) * 100
+          const isLimitReached = actualLeads >= form.lead_limit
 
           return (
             <Card key={form.id} className="relative overflow-hidden">
@@ -275,7 +298,7 @@ export function FormsManager() {
                   <div className="flex justify-between text-xs sm:text-sm mb-1">
                     <span className="text-muted-foreground">Лиды</span>
                     <span className={isLimitReached ? "text-destructive font-medium" : ""}>
-                      {form.lead_count} / {form.lead_limit}
+                      {actualLeads} / {form.lead_limit}
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">

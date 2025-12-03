@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Share2, Download } from "lucide-react"
 import { jsPDF } from "jspdf"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { marked } from "marked"
 
 interface SuccessStepProps {
   result: { type: string; text: string; imageUrl?: string }
@@ -96,6 +98,17 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         const margin = 20
         const maxWidth = pageWidth - margin * 2
         
+        // Настраиваем marked для правильной обработки списков
+        marked.setOptions({
+          breaks: true,
+          gfm: true,
+          headerIds: false,
+          mangle: false,
+        })
+        
+        // Конвертируем markdown в HTML для PDF
+        const htmlContent = marked(result.text)
+        
         // Создаем временный контейнер для рендеринга текста
         const tempContainer = document.createElement("div")
         tempContainer.style.position = "absolute"
@@ -107,13 +120,91 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         tempContainer.style.color = "#000000"
         tempContainer.style.backgroundColor = "#ffffff"
         tempContainer.style.lineHeight = "1.5"
-        tempContainer.style.whiteSpace = "pre-wrap"
-        tempContainer.style.wordWrap = "break-word"
         
-        // Добавляем заголовок и текст
+        // Добавляем заголовок и конвертированный markdown
         tempContainer.innerHTML = `
           <h1 style="font-size: 16px; font-weight: bold; margin: 10px 0 10px 0; padding-top: 10px;">Ваши рекомендации</h1>
-          <div style="white-space: pre-wrap; word-wrap: break-word;">${result.text.replace(/\n/g, "<br>")}</div>
+          <div style="word-wrap: break-word;">
+            <style>
+              h1 {
+                font-size: 16px;
+                font-weight: bold;
+                margin: 10px 0;
+                padding-top: 10px;
+              }
+              h2, h3, h4 {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                white-space: normal;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                line-height: 1.4;
+                margin-top: 12px;
+                margin-bottom: 8px;
+                font-weight: bold;
+              }
+              h2 {
+                font-size: 14px;
+              }
+              h3 {
+                font-size: 13px;
+              }
+              h4 {
+                font-size: 12px;
+              }
+              h2 strong, h3 strong, h4 strong {
+                display: inline;
+                font-weight: bold;
+              }
+              p {
+                white-space: normal;
+                word-wrap: break-word;
+                margin: 8px 0;
+                line-height: 1.5;
+              }
+              ul, ol {
+                margin: 8px 0;
+                padding-left: 24px;
+                line-height: 1.5;
+              }
+              ul {
+                list-style-type: disc;
+                list-style-position: outside;
+              }
+              ol {
+                list-style-type: decimal;
+                list-style-position: outside;
+              }
+              li {
+                margin: 4px 0;
+                padding-left: 4px;
+                word-wrap: break-word;
+                white-space: normal;
+                display: list-item;
+              }
+              strong {
+                font-weight: bold;
+              }
+              em {
+                font-style: italic;
+              }
+              code {
+                background-color: #f5f5f5;
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-family: monospace;
+                font-size: 10px;
+              }
+              blockquote {
+                border-left: 3px solid #59191f;
+                padding-left: 12px;
+                margin: 8px 0;
+                font-style: italic;
+                color: #666;
+              }
+            </style>
+            ${htmlContent}
+          </div>
         `
         
         document.body.appendChild(tempContainer)
@@ -181,8 +272,49 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
             ctx.fillStyle = "#000000"
             ctx.textBaseline = "top"
             
+            // Конвертируем markdown в простой текст для canvas
+            // Используем те же настройки marked
+            const htmlContent = marked(result.text)
+            const tempDiv = document.createElement("div")
+            tempDiv.innerHTML = htmlContent
+            
+            // Извлекаем текст, сохраняя структуру списков
+            let plainText = ""
+            const processNode = (node: Node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as Element
+                const tagName = el.tagName.toLowerCase()
+                
+                if (tagName === "ol" || tagName === "ul") {
+                  const items = el.querySelectorAll("li")
+                  items.forEach((item, index) => {
+                    const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
+                    plainText += prefix + (item.textContent || "") + "\n"
+                  })
+                } else if (tagName === "li") {
+                  // Пропускаем, так как обрабатываем в родительском ol/ul
+                  return
+                } else {
+                  Array.from(node.childNodes).forEach(processNode)
+                }
+              } else if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent || ""
+                if (text.trim()) {
+                  plainText += text
+                }
+              } else {
+                Array.from(node.childNodes).forEach(processNode)
+              }
+            }
+            
+            processNode(tempDiv)
+            
+            if (!plainText) {
+              plainText = tempDiv.textContent || tempDiv.innerText || result.text
+            }
+            
             // Рассчитываем размеры
-            const textLines = result.text.split("\n")
+            const textLines = plainText.split("\n")
             const maxWidthPx = maxWidth * 3.779527559
             let totalHeight = 50 // место для заголовка с отступом сверху
             
@@ -280,9 +412,49 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
             pdf.setFont("helvetica", "bold")
             pdf.text("Ваши рекомендации", margin, margin + 5)
             
+            // Конвертируем markdown в простой текст для PDF с сохранением структуры списков
+            const htmlContent = marked(result.text)
+            const tempDiv = document.createElement("div")
+            tempDiv.innerHTML = htmlContent
+            
+            // Извлекаем текст, сохраняя структуру списков
+            let plainText = ""
+            const processNode = (node: Node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as Element
+                const tagName = el.tagName.toLowerCase()
+                
+                if (tagName === "ol" || tagName === "ul") {
+                  const items = el.querySelectorAll("li")
+                  items.forEach((item, index) => {
+                    const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
+                    plainText += prefix + (item.textContent || "") + "\n"
+                  })
+                } else if (tagName === "li") {
+                  // Пропускаем, так как обрабатываем в родительском ol/ul
+                  return
+                } else {
+                  Array.from(node.childNodes).forEach(processNode)
+                }
+              } else if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent || ""
+                if (text.trim()) {
+                  plainText += text
+                }
+              } else {
+                Array.from(node.childNodes).forEach(processNode)
+              }
+            }
+            
+            processNode(tempDiv)
+            
+            if (!plainText) {
+              plainText = tempDiv.textContent || tempDiv.innerText || result.text
+            }
+            
             pdf.setFontSize(11)
             pdf.setFont("helvetica", "normal")
-            const lines = pdf.splitTextToSize(result.text, maxWidth)
+            const lines = pdf.splitTextToSize(plainText, maxWidth)
             pdf.text(lines, margin, margin + 20)
           }
           
@@ -317,30 +489,30 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
       </div>
 
       <div className="w-full bg-card rounded-lg border border-border p-4 sm:p-6">
-        <div className="prose prose-invert max-w-none text-left">
+        <div className="max-w-none text-left">
           {result.type === "image" && result.imageUrl ? (
             <img src={result.imageUrl || "/placeholder.svg"} alt="Generated result" className="w-full rounded" />
           ) : (
-            <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{result.text}</div>
+            <MarkdownRenderer content={result.text} className="text-xs sm:text-sm" />
           )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-md items-stretch sm:items-center">
-        <Button onClick={handleShare} variant="outline" className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base flex items-center justify-center">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full items-stretch">
+        <Button onClick={handleShare} variant="outline" className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base">
           <Share2 className="mr-2 h-4 w-4" />
           {copied ? "Скопировано!" : "Поделиться"}
         </Button>
         <Button
           onClick={handleDownload}
           variant="outline"
-          className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base flex items-center justify-center"
+          className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base"
           disabled={downloading}
         >
           <Download className="mr-2 h-4 w-4" />
           {downloading ? "Загрузка..." : "Скачать"}
         </Button>
-        <Button onClick={onRestart} className="flex-1 h-11 sm:h-12 text-sm sm:text-base flex items-center justify-center">
+        <Button onClick={onRestart} className="flex-1 h-11 sm:h-12 text-sm sm:text-base">
           Проверить другой URL
         </Button>
       </div>

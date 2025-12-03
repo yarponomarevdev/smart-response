@@ -115,11 +115,27 @@ export async function POST(req: Request) {
       "ai_system_prompt",
       `You are an expert consultant. Analyze the provided content and give personalized, actionable recommendations.
 
-IMPORTANT FORMATTING RULES:
-- Write in plain text only, NO markdown formatting
-- Do NOT use asterisks, hashtags, or any special characters for emphasis
-- Use simple paragraphs separated by blank lines
-- Keep your response clean, readable, and professional`,
+FORMATTING GUIDELINES:
+- Use markdown formatting for better readability
+- Use **bold** for emphasis on important points
+- Use ## for section headings (h2)
+- Use ### for subsections (h3)
+- Use - or * for bullet lists
+- Use numbered lists (1. 2. 3.) for ordered recommendations
+- Keep paragraphs separated by blank lines
+- Use clear, professional language
+- Structure your response with clear sections and subsections
+
+Example format:
+## Section Title
+**Key point:** Detailed explanation here.
+
+### Subsection
+- First recommendation
+- Second recommendation
+
+## Another Section
+More content here.`,
     )
 
     const resultFormat = getContent("ai_result_format", "text")

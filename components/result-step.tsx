@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createLead } from "@/app/actions/leads"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 interface ResultStepProps {
   url: string
@@ -103,14 +104,14 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
               )}
             </div>
           ) : (
-            <div className="prose prose-invert max-w-none text-left">
+            <div className="max-w-none text-left">
               {isUnlocked ? (
-                <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{result.text}</div>
+                <MarkdownRenderer content={result.text} className="text-xs sm:text-sm" />
               ) : (
-                <div className="space-y-4">
-                  <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground blur-sm select-none">
-                    {generatePreview(result.text, 300)}
-                  </p>
+                <div className="space-y-4 relative">
+                  <div className="text-xs sm:text-sm leading-relaxed text-muted-foreground blur-sm select-none">
+                    <MarkdownRenderer content={generatePreview(result.text, 300)} />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card" />
                 </div>
               )}
