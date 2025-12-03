@@ -111,26 +111,44 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
 
   const handleExport = () => {
     const dataToExport = filteredLeads
+    
+    // Экранирование значений для CSV
+    const escapeCsvValue = (value: string): string => {
+      if (value === null || value === undefined) return ""
+      const str = String(value)
+      // Если содержит запятую, кавычки или перенос строки, оборачиваем в кавычки и удваиваем кавычки внутри
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+    
     const csv = [
       ["URL", "Email", "Статус", "Дата", "Результат", "Форма"],
       ...dataToExport.map((lead) => [
-        lead.url,
-        lead.email || "",
-        lead.status,
-        new Date(lead.created_at).toLocaleString("ru-RU"),
-        lead.result_text || lead.result_image_url || "",
-        forms.find(f => f.id === lead.form_id)?.name || "",
+        escapeCsvValue(lead.url),
+        escapeCsvValue(lead.email || ""),
+        escapeCsvValue(lead.status),
+        escapeCsvValue(new Date(lead.created_at).toLocaleString("ru-RU")),
+        escapeCsvValue(lead.result_text || lead.result_image_url || ""),
+        escapeCsvValue(forms.find(f => f.id === lead.form_id)?.name || ""),
       ]),
     ]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .map((row) => row.join(","))
       .join("\n")
 
-    const blob = new Blob([csv], { type: "text/csv" })
+    // Добавляем BOM для правильного отображения кириллицы в Excel
+    const BOM = "\uFEFF"
+    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = `leads-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
+    // Очищаем URL после использования
+    setTimeout(() => window.URL.revokeObjectURL(url), 100)
   }
 
   // Фильтрация лидов по выбранной форме
