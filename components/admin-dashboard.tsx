@@ -75,7 +75,7 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminHeader />
+      <AdminHeader isSuperAdmin={isSuperAdmin} />
       <div className="container mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{getPanelTitle()}</h1>
