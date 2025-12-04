@@ -14,6 +14,7 @@ import { ContentEditor } from "./content-editor"
 import { AdminHeader } from "./admin-header"
 import { FormsManager } from "./forms-manager"
 import { UsersTable } from "./users-table"
+import { SystemSettingsEditor } from "./system-settings-editor"
 import { createClient } from "@/lib/supabase/client"
 
 // ID главной формы для суперадмина
@@ -91,6 +92,7 @@ export function AdminDashboard() {
                 <TabsTrigger value="form-content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
                 <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
                 <TabsTrigger value="users" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Пользователи</TabsTrigger>
+                <TabsTrigger value="system" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Система</TabsTrigger>
               </>
             ) : (
               <>
@@ -117,6 +119,9 @@ export function AdminDashboard() {
               </TabsContent>
               <TabsContent value="users" className="space-y-4">
                 <UsersTable />
+              </TabsContent>
+              <TabsContent value="system" className="space-y-4">
+                <SystemSettingsEditor />
               </TabsContent>
             </>
           ) : (

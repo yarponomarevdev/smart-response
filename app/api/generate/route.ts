@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { getGlobalSystemPrompt } from "@/app/actions/system-settings"
 
 export const maxDuration = 60
 
@@ -111,7 +112,11 @@ export async function POST(req: Request) {
       return contentData?.find((c) => c.key === key)?.value || defaultValue
     }
 
-    const systemPrompt = getContent(
+    // Получаем глобальный системный промпт
+    const globalPrompt = await getGlobalSystemPrompt()
+
+    // Получаем промпт формы
+    const formPrompt = getContent(
       "ai_system_prompt",
       `You are an expert consultant. Analyze the provided content and give personalized, actionable recommendations.
 
@@ -137,6 +142,11 @@ Example format:
 ## Another Section
 More content here.`,
     )
+
+    // Комбинируем глобальный и формовый промпты
+    const systemPrompt = globalPrompt 
+      ? `${globalPrompt}\n\n---\n\n${formPrompt}`
+      : formPrompt
 
     const resultFormat = getContent("ai_result_format", "text")
 
