@@ -52,7 +52,7 @@
     "jspdf": "latest",
     "lucide-react": "^0.454.0",
     "marked": "^17.0.1",
-    "next": "16.0.3",
+    "next": "^16.0.7",
     "next-themes": "latest",
     "openai": "6.9.1",
     "react": "19.2.0",
@@ -76,6 +76,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.9.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "typescript": "^5"
