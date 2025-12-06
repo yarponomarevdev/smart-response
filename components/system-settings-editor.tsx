@@ -138,17 +138,6 @@ export function SystemSettingsEditor() {
         )}
 
         <div className="space-y-4 sm:space-y-6">
-          {/* Информационное сообщение */}
-          <Alert className="border-blue-500/50 bg-blue-500/10">
-            <Info className="h-4 w-4 text-blue-500" />
-            <AlertTitle className="text-blue-500">Как это работает</AlertTitle>
-            <AlertDescription className="text-blue-500/80">
-              Глобальный системный промпт добавляется как <strong>префикс</strong> к индивидуальным 
-              промптам каждой формы. Это позволяет задать общие правила и форматирование для всех 
-              форм, сохраняя при этом возможность кастомизации каждой формы.
-            </AlertDescription>
-          </Alert>
-
           {/* Глобальный системный промпт */}
           <div className="p-3 sm:p-4 border border-accent/20 rounded-lg space-y-3 sm:space-y-4 bg-accent/5">
             <h3 className="text-base sm:text-lg font-semibold text-accent">
@@ -171,25 +160,6 @@ export function SystemSettingsEditor() {
                 Этот текст будет добавлен в начало системного промпта каждой формы при генерации результатов.
                 Используйте его для задания общего тона, языка и формата ответов.
               </p>
-            </div>
-          </div>
-
-          {/* Пример итогового промпта */}
-          <div className="p-3 sm:p-4 border border-muted rounded-lg space-y-3 bg-muted/20">
-            <h3 className="text-base sm:text-lg font-semibold text-muted-foreground">
-              Пример итогового промпта (текст)
-            </h3>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                При генерации текстового результата итоговый промпт будет выглядеть так:
-              </p>
-              <div className="bg-background p-3 rounded border text-xs font-mono whitespace-pre-wrap break-words">
-                <span className="text-accent">{globalPrompt || "(глобальный промпт не задан)"}</span>
-                <br /><br />
-                <span className="text-muted-foreground">---</span>
-                <br /><br />
-                <span className="text-foreground/70">(индивидуальный промпт формы)</span>
-              </div>
             </div>
           </div>
 

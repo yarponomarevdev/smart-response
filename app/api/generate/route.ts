@@ -119,17 +119,24 @@ export async function POST(req: Request) {
     const formPrompt = getContent("ai_system_prompt", "")
 
     // Комбинируем глобальный и формовый промпты
-    // Если есть глобальный промпт, добавляем его как префикс
-    let systemPrompt: string
+    // Если нет ни одного — возвращаем ошибку, потому что промпт должен быть задан в админке
+    let systemPrompt: string | null = null
     if (globalPrompt && formPrompt) {
       systemPrompt = `${globalPrompt}\n\n---\n\n${formPrompt}`
     } else if (globalPrompt) {
       systemPrompt = globalPrompt
     } else if (formPrompt) {
       systemPrompt = formPrompt
-    } else {
-      // Минимальный fallback если ничего не задано
-      systemPrompt = "You are an expert consultant. Analyze the provided content and provide helpful recommendations."
+    }
+
+    if (!systemPrompt) {
+      return Response.json(
+        {
+          error: "Промпт не настроен",
+          details: "Установите системный промпт в админ-панели (глобальный или для формы)",
+        },
+        { status: 400, headers: corsHeaders },
+      )
     }
 
     const resultFormat = getContent("ai_result_format", "text")
@@ -137,33 +144,31 @@ export async function POST(req: Request) {
     const urlContent = await fetchUrlContent(url)
 
     if (resultFormat === "image") {
-      // Получаем отдельный промпт для генерации изображений (если задан в форме)
-      const imagePromptTemplate = getContent(
-        "ai_image_prompt",
-        `Create a professional, high-quality interior design visualization. 
-Style: Modern, elegant, photorealistic.
-The image should be suitable for a professional design presentation.
-Based on the following preferences: {context}`
-      )
+      // Получаем промпт для генерации изображений (обязателен)
+      const imagePromptTemplate = getContent("ai_image_prompt", "")
 
-      // Получаем глобальный системный промпт для изображений
-      const globalImagePrompt = await getGlobalImagePrompt()
-      
-      // Дефолтный промпт если глобальный не задан
-      const defaultImageSystemPrompt = `You are an expert at creating DALL-E image prompts for interior design visualization.
-Your task is to create a SAFE, APPROPRIATE prompt for DALL-E based on user preferences.
+      if (!imagePromptTemplate) {
+        return Response.json(
+          {
+            error: "Промпт для изображений не настроен",
+            details: "Установите ai_image_prompt для формы в админ-панели",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
 
-CRITICAL RULES:
-- Output ONLY the prompt text, nothing else
-- The prompt must be in English
-- Keep it under 900 characters
-- Focus on: room type, style, colors, furniture, lighting, atmosphere
-- NEVER include: people, faces, text, brand names, copyrighted content
-- Make it professional and suitable for interior design presentation
-- If user content seems inappropriate, create a generic modern interior prompt instead`
+      // Получаем глобальный системный промпт для изображений (обязателен)
+      const imageSystemPrompt = await getGlobalImagePrompt()
 
-      // Используем глобальный промпт если задан, иначе дефолтный
-      const imageSystemPrompt = globalImagePrompt || defaultImageSystemPrompt
+      if (!imageSystemPrompt) {
+        return Response.json(
+          {
+            error: "Глобальный промпт для изображений не настроен",
+            details: "Установите global_image_prompt в админ-панели",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
 
       // Сначала используем GPT для создания безопасного промпта для DALL-E
       // на основе контента URL и шаблона
@@ -199,16 +204,43 @@ Create a DALL-E prompt for interior design visualization:`,
         })
 
         if (!promptResponse.ok) {
-          console.error("[v0] GPT prompt generation failed, using default prompt")
-          dallePrompt = "A beautiful modern living room interior with natural lighting, elegant furniture, neutral color palette, professional interior design visualization, photorealistic, 8k quality"
+          let promptErrorData
+          try {
+            promptErrorData = await promptResponse.json()
+          } catch {
+            promptErrorData = { error: { message: `HTTP ${promptResponse.status}: ${promptResponse.statusText}` } }
+          }
+          console.error("[v0] GPT prompt generation failed:", promptErrorData)
+          return Response.json(
+            {
+              error: "Не удалось сгенерировать промпт для изображения",
+              details: promptErrorData.error?.message || "Проверьте настройки промптов в админ-панели",
+            },
+            { status: promptResponse.status, headers: corsHeaders },
+          )
         } else {
           const promptData = await promptResponse.json()
-          dallePrompt = promptData.choices[0]?.message?.content?.trim() || 
-            "A beautiful modern interior design visualization, professional, photorealistic, elegant furniture and decor"
+          dallePrompt = promptData.choices[0]?.message?.content?.trim() || ""
+          if (!dallePrompt) {
+            console.error("[v0] Empty DALL-E prompt from GPT:", promptData)
+            return Response.json(
+              {
+                error: "Пустой промпт для изображения",
+                details: "GPT вернул пустой промпт. Проверьте настройки промптов.",
+              },
+              { status: 500, headers: corsHeaders },
+            )
+          }
         }
       } catch (promptError) {
         console.error("[v0] Error generating DALL-E prompt:", promptError)
-        dallePrompt = "A beautiful modern living room interior with natural lighting, elegant furniture, neutral color palette, professional interior design visualization, photorealistic"
+        return Response.json(
+          {
+            error: "Ошибка генерации промпта для изображения",
+            details: promptError instanceof Error ? promptError.message : "Неизвестная ошибка",
+          },
+          { status: 500, headers: corsHeaders },
+        )
       }
 
       console.log("[v0] Generated DALL-E prompt:", dallePrompt.slice(0, 100) + "...")
@@ -236,46 +268,11 @@ Create a DALL-E prompt for interior design visualization:`,
           errorData = { error: { message: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` } }
         }
         console.error("[v0] DALL-E API error:", errorData)
-        
-        // Если DALL-E отклонил запрос, пробуем с дефолтным безопасным промптом
-        if (imageResponse.status === 400) {
-          console.log("[v0] Retrying with safe default prompt...")
-          const retryResponse = await fetch("https://api.openai.com/v1/images/generations", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: "dall-e-3",
-              prompt: "A beautiful modern living room interior with natural lighting, elegant furniture, soft neutral color palette, professional interior design visualization, photorealistic rendering, high quality architectural photography style",
-              n: 1,
-              size: "1024x1024",
-              quality: "standard",
-            }),
-          })
 
-          if (retryResponse.ok) {
-            const retryData = await retryResponse.json()
-            const retryImageUrl = retryData.data[0]?.url || ""
-            return Response.json(
-              {
-                success: true,
-                result: {
-                  type: "image",
-                  imageUrl: retryImageUrl,
-                  text: `Создано на основе ваших предпочтений`,
-                },
-              },
-              { headers: corsHeaders },
-            )
-          }
-        }
-        
         return Response.json(
           {
             error: "Ошибка генерации изображения",
-            details: "Не удалось сгенерировать изображение. Попробуйте ещё раз или измените ссылку.",
+            details: errorData.error?.message || "Не удалось сгенерировать изображение. Проверьте промпты в админке.",
           },
           { status: imageResponse.status, headers: corsHeaders },
         )
@@ -283,6 +280,17 @@ Create a DALL-E prompt for interior design visualization:`,
 
       const imageData = await imageResponse.json()
       const imageUrl = imageData.data[0]?.url || ""
+
+      if (!imageUrl) {
+        console.error("[v0] Empty image URL from DALL-E:", imageData)
+        return Response.json(
+          {
+            error: "Пустой ответ от DALL-E",
+            details: "DALL-E не вернул ссылку на изображение. Попробуйте другие настройки промптов.",
+          },
+          { status: 500, headers: corsHeaders },
+        )
+      }
 
       return Response.json(
         {
