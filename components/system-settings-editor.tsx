@@ -1,7 +1,7 @@
 /**
  * SystemSettingsEditor - Редактор системных настроек
  * Доступен только для суперадминов
- * Позволяет настраивать глобальный системный промпт для всех форм
+ * Позволяет настраивать глобальные промпты: для текста и для изображений
  */
 "use client"
 
@@ -12,12 +12,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Save, Settings, AlertCircle, CheckCircle2, Info } from "lucide-react"
+import { Save, Settings, AlertCircle, CheckCircle2 } from "lucide-react"
 import { getSystemSetting, updateSystemSetting } from "@/app/actions/system-settings"
 
 export function SystemSettingsEditor() {
   const [userId, setUserId] = useState<string>("")
-  const [globalPrompt, setGlobalPrompt] = useState<string>("")
+  const [globalTextPrompt, setGlobalTextPrompt] = useState<string>("")
   const [globalImagePrompt, setGlobalImagePrompt] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -37,19 +37,22 @@ export function SystemSettingsEditor() {
 
     setUserId(user.id)
 
-    // Загружаем глобальный системный промпт
-    const { value, error } = await getSystemSetting("global_system_prompt")
+    // Загружаем глобальный промпт для текста
+    const { value: textValue, error: textError } = await getSystemSetting("global_text_prompt")
     
-    if (error) {
-      setErrorMessage(error)
+    if (textError) {
+      setErrorMessage(textError)
       setSaveStatus("error")
-    } else if (value) {
-      setGlobalPrompt(value)
+    } else if (textValue) {
+      setGlobalTextPrompt(textValue)
     }
 
     // Загружаем глобальный промпт для изображений
-    const { value: imageValue } = await getSystemSetting("global_image_prompt")
-    if (imageValue) {
+    const { value: imageValue, error: imageError } = await getSystemSetting("global_image_prompt")
+    if (imageError) {
+      setErrorMessage(imageError)
+      setSaveStatus("error")
+    } else if (imageValue) {
       setGlobalImagePrompt(imageValue)
     }
 
@@ -77,7 +80,7 @@ export function SystemSettingsEditor() {
 
     // Сохраняем оба промпта
     const [textResult, imageResult] = await Promise.all([
-      updateSystemSetting(userId, "global_system_prompt", globalPrompt),
+      updateSystemSetting(userId, "global_text_prompt", globalTextPrompt),
       updateSystemSetting(userId, "global_image_prompt", globalImagePrompt),
     ])
 
@@ -138,27 +141,27 @@ export function SystemSettingsEditor() {
         )}
 
         <div className="space-y-4 sm:space-y-6">
-          {/* Глобальный системный промпт */}
+          {/* Глобальный промпт для текста */}
           <div className="p-3 sm:p-4 border border-accent/20 rounded-lg space-y-3 sm:space-y-4 bg-accent/5">
             <h3 className="text-base sm:text-lg font-semibold text-accent">
-              Глобальный системный промпт
+              Системный промпт для текста
             </h3>
 
             <div className="space-y-2">
-              <Label htmlFor="global_prompt" className="text-sm">
-                Базовые инструкции для AI (добавляются ко всем формам)
+              <Label htmlFor="global_text_prompt" className="text-sm">
+                Инструкции AI для генерации текстовых результатов
               </Label>
               <Textarea
-                id="global_prompt"
-                value={globalPrompt}
-                onChange={(e) => setGlobalPrompt(e.target.value)}
-                placeholder="Введите глобальный системный промпт..."
+                id="global_text_prompt"
+                value={globalTextPrompt}
+                onChange={(e) => setGlobalTextPrompt(e.target.value)}
+                placeholder="Введите системный промпт для текстового формата..."
                 rows={12}
                 className="font-mono text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Этот текст будет добавлен в начало системного промпта каждой формы при генерации результатов.
-                Используйте его для задания общего тона, языка и формата ответов.
+                Применяется к формам с форматом результата «Текст». Индивидуальный промпт формы 
+                (если задан) добавляется к этому глобальному промпту.
               </p>
             </div>
           </div>
@@ -171,7 +174,7 @@ export function SystemSettingsEditor() {
 
             <div className="space-y-2">
               <Label htmlFor="global_image_prompt" className="text-sm">
-                Инструкции для генерации промптов DALL-E
+                Инструкции AI для генерации промптов DALL-E
               </Label>
               <Textarea
                 id="global_image_prompt"
@@ -182,8 +185,8 @@ export function SystemSettingsEditor() {
                 className="font-mono text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Этот промпт используется для генерации безопасных промптов DALL-E на основе контента пользователя.
-                GPT сначала создаёт промпт для DALL-E, следуя этим инструкциям.
+                Применяется к формам с форматом результата «Изображение». GPT использует этот промпт 
+                для создания безопасного промпта DALL-E. Индивидуальный промпт формы добавляется сюда.
               </p>
             </div>
           </div>

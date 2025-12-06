@@ -203,7 +203,7 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
             <h3 className="text-base sm:text-lg font-semibold text-accent">Настройки AI</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="system_prompt" className="text-sm">Системный промпт формы (OpenAI)</Label>
+              <Label htmlFor="system_prompt" className="text-sm">Индивидуальный промпт формы</Label>
               <Textarea
                 id="system_prompt"
                 value={systemPrompt}
@@ -213,8 +213,8 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
                 className="font-mono text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Индивидуальный промпт для этой формы. Глобальный системный промпт (если задан суперадмином) 
-                будет автоматически добавлен как префикс к этому промпту при генерации результатов.
+                Индивидуальный промпт для этой формы (необязательно). Добавляется к глобальному промпту
+                для выбранного формата результата (текст или изображение).
               </p>
             </div>
 

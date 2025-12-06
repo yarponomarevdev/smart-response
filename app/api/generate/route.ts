@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getGlobalSystemPrompt, getGlobalImagePrompt } from "@/app/actions/system-settings"
+import { getGlobalTextPrompt, getGlobalImagePrompt } from "@/app/actions/system-settings"
 
 export const maxDuration = 60
 
@@ -112,66 +112,39 @@ export async function POST(req: Request) {
       return contentData?.find((c) => c.key === key)?.value || defaultValue
     }
 
-    // Получаем глобальный системный промпт
-    const globalPrompt = await getGlobalSystemPrompt()
-
-    // Получаем промпт формы (может быть пустым)
-    const formPrompt = getContent("ai_system_prompt", "")
-
-    // Комбинируем глобальный и формовый промпты
-    // Если нет ни одного — возвращаем ошибку, потому что промпт должен быть задан в админке
-    let systemPrompt: string | null = null
-    if (globalPrompt && formPrompt) {
-      systemPrompt = `${globalPrompt}\n\n---\n\n${formPrompt}`
-    } else if (globalPrompt) {
-      systemPrompt = globalPrompt
-    } else if (formPrompt) {
-      systemPrompt = formPrompt
-    }
-
-    if (!systemPrompt) {
-      return Response.json(
-        {
-          error: "Промпт не настроен",
-          details: "Установите системный промпт в админ-панели (глобальный или для формы)",
-        },
-        { status: 400, headers: corsHeaders },
-      )
-    }
-
+    // Определяем формат результата
     const resultFormat = getContent("ai_result_format", "text")
+
+    // Получаем индивидуальный промпт формы (может быть пустым)
+    const formPrompt = getContent("ai_system_prompt", "")
 
     const urlContent = await fetchUrlContent(url)
 
     if (resultFormat === "image") {
-      // Получаем промпт для генерации изображений (обязателен)
-      const imagePromptTemplate = getContent("ai_image_prompt", "")
+      // Получаем глобальный промпт для изображений
+      const globalImagePrompt = await getGlobalImagePrompt()
 
-      if (!imagePromptTemplate) {
-        return Response.json(
-          {
-            error: "Промпт для изображений не настроен",
-            details: "Установите ai_image_prompt для формы в админ-панели",
-          },
-          { status: 400, headers: corsHeaders },
-        )
+      // Комбинируем глобальный и индивидуальный промпты
+      let imageSystemPrompt: string | null = null
+      if (globalImagePrompt && formPrompt) {
+        imageSystemPrompt = `${globalImagePrompt}\n\n---\n\n${formPrompt}`
+      } else if (globalImagePrompt) {
+        imageSystemPrompt = globalImagePrompt
+      } else if (formPrompt) {
+        imageSystemPrompt = formPrompt
       }
-
-      // Получаем глобальный системный промпт для изображений (обязателен)
-      const imageSystemPrompt = await getGlobalImagePrompt()
 
       if (!imageSystemPrompt) {
         return Response.json(
           {
-            error: "Глобальный промпт для изображений не настроен",
-            details: "Установите global_image_prompt в админ-панели",
+            error: "Промпт для изображений не настроен",
+            details: "Установите global_image_prompt в системных настройках или ai_system_prompt для формы",
           },
           { status: 400, headers: corsHeaders },
         )
       }
 
-      // Сначала используем GPT для создания безопасного промпта для DALL-E
-      // на основе контента URL и шаблона
+      // Используем GPT для создания промпта для DALL-E на основе контента URL
       let dallePrompt: string
       
       try {
@@ -190,12 +163,10 @@ export async function POST(req: Request) {
               },
               {
                 role: "user",
-                content: `User template: ${imagePromptTemplate}
-
-User preferences from URL content:
+                content: `User preferences from URL content:
 ${urlContent.slice(0, 1500)}
 
-Create a DALL-E prompt for interior design visualization:`,
+Create an image prompt based on this content:`,
               },
             ],
             max_tokens: 300,
@@ -304,6 +275,29 @@ Create a DALL-E prompt for interior design visualization:`,
         { headers: corsHeaders },
       )
     } else {
+      // Получаем глобальный промпт для текста
+      const globalTextPrompt = await getGlobalTextPrompt()
+
+      // Комбинируем глобальный и индивидуальный промпты
+      let textSystemPrompt: string | null = null
+      if (globalTextPrompt && formPrompt) {
+        textSystemPrompt = `${globalTextPrompt}\n\n---\n\n${formPrompt}`
+      } else if (globalTextPrompt) {
+        textSystemPrompt = globalTextPrompt
+      } else if (formPrompt) {
+        textSystemPrompt = formPrompt
+      }
+
+      if (!textSystemPrompt) {
+        return Response.json(
+          {
+            error: "Промпт для текста не настроен",
+            details: "Установите global_text_prompt в системных настройках или ai_system_prompt для формы",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
+
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -315,7 +309,7 @@ Create a DALL-E prompt for interior design visualization:`,
           messages: [
             {
               role: "system",
-              content: systemPrompt,
+              content: textSystemPrompt,
             },
             {
               role: "user",

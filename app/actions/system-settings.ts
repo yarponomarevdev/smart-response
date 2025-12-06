@@ -2,7 +2,8 @@
  * Server Actions для работы с системными настройками
  * - getSystemSetting: получение значения настройки
  * - updateSystemSetting: обновление настройки (только для superadmin)
- * - getGlobalSystemPrompt: получение глобального системного промпта
+ * - getGlobalTextPrompt: получение глобального промпта для текстового формата
+ * - getGlobalImagePrompt: получение глобального промпта для изображений (DALL-E)
  */
 "use server"
 
@@ -45,17 +46,17 @@ export async function getSystemSetting(key: string): Promise<{ value: string | n
 }
 
 /**
- * Получает глобальный системный промпт
- * Используется в API /api/generate
+ * Получает глобальный промпт для текстового формата
+ * Используется в API /api/generate когда ai_result_format = "text"
  */
-export async function getGlobalSystemPrompt(): Promise<string | null> {
-  const { value } = await getSystemSetting("global_system_prompt")
+export async function getGlobalTextPrompt(): Promise<string | null> {
+  const { value } = await getSystemSetting("global_text_prompt")
   return value
 }
 
 /**
  * Получает глобальный промпт для генерации изображений (DALL-E)
- * Используется в API /api/generate для режима image
+ * Используется в API /api/generate когда ai_result_format = "image"
  */
 export async function getGlobalImagePrompt(): Promise<string | null> {
   const { value } = await getSystemSetting("global_image_prompt")
