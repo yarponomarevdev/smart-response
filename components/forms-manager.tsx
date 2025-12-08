@@ -292,11 +292,6 @@ export function FormsManager() {
       {/* Список форм */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {forms.map((form) => {
-          // Используем реальное количество лидов для отображения статистики
-          const actualLeads = form.actual_lead_count ?? form.lead_count
-          const progressPercent = (actualLeads / form.lead_limit) * 100
-          const isLimitReached = actualLeads >= form.lead_limit
-
           return (
             <Card key={form.id} className="relative overflow-hidden">
               <CardHeader className="pb-2">
@@ -313,28 +308,6 @@ export function FormsManager() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
-                {/* Прогресс лидов */}
-                <div>
-                  <div className="flex justify-between text-xs sm:text-sm mb-1">
-                    <span className="text-muted-foreground">Лиды</span>
-                    <span className={isLimitReached ? "text-destructive font-medium" : ""}>
-                      {actualLeads} / {form.lead_limit}
-                    </span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${isLimitReached ? "bg-destructive" : "bg-primary"}`}
-                      style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {isLimitReached && (
-                  <p className="text-xs text-destructive">
-                    Лимит исчерпан
-                  </p>
-                )}
-
                 {/* Действия */}
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
