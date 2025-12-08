@@ -159,14 +159,21 @@ export async function updateUserQuotas(
   }
 
   // Обновляем квоты пользователя
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("users")
     .update(updateData)
     .eq("id", params.userId)
+    .select()
 
   if (error) {
     console.error("Error updating user quotas:", error)
     return { error: "Ошибка обновления квот: " + error.message }
+  }
+
+  // Проверяем, что обновление действительно произошло
+  if (!data || data.length === 0) {
+    console.error("No rows updated for user:", params.userId)
+    return { error: "Пользователь не найден или обновление не выполнено" }
   }
 
   return { success: true }

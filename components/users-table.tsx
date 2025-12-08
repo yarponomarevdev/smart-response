@@ -70,6 +70,12 @@ export function UsersTable() {
           setUsers(refreshResult.users)
         }
         console.error("Ошибка обновления:", result.error)
+      } else {
+        // Перезагружаем данные после успешного обновления для синхронизации
+        const refreshResult = await getAllUsers()
+        if (!("error" in refreshResult)) {
+          setUsers(refreshResult.users)
+        }
       }
     } catch (err) {
       console.error("Ошибка обновления квот:", err)
