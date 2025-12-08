@@ -5,7 +5,6 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
-import { isFormOwner } from "@/app/actions/forms"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
@@ -84,7 +83,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
     const { data: forms, error: formError } = await supabase
       .from("forms")
-      .select("lead_count, lead_limit, is_active")
+      .select("is_active")
       .eq("id", effectiveFormId)
       .limit(1)
 
@@ -102,19 +101,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       return
     }
 
-    // Проверяем, является ли пользователь владельцем формы
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    const ownerCheck = await isFormOwner(user?.id || null, effectiveFormId)
-
-    // Проверяем лимит только если пользователь не является владельцем формы
-    if (!ownerCheck && form.lead_count >= form.lead_limit) {
-      setError("Лимит заявок исчерпан. Для увеличения лимита напишите на hello@vasilkov.digital")
-      setIsLoading(false)
-      return
-    }
-
+    // Лимит проверяется на уровне аккаунта в createLead()
     onSubmit(formattedUrl)
   }
 

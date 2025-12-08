@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LeadFlow } from "@/components/lead-flow"
-import { isFormOwner } from "@/app/actions/forms"
 
 export default async function FormPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -17,28 +16,6 @@ export default async function FormPage({ params }: { params: Promise<{ id: strin
 
   if (error || !form) {
     notFound()
-  }
-
-  // Проверяем, является ли пользователь владельцем формы
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isOwner = await isFormOwner(user?.id || null, id)
-
-  // Проверяем лимит только если пользователь не является владельцем формы
-  if (!isOwner && form.lead_count >= form.lead_limit) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
-          <div className="col-span-12 md:col-start-3 md:col-span-8 lg:col-start-4 lg:col-span-6 text-center space-y-4">
-            <h1 className="text-2xl sm:text-3xl font-bold">Form Limit Reached</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              This form has reached its maximum number of leads ({form.lead_limit}).
-            </p>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (

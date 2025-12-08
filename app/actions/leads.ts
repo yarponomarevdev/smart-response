@@ -289,7 +289,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
       const { canCreate, currentCount, limit } = await checkLeadLimit(form.owner_id)
       if (!canCreate) {
         const limitText = limit !== null ? `${currentCount}/${limit}` : currentCount.toString()
-        return { error: `Достигнут лимит лидов для этой формы (${limitText}). Владельцу необходимо связаться с администратором.` }
+        return { error: `Достигнут лимит лидов для аккаунта (${limitText}). Владельцу необходимо связаться с администратором.` }
       }
     }
   }
