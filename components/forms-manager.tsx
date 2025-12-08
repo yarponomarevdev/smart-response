@@ -46,6 +46,7 @@ export function FormsManager() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [limitInfo, setLimitInfo] = useState<FormLimitInfo | null>(null)
+  const [totalLeads, setTotalLeads] = useState<number>(0)
   
   // Диалоги
   const [showEmbedDialog, setShowEmbedDialog] = useState(false)
@@ -94,6 +95,19 @@ export function FormsManager() {
         )
         
         setForms(formsWithLeadCount)
+
+        // Получаем общее количество лидов для всех форм пользователя
+        const formIds = userForms.map(f => f.id)
+        if (formIds.length > 0) {
+          const { count: totalCount } = await supabase
+            .from("leads")
+            .select("*", { count: "exact", head: true })
+            .in("form_id", formIds)
+          
+          setTotalLeads(totalCount || 0)
+        } else {
+          setTotalLeads(0)
+        }
       }
 
       // Проверяем лимит форм
@@ -150,6 +164,10 @@ export function FormsManager() {
       return
     }
 
+    // Вычитаем количество лидов удаленной формы из общего счетчика
+    const deletedFormLeads = selectedForm.actual_lead_count || 0
+    setTotalLeads(prev => Math.max(0, prev - deletedFormLeads))
+    
     setForms(forms.filter(f => f.id !== selectedForm.id))
     setShowDeleteDialog(false)
     setSelectedForm(null)
@@ -272,6 +290,9 @@ export function FormsManager() {
               ? `Всего форм: ${limitInfo?.currentCount || forms.length}` 
               : `Форм: ${limitInfo?.currentCount || forms.length} / ${limitInfo?.limit}`
             }
+          </p>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Всего ответов: {totalLeads}
           </p>
         </div>
         {(limitInfo?.canCreate || isUnlimited) && (
