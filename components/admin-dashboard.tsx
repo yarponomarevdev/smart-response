@@ -102,42 +102,50 @@ export function AdminDashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">{getPanelDescription()}</p>
         </div>
 
-        <Tabs defaultValue={isSuperAdmin ? "content" : "form"} className="space-y-4 sm:space-y-6">
-          <TabsList className="flex-wrap h-auto p-1">
+        <Tabs defaultValue={isSuperAdmin ? "dashboard" : "dashboard"} className="space-y-4 sm:space-y-6">
+          <TabsList className="flex-wrap h-auto border-b border-border pb-2">
             {isSuperAdmin ? (
               <>
-                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Главная форма</TabsTrigger>
-                <TabsTrigger value="forms" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
-                <TabsTrigger value="form-content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
-                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
-                <TabsTrigger value="users" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Пользователи</TabsTrigger>
-                <TabsTrigger value="system" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Система</TabsTrigger>
+                <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
+                <TabsTrigger value="editor">Редактор</TabsTrigger>
+                <TabsTrigger value="leads">Ответы</TabsTrigger>
+                <TabsTrigger value="integrations" disabled className="relative">
+                  Интеграции
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                </TabsTrigger>
+                <TabsTrigger value="balance" disabled className="relative">
+                  Баланс
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                </TabsTrigger>
+                <TabsTrigger value="system">Настройки</TabsTrigger>
               </>
             ) : (
               <>
-                <TabsTrigger value="form" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
-                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
-                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
+                <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
+                <TabsTrigger value="editor">Редактор</TabsTrigger>
+                <TabsTrigger value="leads">Ответы</TabsTrigger>
+                <TabsTrigger value="integrations" disabled className="relative">
+                  Интеграции
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                </TabsTrigger>
+                <TabsTrigger value="balance" disabled className="relative">
+                  Баланс
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                </TabsTrigger>
               </>
             )}
           </TabsList>
 
           {isSuperAdmin ? (
             <>
-              <TabsContent value="content" className="space-y-4">
-                <ContentEditor formId={MAIN_FORM_ID} />
-              </TabsContent>
-              <TabsContent value="forms" className="space-y-4">
+              <TabsContent value="dashboard" className="space-y-4">
                 <FormsManager />
               </TabsContent>
-              <TabsContent value="form-content" className="space-y-4">
-                <ContentEditor />
+              <TabsContent value="editor" className="space-y-4">
+                <ContentEditor formId={MAIN_FORM_ID} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />
-              </TabsContent>
-              <TabsContent value="users" className="space-y-4">
-                <UsersTable />
               </TabsContent>
               <TabsContent value="system" className="space-y-4">
                 <SystemSettingsEditor />
@@ -145,14 +153,14 @@ export function AdminDashboard() {
             </>
           ) : (
             <>
-              <TabsContent value="form" className="space-y-4">
+              <TabsContent value="dashboard" className="space-y-4">
                 <FormsManager />
+              </TabsContent>
+              <TabsContent value="editor" className="space-y-4">
+                <ContentEditor />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />
-              </TabsContent>
-              <TabsContent value="content" className="space-y-4">
-                <ContentEditor />
               </TabsContent>
             </>
           )}
