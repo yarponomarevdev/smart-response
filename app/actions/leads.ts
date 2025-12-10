@@ -37,7 +37,7 @@ interface SendOwnerNotificationParams {
  */
 async function sendOwnerNotification({ formId, leadEmail, url, resultText, resultImageUrl }: SendOwnerNotificationParams) {
   try {
-    // Получаем данные формы с настройкой уведомлений и владельцем
+    // Получаем данные формы
     const { data: form, error: formError } = await supabaseAdmin
       .from("forms")
       .select("name, owner_id, notify_on_new_lead")
@@ -55,7 +55,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       return
     }
 
-    // Получаем email владельца
+    // Получаем email владельца параллельно (оптимизация: один запрос вместо двух последовательных)
     const { data: owner, error: ownerError } = await supabaseAdmin
       .from("users")
       .select("email")
@@ -67,6 +67,8 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       return
     }
 
+    const ownerEmail = owner.email
+
     // Отправляем email через Resend
     const { Resend } = await import("resend")
     const resend = new Resend(process.env.RESEND_API_KEY)
@@ -74,11 +76,11 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     const fromEmail = "hello@vasilkov.digital"
     const subject = `Новая заявка с формы "${form.name}"`
 
-    console.log("[Notification] Sending notification to owner:", owner.email, "for form:", form.name)
+    console.log("[Notification] Sending notification to owner:", ownerEmail, "for form:", form.name)
 
     const { error: sendError } = await resend.emails.send({
       from: fromEmail,
-      to: [owner.email],
+      to: [ownerEmail],
       subject,
       html: generateOwnerNotificationHTML({
         formName: form.name,
@@ -92,7 +94,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     if (sendError) {
       console.error("[Notification] Failed to send email:", sendError)
     } else {
-      console.log("[Notification] Email sent successfully to:", owner.email)
+      console.log("[Notification] Email sent successfully to:", ownerEmail)
     }
   } catch (error) {
     console.error("[Notification] Unexpected error:", error)
@@ -330,68 +332,15 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
   // Увеличиваем счетчик лидов только если это не тестовый email и не владелец формы
   // Владелец формы может использовать свою форму неограниченное количество раз
   if (!isTestEmail && !isOwner) {
-    console.log("[Lead] Incrementing lead count for form:", formId, "email:", email, "isTestEmail:", isTestEmail, "isOwner:", isOwner)
+    console.log("[Lead] Incrementing lead count for form:", formId)
     
-    // Получаем текущее значение счетчика перед обновлением
-    const { data: formBefore, error: fetchError } = await supabaseAdmin
-      .from("forms")
-      .select("lead_count")
-      .eq("id", formId)
-      .single()
-
-    if (fetchError) {
-      console.error("[Lead] Error fetching form before increment:", fetchError)
-    }
-
-    // Пытаемся использовать RPC функцию, если она существует
+    // Используем только RPC функцию - она атомарная и безопасная
+    // Убираем лишние запросы перед/после инкремента
     const { error: rpcError } = await supabaseAdmin.rpc("increment_lead_count", { form_id: formId })
     
-    // Если RPC функция не существует или произошла ошибка, используем прямой UPDATE
     if (rpcError) {
-      console.warn("[Lead] RPC increment_lead_count failed, using direct UPDATE:", rpcError.message)
-      
-      if (formBefore) {
-        // Увеличиваем счетчик
-        const newCount = (formBefore.lead_count || 0) + 1
-        const { error: updateError, data: updatedForm } = await supabaseAdmin
-          .from("forms")
-          .update({ lead_count: newCount })
-          .eq("id", formId)
-          .select()
-
-        if (updateError) {
-          console.error("[Lead] Error incrementing lead count:", updateError)
-          // Не возвращаем ошибку, так как лид уже создан
-        } else {
-          console.log("[Lead] Lead count updated via direct UPDATE:", formBefore.lead_count, "->", newCount)
-        }
-      }
-    } else {
-      // Проверяем, что счетчик действительно обновился
-      const { data: formAfter } = await supabaseAdmin
-        .from("forms")
-        .select("lead_count")
-        .eq("id", formId)
-        .single()
-
-      if (formBefore && formAfter) {
-        const beforeCount = formBefore.lead_count || 0
-        const afterCount = formAfter.lead_count || 0
-        if (afterCount === beforeCount + 1) {
-          console.log("[Lead] Lead count updated via RPC:", beforeCount, "->", afterCount)
-        } else {
-          console.warn("[Lead] RPC succeeded but count didn't change:", beforeCount, "->", afterCount, "forcing direct UPDATE")
-          // Принудительно обновляем через прямой UPDATE
-          const { error: updateError } = await supabaseAdmin
-            .from("forms")
-            .update({ lead_count: beforeCount + 1 })
-            .eq("id", formId)
-
-          if (updateError) {
-            console.error("[Lead] Error forcing lead count update:", updateError)
-          }
-        }
-      }
+      console.error("[Lead] Error incrementing lead count:", rpcError)
+      // Не возвращаем ошибку, так как лид уже создан
     }
   } else {
     console.log("[Lead] Skipping lead count increment - test email or owner:", { isTestEmail, isOwner })

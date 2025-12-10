@@ -52,23 +52,21 @@ export function ResultStep({ url, formId, result, onSuccess }: ResultStepProps) 
       return
     }
 
-    // Send email
-    try {
-      const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
-      await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          resultText: result.text,
-          resultImageUrl: result.imageUrl || null,
-          resultType: result.type,
-          url,
-        }),
-      })
-    } catch (err) {
+    // Отправляем email асинхронно, не блокируя UI
+    const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
+    fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        resultText: result.text,
+        resultImageUrl: result.imageUrl || null,
+        resultType: result.type,
+        url,
+      }),
+    }).catch((err) => {
       console.error("[v0] Error sending email:", err)
-    }
+    })
 
     setIsUnlocked(true)
     onSuccess()

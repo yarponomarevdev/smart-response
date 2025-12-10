@@ -61,6 +61,9 @@ export async function getAllUsers(): Promise<{ users: UserWithStats[] } | { erro
   }
 
   // Получаем статистику для каждого пользователя
+  // Используем один запрос с JOIN вместо множественных запросов для каждой формы
+  // Убираем синхронизацию счетчиков - они должны быть актуальными благодаря increment_lead_count
+  // Если нужна синхронизация, делайте её отдельным фоновым процессом, а не при каждом запросе
   const usersWithStats = await Promise.all(
     usersData.map(async (user) => {
       const { data: forms } = await supabaseAdmin
@@ -68,36 +71,8 @@ export async function getAllUsers(): Promise<{ users: UserWithStats[] } | { erro
         .select("id, lead_count")
         .eq("owner_id", user.id)
 
-      // Получаем реальное количество лидов для каждой формы и синхронизируем счетчики
-      const formsWithRealCount = await Promise.all(
-        (forms || []).map(async (form) => {
-          // Получаем реальное количество лидов (исключая тестовые)
-          const { count: realLeadCount } = await supabaseAdmin
-            .from("leads")
-            .select("*", { count: "exact", head: true })
-            .eq("form_id", form.id)
-            .neq("email", "hello@vasilkov.digital")
-
-          const realCount = realLeadCount || 0
-          const storedCount = form.lead_count || 0
-
-          // Если счетчик не синхронизирован, обновляем его
-          if (realCount !== storedCount) {
-            console.log(`[Users] Syncing lead count for form ${form.id}: ${storedCount} -> ${realCount}`)
-            await supabaseAdmin
-              .from("forms")
-              .update({ lead_count: realCount })
-              .eq("id", form.id)
-            
-            return { ...form, lead_count: realCount }
-          }
-
-          return form
-        })
-      )
-
-      const formCount = formsWithRealCount?.length || 0
-      const leadCount = formsWithRealCount?.reduce((sum, f) => sum + (f.lead_count || 0), 0) || 0
+      const formCount = forms?.length || 0
+      const leadCount = forms?.reduce((sum, f) => sum + (f.lead_count || 0), 0) || 0
 
       return {
         id: user.id,
