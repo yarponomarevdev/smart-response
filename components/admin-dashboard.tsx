@@ -109,6 +109,7 @@ export function AdminDashboard() {
                 <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
                 <TabsTrigger value="editor">Редактор</TabsTrigger>
                 <TabsTrigger value="leads">Ответы</TabsTrigger>
+                <TabsTrigger value="users">Пользователи</TabsTrigger>
                 <TabsTrigger value="integrations" disabled className="relative">
                   Интеграции
                   <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
@@ -146,6 +147,9 @@ export function AdminDashboard() {
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />
+              </TabsContent>
+              <TabsContent value="users" className="space-y-4">
+                <UsersTable />
               </TabsContent>
               <TabsContent value="integrations" className="space-y-4">
                 {/* Скоро */}
