@@ -115,6 +115,19 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
     }
   }
 
+  const handleContinue = async () => {
+    const tabs = ["data", "contacts", "generation", "result", "share"]
+    const currentIndex = tabs.indexOf(activeTab)
+    
+    if (currentIndex < tabs.length - 1) {
+      // Переходим на следующую вкладку
+      setActiveTab(tabs[currentIndex + 1])
+    } else {
+      // На последней вкладке сохраняем
+      await handleSave()
+    }
+  }
+
   const handleLoadingMessageChange = (index: number, value: string) => {
     const newMessages = [...loadingMessages]
     newMessages[index] = value
@@ -272,11 +285,11 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
         {/* Кнопки действий */}
         <div className="flex flex-col gap-3">
           <Button
-            onClick={handleSave}
+            onClick={handleContinue}
             disabled={saveContentMutation.isPending || contentLoading}
             className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {saveContentMutation.isPending ? "Сохранение..." : "Продолжить"}
+            {saveContentMutation.isPending ? "Сохранение..." : activeTab === "share" ? "Сохранить" : "Продолжить"}
           </Button>
           <Button
             onClick={handleSave}

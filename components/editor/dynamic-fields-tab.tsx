@@ -166,7 +166,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
       {/* Кнопка добавления */}
       <Button
         onClick={handleAddField}
-        className="w-full h-12 rounded-[18px] bg-black text-white hover:bg-black/90"
+        className="w-full h-12 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
       >
         <Plus className="h-4 w-4 mr-2" />
         Добавить поле
