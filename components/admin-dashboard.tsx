@@ -32,6 +32,8 @@ export function AdminDashboard() {
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const [editorFormId, setEditorFormId] = useState<string | undefined>(undefined)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -101,7 +103,7 @@ export function AdminDashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">{getPanelDescription()}</p>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-4 sm:space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <TabsList className="flex-wrap h-auto border-b border-border">
             {isSuperAdmin ? (
               <>
@@ -139,10 +141,13 @@ export function AdminDashboard() {
           {isSuperAdmin ? (
             <>
               <TabsContent value="dashboard" className="space-y-4">
-                <FormsManager />
+                <FormsManager onOpenEditor={(formId) => {
+                  setEditorFormId(formId)
+                  setActiveTab("editor")
+                }} />
               </TabsContent>
               <TabsContent value="editor" className="space-y-4">
-                <ContentEditor />
+                <ContentEditor formId={editorFormId} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />
@@ -163,10 +168,13 @@ export function AdminDashboard() {
           ) : (
             <>
               <TabsContent value="dashboard" className="space-y-4">
-                <FormsManager />
+                <FormsManager onOpenEditor={(formId) => {
+                  setEditorFormId(formId)
+                  setActiveTab("editor")
+                }} />
               </TabsContent>
               <TabsContent value="editor" className="space-y-4">
-                <ContentEditor />
+                <ContentEditor formId={editorFormId} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />

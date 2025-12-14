@@ -11,7 +11,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Copy, ExternalLink, Users, Code2, Settings, AlertCircle, Plus, Loader2, Trash2 } from "lucide-react"
+import { Copy, ExternalLink, Users, Code2, Settings, AlertCircle, Plus, Loader2, Trash2, FileEdit } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,7 +40,11 @@ interface Form {
   notify_on_new_lead?: boolean
 }
 
-export function FormsManager() {
+interface FormsManagerProps {
+  onOpenEditor?: (formId: string) => void
+}
+
+export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   // React Query хуки
   const { data, isLoading, error: queryError } = useUserForms()
   const createFormMutation = useCreateForm()
@@ -241,7 +245,10 @@ export function FormsManager() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {forms.map((form) => {
           return (
-            <Card key={form.id} className="relative overflow-hidden">
+            <Card 
+              key={form.id} 
+              className="relative overflow-hidden"
+            >
               <CardHeader className="pb-2">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                   <div className="flex-1 min-w-0">
@@ -258,6 +265,11 @@ export function FormsManager() {
               <CardContent className="space-y-3 sm:space-y-4">
                 {/* Действия */}
                 <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => onOpenEditor?.(form.id)} className="text-xs sm:text-sm h-8 sm:h-9">
+                    <FileEdit className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Редактор</span>
+                    <span className="sm:hidden">Редакт.</span>
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Copy className="h-3 w-3 mr-1" />
                     <span className="hidden sm:inline">Ссылка</span>

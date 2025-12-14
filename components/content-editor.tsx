@@ -7,7 +7,7 @@
  */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 import {
@@ -48,8 +48,11 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
   const [systemPrompt, setSystemPrompt] = useState<string>("")
   const [resultFormat, setResultFormat] = useState<string>("text")
   const [activeTab, setActiveTab] = useState("data")
+  const propFormIdRef = useRef<string | undefined>(propFormId)
+  const userHasSelectedRef = useRef<boolean>(false)
 
   const forms = formsData?.forms || []
+  const firstFormId = forms.length > 0 ? forms[0].id : null
 
   const tabTitles: Record<string, string> = {
     data: "Данные формы",
@@ -59,12 +62,23 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
     share: "Поделиться"
   }
 
-  // Устанавливаем первую форму по умолчанию
+  // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
   useEffect(() => {
-    if (!propFormId && forms.length > 0 && !selectedFormId) {
-      setSelectedFormId(forms[0].id)
+    if (propFormId !== propFormIdRef.current) {
+      propFormIdRef.current = propFormId
+      userHasSelectedRef.current = false
+      if (propFormId) {
+        setSelectedFormId(propFormId)
+      }
     }
-  }, [forms, propFormId, selectedFormId])
+  }, [propFormId])
+
+  // Устанавливаем первую форму по умолчанию, если нет выбранной формы
+  useEffect(() => {
+    if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
+      setSelectedFormId(firstFormId)
+    }
+  }, [firstFormId, selectedFormId])
 
   // Загружаем контент выбранной формы
   const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
@@ -80,6 +94,7 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
   }, [contentData])
 
   const handleFormChange = (formId: string) => {
+    userHasSelectedRef.current = true
     setSelectedFormId(formId)
   }
 
@@ -165,7 +180,7 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
             {/* Выбор формы (если несколько) */}
-            {forms.length > 1 && !propFormId && (
+            {forms.length > 1 && (
               <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
                 <SelectTrigger className="relative h-12 w-full sm:w-[280px] rounded-[18px] bg-white dark:bg-background border border-input hover:bg-accent/50 !justify-center [&>span]:text-center [&>svg]:absolute [&>svg]:right-3">
                   <SelectValue placeholder="Выберите форму" />
@@ -222,7 +237,7 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
             </TabsTrigger>
           </TabsList>
 
-          <div className="pt-6">
+          <div className="pt-6 max-w-2xl">
             <TabsContent value="data" className="mt-0">
               <DynamicFieldsTab formId={selectedFormId} />
             </TabsContent>
