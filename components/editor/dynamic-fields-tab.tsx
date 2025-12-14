@@ -18,6 +18,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
 import { FieldTypeSelector } from "./field-type-selector"
 import { FieldForm } from "./field-form"
 import { FieldListItem } from "./field-list-item"
@@ -53,6 +68,38 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   const reorderFieldsMutation = useReorderFormFields()
 
   const fields = fieldsData?.fields || []
+
+  // Настройка сенсоров для drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Обработчик завершения перетаскивания
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || !formId) return
+
+    const oldIndex = fields.findIndex((field) => field.id === active.id)
+    const newIndex = fields.findIndex((field) => field.id === over.id)
+
+    if (oldIndex !== newIndex) {
+      const newFields = arrayMove(fields, oldIndex, newIndex)
+
+      try {
+        await reorderFieldsMutation.mutateAsync({
+          formId,
+          fieldIds: newFields.map((f) => f.id),
+        })
+        toast.success("Порядок полей изменен")
+      } catch (error) {
+        toast.error("Ошибка изменения порядка")
+      }
+    }
+  }
 
   // Открыть диалог выбора типа поля
   const handleAddField = () => {
@@ -107,25 +154,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     }
   }
 
-  // Простое перемещение поля вверх/вниз (без drag & drop для простоты)
-  const handleMoveField = async (index: number, direction: "up" | "down") => {
-    if (!formId) return
-    const newIndex = direction === "up" ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= fields.length) return
-
-    const newFields = [...fields]
-    const [movedField] = newFields.splice(index, 1)
-    newFields.splice(newIndex, 0, movedField)
-
-    try {
-      await reorderFieldsMutation.mutateAsync({
-        formId,
-        fieldIds: newFields.map((f) => f.id),
-      })
-    } catch (error) {
-      toast.error("Ошибка изменения порядка")
-    }
-  }
 
   if (!formId) {
     return (
@@ -147,16 +175,28 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     <div className="space-y-4">
       {/* Список полей */}
       {fields.length > 0 ? (
-        <div className="space-y-2">
-          {fields.map((field, index) => (
-            <FieldListItem
-              key={field.id}
-              field={field}
-              onEdit={() => handleEditField(field)}
-              onDelete={() => handleDeleteClick(field)}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={fields.map((f) => f.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {fields.map((field) => (
+                <FieldListItem
+                  key={field.id}
+                  id={field.id}
+                  field={field}
+                  onEdit={() => handleEditField(field)}
+                  onDelete={() => handleDeleteClick(field)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
           Нет добавленных полей

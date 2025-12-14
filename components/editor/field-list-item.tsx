@@ -7,14 +7,15 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image } from "lucide-react"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
 
 interface FieldListItemProps {
+  id: string
   field: FormField
   onEdit: () => void
   onDelete: () => void
-  isDragging?: boolean
-  dragHandleProps?: Record<string, unknown>
 }
 
 const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
@@ -36,22 +37,38 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
 }
 
 export function FieldListItem({
+  id,
   field,
   onEdit,
   onDelete,
-  isDragging,
-  dragHandleProps,
 }: FieldListItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`flex items-center gap-3 p-3 border rounded-lg bg-background transition-shadow ${
-        isDragging ? "shadow-lg" : "hover:shadow-sm"
+        isDragging ? "shadow-lg opacity-50" : "hover:shadow-sm"
       }`}
     >
       {/* Drag handle */}
       <div
-        className="cursor-grab text-muted-foreground hover:text-foreground"
-        {...dragHandleProps}
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
       >
         <GripVertical className="h-5 w-5" />
       </div>
