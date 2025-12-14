@@ -127,8 +127,48 @@ export function useReorderFormFields() {
       }
       return result
     },
-    onSuccess: (_, variables) => {
-      // Инвалидируем кэш полей формы
+    // Оптимистичное обновление для мгновенной обратной связи
+    onMutate: async ({ formId, fieldIds }) => {
+      // Отменяем текущие запросы, чтобы не перезаписать оптимистичное обновление
+      await queryClient.cancelQueries({
+        queryKey: [FORM_FIELDS_KEY, formId],
+      })
+
+      // Сохраняем предыдущее значение для отката при ошибке
+      const previousFields = queryClient.getQueryData<{ fields: FormField[] }>([
+        FORM_FIELDS_KEY,
+        formId,
+      ])
+
+      // Оптимистично обновляем порядок полей
+      if (previousFields) {
+        // Создаем мапу для быстрого поиска полей по ID
+        const fieldsMap = new Map(previousFields.fields.map((f) => [f.id, f]))
+        
+        // Создаем новый массив полей в нужном порядке
+        const reorderedFields = fieldIds
+          .map((id) => fieldsMap.get(id))
+          .filter((field): field is FormField => field !== undefined)
+
+        // Обновляем кэш с новым порядком
+        queryClient.setQueryData([FORM_FIELDS_KEY, formId], {
+          fields: reorderedFields,
+        })
+      }
+
+      return { previousFields }
+    },
+    // Откат при ошибке
+    onError: (err, variables, context) => {
+      if (context?.previousFields) {
+        queryClient.setQueryData(
+          [FORM_FIELDS_KEY, variables.formId],
+          context.previousFields
+        )
+      }
+    },
+    // После успеха синхронизируем с сервером (на случай, если порядок изменился)
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({
         queryKey: [FORM_FIELDS_KEY, variables.formId],
       })

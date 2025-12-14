@@ -78,7 +78,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   )
 
   // Обработчик завершения перетаскивания
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
     if (!over || !formId) return
@@ -89,15 +89,22 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     if (oldIndex !== newIndex) {
       const newFields = arrayMove(fields, oldIndex, newIndex)
 
-      try {
-        await reorderFieldsMutation.mutateAsync({
+      // Используем mutate вместо mutateAsync для неблокирующего обновления
+      // Оптимистичное обновление уже обрабатывается в хуке
+      reorderFieldsMutation.mutate(
+        {
           formId,
           fieldIds: newFields.map((f) => f.id),
-        })
-        toast.success("Порядок полей изменен")
-      } catch (error) {
-        toast.error("Ошибка изменения порядка")
-      }
+        },
+        {
+          onSuccess: () => {
+            toast.success("Порядок полей изменен")
+          },
+          onError: () => {
+            toast.error("Ошибка изменения порядка")
+          },
+        }
+      )
     }
   }
 
