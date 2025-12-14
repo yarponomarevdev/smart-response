@@ -233,20 +233,32 @@ Create an image prompt based on this content:`,
 
       console.log("[v0] Generated DALL-E prompt:", dallePrompt.slice(0, 100) + "...")
 
-      const imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: dallePrompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "standard",
-        }),
-      })
+      let imageResponse
+      try {
+        imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "dall-e-3",
+            prompt: dallePrompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard",
+          }),
+        })
+      } catch (imageFetchError: any) {
+        console.error("[v0] DALL-E connection error:", imageFetchError)
+        return Response.json(
+          {
+            error: "DALL-E connection failed",
+            details: imageFetchError.message || "Failed to connect to DALL-E API",
+          },
+          { status: 502, headers: corsHeaders },
+        )
+      }
 
       if (!imageResponse.ok) {
         let errorData
@@ -315,28 +327,40 @@ Create an image prompt based on this content:`,
         )
       }
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: textSystemPrompt,
-            },
-            {
-              role: "user",
-              content: `URL: ${url}\n\nContent:\n${urlContent}${customFieldsContext}\n\nPlease provide your analysis and recommendations.`,
-            },
-          ],
-          max_tokens: 1500,
-          temperature: 0.7,
-        }),
-      })
+      let response
+      try {
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: textSystemPrompt,
+              },
+              {
+                role: "user",
+                content: `URL: ${url}\n\nContent:\n${urlContent}${customFieldsContext}\n\nPlease provide your analysis and recommendations.`,
+              },
+            ],
+            max_tokens: 1500,
+            temperature: 0.7,
+          }),
+        })
+      } catch (fetchError: any) {
+        console.error("[v0] OpenAI connection error:", fetchError)
+        return Response.json(
+          {
+            error: "OpenAI connection failed",
+            details: fetchError.message || "Failed to connect to OpenAI API",
+          },
+          { status: 502, headers: corsHeaders },
+        )
+      }
 
       if (!response.ok) {
         let errorData
