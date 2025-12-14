@@ -147,6 +147,35 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     setShowDeleteDialog(true)
   }
 
+  // Быстрое обновление поля (inline редактирование)
+  const handleFieldUpdate = async (
+    fieldId: string,
+    updates: Partial<Pick<FormField, "field_label" | "placeholder">>
+  ) => {
+    if (!formId) return
+
+    const field = fields.find((f) => f.id === fieldId)
+    if (!field) return
+
+    try {
+      await saveFieldMutation.mutateAsync({
+        formId,
+        fieldData: {
+          id: field.id,
+          field_type: field.field_type,
+          field_label: updates.field_label ?? field.field_label,
+          field_key: field.field_key,
+          placeholder: updates.placeholder !== undefined ? (updates.placeholder || undefined) : (field.placeholder || undefined),
+          is_required: field.is_required,
+          options: field.options,
+        },
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ошибка обновления поля")
+      throw error // Пробрасываем ошибку для InlineEditableText
+    }
+  }
+
   // Удалить поле
   const handleDeleteConfirm = async () => {
     if (!formId || !deletingField) return
@@ -199,6 +228,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
                   field={field}
                   onEdit={() => handleEditField(field)}
                   onDelete={() => handleDeleteClick(field)}
+                  onFieldUpdate={handleFieldUpdate}
                 />
               ))}
             </div>
@@ -242,6 +272,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
                 field_type: editingField.field_type,
                 field_label: editingField.field_label,
                 field_key: editingField.field_key,
+                placeholder: editingField.placeholder || undefined,
                 is_required: editingField.is_required,
                 options: editingField.options,
               }

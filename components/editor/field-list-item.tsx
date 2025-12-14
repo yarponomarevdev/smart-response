@@ -6,6 +6,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { InlineEditableText } from "@/components/ui/inline-editable-text"
 import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -16,6 +17,7 @@ interface FieldListItemProps {
   field: FormField
   onEdit: () => void
   onDelete: () => void
+  onFieldUpdate?: (fieldId: string, updates: Partial<Pick<FormField, "field_label" | "placeholder">>) => Promise<void>
 }
 
 const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
@@ -41,6 +43,7 @@ export function FieldListItem({
   field,
   onEdit,
   onDelete,
+  onFieldUpdate,
 }: FieldListItemProps) {
   const {
     attributes,
@@ -81,15 +84,38 @@ export function FieldListItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium truncate">{field.field_label}</span>
+          {onFieldUpdate ? (
+            <InlineEditableText
+              value={field.field_label}
+              onSave={async (newValue) => {
+                await onFieldUpdate(field.id, { field_label: newValue })
+              }}
+              placeholder="Название поля"
+              className="font-medium"
+            />
+          ) : (
+            <span className="font-medium truncate">{field.field_label}</span>
+          )}
           {field.is_required && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs flex-shrink-0">
               Обязательное
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-mono">{field.field_key}</span>
+          {onFieldUpdate ? (
+            <InlineEditableText
+              value={field.placeholder || ""}
+              onSave={async (newValue) => {
+                await onFieldUpdate(field.id, { placeholder: newValue || null })
+              }}
+              placeholder="Плейсхолдер"
+              emptyText="+ плейсхолдер"
+              className="text-xs"
+            />
+          ) : (
+            field.placeholder && <span className="truncate">{field.placeholder}</span>
+          )}
           <span>•</span>
           <span>{FIELD_TYPE_LABELS[field.field_type]}</span>
           {(field.field_type === "select" || field.field_type === "multiselect") && field.options?.length > 0 && (

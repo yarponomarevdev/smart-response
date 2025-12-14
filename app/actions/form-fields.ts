@@ -28,6 +28,7 @@ export interface FormField {
   field_type: FieldType
   field_label: string
   field_key: string
+  placeholder?: string | null
   is_required: boolean
   options: FieldOption[]
   order_index: number
@@ -40,6 +41,7 @@ export interface FormFieldInput {
   field_type: FieldType
   field_label: string
   field_key: string
+  placeholder?: string
   is_required?: boolean
   options?: FieldOption[]
   order_index?: number

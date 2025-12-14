@@ -58,6 +58,7 @@ export function FieldForm({
 }: FieldFormProps) {
   const [label, setLabel] = useState(initialData?.field_label || "")
   const [key, setKey] = useState(initialData?.field_key || "")
+  const [placeholder, setPlaceholder] = useState(initialData?.placeholder || "")
   const [isRequired, setIsRequired] = useState(initialData?.is_required || false)
   const [options, setOptions] = useState<FieldOption[]>(initialData?.options || [])
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false)
@@ -67,6 +68,7 @@ export function FieldForm({
     if (open) {
       setLabel(initialData?.field_label || "")
       setKey(initialData?.field_key || "")
+      setPlaceholder(initialData?.placeholder || "")
       setIsRequired(initialData?.is_required || false)
       setOptions(initialData?.options || [])
       setKeyManuallyEdited(!!initialData?.field_key)
@@ -109,6 +111,7 @@ export function FieldForm({
       field_type: fieldType,
       field_label: label.trim(),
       field_key: key.trim(),
+      placeholder: placeholder.trim() || undefined,
       is_required: isRequired,
       options: needsOptions ? options.filter(o => o.value && o.label) : [],
     })
@@ -151,6 +154,16 @@ export function FieldForm({
             <p className="text-xs text-muted-foreground">
               Уникальный идентификатор поля (автогенерируется из названия)
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="field_placeholder">Плейсхолдер</Label>
+            <Input
+              id="field_placeholder"
+              value={placeholder}
+              onChange={(e) => setPlaceholder(e.target.value)}
+              placeholder="Текст-подсказка в поле ввода"
+            />
           </div>
 
           <div className="flex items-center justify-between">

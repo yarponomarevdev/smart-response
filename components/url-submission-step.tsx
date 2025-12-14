@@ -13,8 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Upload, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { getFormFields, type FormField, type FieldType } from "@/app/actions/form-fields"
+import { cn } from "@/lib/utils"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
@@ -42,6 +44,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   // Динамические поля
   const [dynamicFields, setDynamicFields] = useState<FormField[]>([])
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
+  const [fileNames, setFileNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -291,24 +294,72 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
             </Label>
-            <Input
-              id={field.field_key}
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  // Сохраняем base64 для отправки на сервер
-                  const reader = new FileReader()
-                  reader.onloadend = () => {
-                    handleFieldChange(field.field_key, reader.result)
+            <div className="relative">
+              <Input
+                id={field.field_key}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setFileNames((prev) => ({ ...prev, [field.field_key]: file.name }))
+                    // Сохраняем base64 для отправки на сервер
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      handleFieldChange(field.field_key, reader.result)
+                    }
+                    reader.readAsDataURL(file)
+                  } else {
+                    // Если файл не выбран (отмена), очищаем
+                    setFileNames((prev) => {
+                      const newNames = { ...prev }
+                      delete newNames[field.field_key]
+                      return newNames
+                    })
+                    handleFieldChange(field.field_key, "")
                   }
-                  reader.readAsDataURL(file)
-                }
-              }}
-              className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border"
-              disabled={isLoading}
-            />
+                }}
+                className="hidden"
+                disabled={isLoading}
+              />
+              <div
+                onClick={() => document.getElementById(field.field_key)?.click()}
+                className={cn(
+                  "flex h-12 sm:h-14 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-card px-4 sm:px-6 py-2 text-base shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                  !fileNames[field.field_key] && "text-muted-foreground",
+                  isLoading && "cursor-not-allowed opacity-50"
+                )}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Upload className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {fileNames[field.field_key] || field.placeholder || "Выберите изображение..."}
+                  </span>
+                </div>
+                {fileNames[field.field_key] && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setFileNames((prev) => {
+                        const newNames = { ...prev }
+                        delete newNames[field.field_key]
+                        return newNames
+                      })
+                      handleFieldChange(field.field_key, "")
+                      // Очищаем input
+                      const input = document.getElementById(field.field_key) as HTMLInputElement
+                      if (input) input.value = ""
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )
 
