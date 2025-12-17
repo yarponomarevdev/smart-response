@@ -37,12 +37,16 @@ interface EditorFormsData {
 async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
   const supabase = createClient()
 
-  // Проверяем роль пользователя
+  // Проверяем роль пользователя и email
   const { data: userData } = await supabase
     .from("users")
     .select("role")
     .eq("id", userId)
     .single()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  const userEmail = user?.email || ""
+  const canSeeMainForm = userEmail === "hello@vasilkov.digital"
 
   const isSuperAdmin = userData?.role === "superadmin"
 
@@ -55,8 +59,8 @@ async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
 
   let allForms: Form[] = userForms || []
 
-  // Для суперадмина добавляем главную форму
-  if (isSuperAdmin) {
+  // Для пользователя с доступом к Main form добавляем её
+  if (canSeeMainForm) {
     const hasMainForm = allForms.some(f => f.id === MAIN_FORM_ID)
     if (!hasMainForm) {
       const { data: mainForm } = await supabase
@@ -71,6 +75,9 @@ async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
     } else {
       allForms = allForms.map(f => f.id === MAIN_FORM_ID ? { ...f, isMain: true } : f)
     }
+  } else {
+    // Для остальных пользователей скрываем Main form
+    allForms = allForms.filter(f => f.id !== MAIN_FORM_ID)
   }
 
   return { forms: allForms, isSuperAdmin }
@@ -177,6 +184,26 @@ export function useSaveFormContent() {
       resultFormat: string
     }) => {
       const supabase = createClient()
+
+      // Получаем email пользователя для проверки доступа к Main form
+      const { data: { user } } = await supabase.auth.getUser()
+      const userEmail = user?.email || ""
+
+      // Защита от редактирования Main form - только hello@vasilkov.digital может её редактировать
+      if (formId === MAIN_FORM_ID && userEmail !== "hello@vasilkov.digital") {
+        throw new Error("Нет прав на редактирование этой формы")
+      }
+
+      // Проверяем, что пользователь владелец формы
+      const { data: form } = await supabase
+        .from("forms")
+        .select("owner_id")
+        .eq("id", formId)
+        .single()
+      
+      if (!form || (form.owner_id !== user?.id && userEmail !== "hello@vasilkov.digital")) {
+        throw new Error("Нет прав на редактирование этой формы")
+      }
 
       // Сохраняем основной контент
       for (const [key, value] of Object.entries(content)) {
