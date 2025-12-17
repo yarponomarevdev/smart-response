@@ -147,7 +147,7 @@ export function AdminDashboard() {
                 }} />
               </TabsContent>
               <TabsContent value="editor" className="space-y-4">
-                <ContentEditor formId={editorFormId} />
+                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />
@@ -174,7 +174,7 @@ export function AdminDashboard() {
                 }} />
               </TabsContent>
               <TabsContent value="editor" className="space-y-4">
-                <ContentEditor formId={editorFormId} />
+                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
                 <LeadsTable />

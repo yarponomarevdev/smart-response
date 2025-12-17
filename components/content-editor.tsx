@@ -31,9 +31,10 @@ import {
 
 interface ContentEditorProps {
   formId?: string
+  onBackToDashboard?: () => void
 }
 
-export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
+export function ContentEditor({ formId: propFormId, onBackToDashboard }: ContentEditorProps) {
   // Проверяем загрузку пользователя сначала
   const { data: user, isLoading: userLoading } = useCurrentUser()
   
@@ -126,6 +127,23 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
       // На последней вкладке сохраняем
       await handleSave()
     }
+  }
+
+  const handleBack = () => {
+    const tabs = ["data", "contacts", "generation", "result", "share"]
+    const currentIndex = tabs.indexOf(activeTab)
+    
+    if (currentIndex === 0) {
+      // На первой вкладке возвращаемся на дашборд
+      onBackToDashboard?.()
+    } else if (currentIndex > 0) {
+      // На остальных переходим на предыдущую вкладку
+      setActiveTab(tabs[currentIndex - 1])
+    }
+  }
+
+  const handleGoToShare = () => {
+    setActiveTab("share")
   }
 
   const handleLoadingMessageChange = (index: number, value: string) => {
@@ -277,28 +295,95 @@ export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
             </TabsContent>
 
             <TabsContent value="share" className="mt-0">
-              <ShareTab content={content} onChange={setContent} />
+              <ShareTab formId={selectedFormId} />
             </TabsContent>
           </div>
         </Tabs>
 
         {/* Кнопки действий */}
         <div className="flex flex-col gap-3">
-          <Button
-            onClick={handleContinue}
-            disabled={saveContentMutation.isPending || contentLoading}
-            className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {saveContentMutation.isPending ? "Сохранение..." : activeTab === "share" ? "Сохранить" : "Продолжить"}
-          </Button>
-          <Button
-            onClick={handleSave}
-            variant="outline"
-            disabled={saveContentMutation.isPending || contentLoading}
-            className="h-12 w-full sm:w-[200px] rounded-[18px]"
-          >
-            {saveContentMutation.isPending ? "Сохранение..." : "Сохранить"}
-          </Button>
+          {/* Вкладка "Данные формы" */}
+          {activeTab === "data" && (
+            <>
+              <Button
+                onClick={handleContinue}
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                Продолжить
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+              >
+                Вернуться назад
+              </Button>
+            </>
+          )}
+
+          {/* Вкладки "Контакты" и "Генерация" */}
+          {(activeTab === "contacts" || activeTab === "generation") && (
+            <>
+              <Button
+                onClick={handleContinue}
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                Продолжить
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+              >
+                Вернуться назад
+              </Button>
+            </>
+          )}
+
+          {/* Вкладка "Результат" */}
+          {activeTab === "result" && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {saveContentMutation.isPending ? "Сохранение..." : "Сохранить и опубликовать"}
+              </Button>
+              <Button
+                onClick={handleGoToShare}
+                variant="outline"
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+              >
+                Поделиться
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={saveContentMutation.isPending || contentLoading}
+                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+              >
+                Вернуться назад
+              </Button>
+            </>
+          )}
+
+          {/* Вкладка "Поделиться" */}
+          {activeTab === "share" && (
+            <Button
+              onClick={handleBack}
+              variant="outline"
+              disabled={saveContentMutation.isPending || contentLoading}
+              className="h-12 w-full sm:w-[200px] rounded-[18px]"
+            >
+              Вернуться назад
+            </Button>
+          )}
         </div>
       </div>
     </div>
