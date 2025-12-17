@@ -19,6 +19,24 @@ export default async function FormPage({ params }: { params: Promise<{ id: strin
     notFound()
   }
 
+  // Проверяем наличие полей
+  const { count } = await supabase
+    .from("form_fields")
+    .select("*", { count: "exact", head: true })
+    .eq("form_id", id)
+
+  if (!count || count === 0) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-4">
+        <ThemeToggleWrapper />
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold">Форма недоступна</h1>
+          <p className="text-muted-foreground">В этой форме пока нет полей для заполнения.</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
       <ThemeToggleWrapper />

@@ -28,8 +28,6 @@ interface URLSubmissionStepProps {
 export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) {
   const effectiveFormId = formId || MAIN_FORM_ID
 
-  const [url, setUrl] = useState("")
-  const [isValid, setIsValid] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
@@ -37,7 +35,6 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     title: "Анализ сайта с помощью ИИ",
     subtitle: "Получите детальный анализ вашего сайта за 30 секунд",
     buttonText: "Получить анализ",
-    placeholder: "https://example.com",
     disclaimer: "Бесплатно • Занимает 30 секунд",
   })
 
@@ -64,7 +61,6 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
           title: contentMap.page_title || "Анализ сайта с помощью ИИ",
           subtitle: contentMap.page_subtitle || "Получите детальный анализ вашего сайта за 30 секунд",
           buttonText: contentMap.submit_button || "Получить анализ",
-          placeholder: contentMap.url_placeholder || "https://example.com",
           disclaimer: contentMap.disclaimer || "Бесплатно • Занимает 30 секунд",
         })
       }
@@ -93,22 +89,6 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     fetchContent()
   }, [effectiveFormId])
 
-  const validateUrl = (value: string) => {
-    if (!value) return false
-    try {
-      const urlObj = new URL(value.startsWith("http") ? value : `https://${value}`)
-      return urlObj.hostname.includes(".")
-    } catch {
-      return false
-    }
-  }
-
-  const handleChange = (value: string) => {
-    setUrl(value)
-    setIsValid(validateUrl(value))
-    setError(null)
-  }
-
   const handleFieldChange = (fieldKey: string, value: unknown) => {
     setFieldValues((prev) => ({ ...prev, [fieldKey]: value }))
     setError(null)
@@ -133,7 +113,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isValid || isLoading) return
+    if (isLoading) return
+
+    // Проверяем наличие полей
+    if (dynamicFields.length === 0) {
+      setError("Форма не настроена")
+      return
+    }
 
     // Проверяем обязательные поля
     if (!validateRequiredFields()) {
@@ -143,7 +129,17 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
     setIsLoading(true)
     setError(null)
-    const formattedUrl = url.startsWith("http") ? url : `https://${url}`
+
+    // Ищем поле URL среди динамических полей, если есть
+    const urlField = dynamicFields.find(f => f.field_type === 'url')
+    let formattedUrl = ""
+    
+    if (urlField) {
+      const rawUrl = (fieldValues[urlField.field_key] as string) || ""
+      if (rawUrl) {
+        formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
+      }
+    }
 
     const supabase = createClient()
 
@@ -190,6 +186,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
               onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
               className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border"
               disabled={isLoading}
+              placeholder={field.placeholder || undefined}
             />
           </div>
         )
@@ -206,7 +203,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
               type="url"
               value={(value as string) || ""}
               onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-              placeholder="https://example.com"
+              placeholder={field.placeholder || "https://example.com"}
               className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border"
               disabled={isLoading}
             />
@@ -383,6 +380,18 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     )
   }
 
+  // Если нет полей, не показываем форму (это дублирует проверку на сервере, но полезно для обновления)
+  if (dynamicFields.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-in fade-in duration-500">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Форма не готова</h1>
+          <p className="text-muted-foreground">В этой форме пока нет полей для заполнения.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
       <div className="space-y-3 sm:space-y-4">
@@ -391,18 +400,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
-        {/* Основное поле URL */}
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder={content.placeholder}
-            value={url}
-            onChange={(e) => handleChange(e.target.value)}
-            className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-6 bg-card border-border"
-            disabled={isLoading}
-          />
-        </div>
-
+        
         {/* Динамические поля */}
         {dynamicFields.length > 0 && (
           <div className="space-y-4 text-left">
@@ -412,7 +410,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
         {error && <p className="text-sm text-destructive text-left">{error}</p>}
         
-        <Button type="submit" disabled={!isValid || isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
+        <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
           {isLoading ? "Обработка..." : content.buttonText}
         </Button>
       </form>

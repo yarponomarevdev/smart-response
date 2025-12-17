@@ -84,7 +84,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
       name: formName || "Моя форма",
       lead_limit: 20,
       lead_count: 0,
-      is_active: true,
+      is_active: false,
     })
     .select()
     .single()

@@ -43,17 +43,6 @@ export function FormDataTab({ content, onChange }: FormDataTabProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="url_placeholder" className="text-sm">Плейсхолдер для URL</Label>
-        <Input
-          id="url_placeholder"
-          value={content.url_placeholder || ""}
-          onChange={(e) => handleChange("url_placeholder", e.target.value)}
-          placeholder="https://example.com"
-          className="h-10 sm:h-11"
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="submit_button" className="text-sm">Текст кнопки отправки</Label>
         <Input
           id="submit_button"

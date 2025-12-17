@@ -176,6 +176,21 @@ export function useToggleFormActive() {
       const supabase = createClient()
       // Переключаем состояние: если сейчас активна, делаем неактивной, и наоборот
       const newIsActive = !currentIsActive
+
+      // Если пытаемся активировать форму, проверяем наличие полей
+      if (newIsActive) {
+        const { count, error: countError } = await supabase
+          .from("form_fields")
+          .select("*", { count: "exact", head: true })
+          .eq("form_id", formId)
+        
+        if (countError) throw new Error(countError.message)
+        
+        if (count === 0) {
+          throw new Error("Нельзя опубликовать пустую форму. Добавьте поля в редакторе.")
+        }
+      }
+
       const { error } = await supabase
         .from("forms")
         .update({ is_active: newIsActive })
