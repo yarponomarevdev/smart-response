@@ -26,7 +26,6 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
   const isPhoneEnabled = content.phone_enabled === "true"
   const isFeedbackEnabled = content.feedback_enabled === "true"
   const isPrivacyEnabled = content.privacy_enabled === "true"
-  const isBackButtonEnabled = content.back_button_enabled === "true"
 
   return (
     <div className="space-y-6">
@@ -222,48 +221,6 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
         )}
       </div>
 
-      {/* Секция: Кнопки */}
-      <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-sm font-semibold text-foreground">Кнопки</h3>
-        
-        <div className="space-y-2">
-          <Label htmlFor="email_button" className="text-sm">Текст кнопки "Продолжить"</Label>
-          <Input
-            id="email_button"
-            value={content.email_button || ""}
-            onChange={(e) => handleChange("email_button", e.target.value)}
-            placeholder="Продолжить"
-            className="h-10 sm:h-11"
-          />
-        </div>
-
-        <div className="flex items-center justify-between pt-2">
-          <Label htmlFor="back_button_enabled" className="text-sm">Кнопка "Назад"</Label>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="back_button_enabled" className="text-sm text-muted-foreground cursor-pointer">
-              Показать кнопку
-            </Label>
-            <Switch
-              id="back_button_enabled"
-              checked={isBackButtonEnabled}
-              onCheckedChange={(checked) => handleBooleanChange("back_button_enabled", checked)}
-            />
-          </div>
-        </div>
-
-        {isBackButtonEnabled && (
-          <div className="space-y-2">
-            <Label htmlFor="back_button_text" className="text-sm">Текст кнопки "Назад"</Label>
-            <Input
-              id="back_button_text"
-              value={content.back_button_text || ""}
-              onChange={(e) => handleChange("back_button_text", e.target.value)}
-              placeholder="Вернуться назад"
-              className="h-10 sm:h-11"
-            />
-          </div>
-        )}
-      </div>
     </div>
   )
 }
