@@ -268,7 +268,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </TabsTrigger>
           </TabsList>
 
-          <div className="pt-6 max-w-2xl">
+          <div className="pt-6">
             <TabsContent value="data" className="mt-0">
               <DynamicFieldsTab formId={selectedFormId} />
             </TabsContent>

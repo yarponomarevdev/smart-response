@@ -51,7 +51,7 @@ export function ShareTab({ formId }: ShareTabProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-w-2xl">
       <div className="space-y-2">
         <Label htmlFor="form_url" className="text-sm">Ссылка на форму</Label>
         <div className="flex gap-2">

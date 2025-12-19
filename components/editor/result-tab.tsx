@@ -18,7 +18,7 @@ export function ResultTab({ content, onChange }: ResultTabProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-w-2xl">
       <div className="space-y-2">
         <Label htmlFor="result_title" className="text-sm">Заголовок результата</Label>
         <Input

@@ -208,7 +208,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 max-w-2xl">
       {/* Список полей */}
       {fields.length > 0 ? (
         <DndContext

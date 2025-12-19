@@ -28,7 +28,7 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
   const isPrivacyEnabled = content.privacy_enabled === "true"
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 max-w-2xl">
       {/* Заголовок */}
       <div className="space-y-2">
         <Label htmlFor="email_title" className="text-base sm:text-lg">Заголовок</Label>
