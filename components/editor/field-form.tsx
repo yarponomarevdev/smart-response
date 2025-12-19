@@ -1,6 +1,7 @@
 /**
  * FieldForm - Форма редактирования поля
  * Позволяет настраивать название, ключ, обязательность и опции для select
+ * Адаптируется для разных типов полей (включая заголовки, дисклеймер, кнопку)
  */
 "use client"
 
@@ -46,7 +47,18 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   multiselect: "Множественный выбор",
   checkbox: "Чек-бокс",
   image: "Изображение",
+  h1: "Заголовок H1",
+  h2: "Заголовок H2",
+  h3: "Заголовок H3",
+  disclaimer: "Дисклеймер",
+  submit_button: "Кнопка продолжения",
 }
+
+// Типы полей, для которых не нужен placeholder и is_required
+const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer", "submit_button"]
+
+// Типы полей, для которых нужны опции
+const OPTION_FIELD_TYPES: FieldType[] = ["select", "multiselect"]
 
 export function FieldForm({
   open,
@@ -62,6 +74,9 @@ export function FieldForm({
   const [isRequired, setIsRequired] = useState(initialData?.is_required || false)
   const [options, setOptions] = useState<FieldOption[]>(initialData?.options || [])
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false)
+
+  const isLayoutField = LAYOUT_FIELD_TYPES.includes(fieldType)
+  const needsOptions = OPTION_FIELD_TYPES.includes(fieldType)
 
   // Сбрасываем форму при открытии с новыми данными
   useEffect(() => {
@@ -81,8 +96,6 @@ export function FieldForm({
       setKey(generateFieldKey(label))
     }
   }, [label, keyManuallyEdited])
-
-  const needsOptions = fieldType === "select" || fieldType === "multiselect"
 
   const handleAddOption = () => {
     setOptions([...options, { value: "", label: "" }])
@@ -111,31 +124,47 @@ export function FieldForm({
       field_type: fieldType,
       field_label: label.trim(),
       field_key: key.trim(),
-      placeholder: placeholder.trim() || undefined,
-      is_required: isRequired,
+      placeholder: isLayoutField ? undefined : (placeholder.trim() || undefined),
+      is_required: isLayoutField ? false : isRequired,
       options: needsOptions ? options.filter(o => o.value && o.label) : [],
     })
   }
 
   const isValid = label.trim() && key.trim() && (!needsOptions || options.some(o => o.value && o.label))
 
+  // Определяем label для поля ввода текста в зависимости от типа
+  const getLabelText = () => {
+    if (fieldType === "submit_button") return "Текст кнопки"
+    if (fieldType === "disclaimer") return "Текст дисклеймера"
+    if (fieldType === "h1" || fieldType === "h2" || fieldType === "h3") return "Текст заголовка"
+    return "Название поля"
+  }
+
+  const getPlaceholderText = () => {
+    if (fieldType === "submit_button") return "Например: Продолжить"
+    if (fieldType === "disclaimer") return "Например: Бесплатно • Занимает 30 секунд"
+    if (fieldType === "h1") return "Например: Анализ сайта с помощью ИИ"
+    if (fieldType === "h2" || fieldType === "h3") return "Введите текст заголовка"
+    return "Например: Ваше имя"
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {initialData?.id ? "Редактировать поле" : "Новое поле"}: {FIELD_TYPE_LABELS[fieldType]}
+            {initialData?.id ? "Редактировать" : "Новое поле"}: {FIELD_TYPE_LABELS[fieldType]}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="field_label">Название поля</Label>
+            <Label htmlFor="field_label">{getLabelText()}</Label>
             <Input
               id="field_label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Например: Ваше имя"
+              placeholder={getPlaceholderText()}
             />
           </div>
 
@@ -156,24 +185,30 @@ export function FieldForm({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="field_placeholder">Плейсхолдер</Label>
-            <Input
-              id="field_placeholder"
-              value={placeholder}
-              onChange={(e) => setPlaceholder(e.target.value)}
-              placeholder="Текст-подсказка в поле ввода"
-            />
-          </div>
+          {/* Плейсхолдер - только для полей ввода */}
+          {!isLayoutField && (
+            <div className="space-y-2">
+              <Label htmlFor="field_placeholder">Плейсхолдер</Label>
+              <Input
+                id="field_placeholder"
+                value={placeholder}
+                onChange={(e) => setPlaceholder(e.target.value)}
+                placeholder="Текст-подсказка в поле ввода"
+              />
+            </div>
+          )}
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="is_required">Обязательное поле</Label>
-            <Switch
-              id="is_required"
-              checked={isRequired}
-              onCheckedChange={setIsRequired}
-            />
-          </div>
+          {/* Обязательность - только для полей ввода */}
+          {!isLayoutField && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_required">Обязательное поле</Label>
+              <Switch
+                id="is_required"
+                checked={isRequired}
+                onCheckedChange={setIsRequired}
+              />
+            </div>
+          )}
 
           {needsOptions && (
             <div className="space-y-2">

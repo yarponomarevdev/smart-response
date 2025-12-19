@@ -1,6 +1,7 @@
 /**
  * DynamicFieldsTab - Вкладка управления динамическими полями формы
  * Позволяет добавлять, редактировать, удалять и переупорядочивать поля
+ * Теперь все элементы первой страницы (заголовки, дисклеймер, кнопка) - тоже динамические поля
  */
 "use client"
 
@@ -190,7 +191,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     }
   }
 
-
   if (!formId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -209,6 +209,13 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
+      <div>
+        <h3 className="text-2xl sm:text-3xl font-bold mb-2">Поля формы</h3>
+        <p className="text-sm text-muted-foreground">
+          Добавьте заголовки (H1, H2, H3), поля ввода, дисклеймер и кнопку продолжения
+        </p>
+      </div>
+
       {/* Список полей */}
       {fields.length > 0 ? (
         <DndContext

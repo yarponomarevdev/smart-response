@@ -7,7 +7,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InlineEditableText } from "@/components/ui/inline-editable-text"
-import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image } from "lucide-react"
+import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info, ArrowRight } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
@@ -27,6 +27,11 @@ const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
   multiselect: <ListChecks className="h-4 w-4" />,
   checkbox: <CheckSquare className="h-4 w-4" />,
   image: <Image className="h-4 w-4" />,
+  h1: <Heading1 className="h-4 w-4" />,
+  h2: <Heading2 className="h-4 w-4" />,
+  h3: <Heading3 className="h-4 w-4" />,
+  disclaimer: <Info className="h-4 w-4" />,
+  submit_button: <ArrowRight className="h-4 w-4" />,
 }
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
@@ -36,7 +41,15 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   multiselect: "Множ. выбор",
   checkbox: "Чек-бокс",
   image: "Изображение",
+  h1: "Заголовок H1",
+  h2: "Заголовок H2",
+  h3: "Заголовок H3",
+  disclaimer: "Дисклеймер",
+  submit_button: "Кнопка",
 }
+
+// Типы полей, для которых не нужен placeholder
+const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer", "submit_button"]
 
 export function FieldListItem({
   id,
@@ -103,20 +116,25 @@ export function FieldListItem({
           )}
         </div>
         <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-          {onFieldUpdate ? (
-            <InlineEditableText
-              value={field.placeholder || ""}
-              onSave={async (newValue) => {
-                await onFieldUpdate(field.id, { placeholder: newValue || null })
-              }}
-              placeholder="Плейсхолдер"
-              emptyText="+ плейсхолдер"
-              className="text-xs sm:text-sm"
-            />
-          ) : (
-            field.placeholder && <span className="truncate">{field.placeholder}</span>
+          {/* Placeholder только для input полей */}
+          {!LAYOUT_FIELD_TYPES.includes(field.field_type) && (
+            <>
+              {onFieldUpdate ? (
+                <InlineEditableText
+                  value={field.placeholder || ""}
+                  onSave={async (newValue) => {
+                    await onFieldUpdate(field.id, { placeholder: newValue || null })
+                  }}
+                  placeholder="Плейсхолдер"
+                  emptyText="+ плейсхолдер"
+                  className="text-xs sm:text-sm"
+                />
+              ) : (
+                field.placeholder && <span className="truncate">{field.placeholder}</span>
+              )}
+              <span>•</span>
+            </>
           )}
-          <span>•</span>
           <span>{FIELD_TYPE_LABELS[field.field_type]}</span>
           {(field.field_type === "select" || field.field_type === "multiselect") && field.options?.length > 0 && (
             <>

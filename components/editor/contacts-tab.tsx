@@ -131,6 +131,18 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
         )}
       </div>
 
+      {/* Текст кнопки отправки */}
+      <div className="space-y-2">
+        <Label htmlFor="email_button" className="text-base sm:text-lg">Текст кнопки отправки</Label>
+        <Input
+          id="email_button"
+          value={content.email_button || ""}
+          onChange={(e) => handleChange("email_button", e.target.value)}
+          placeholder="Сгенерировать"
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+        />
+      </div>
+
       {/* Политика конфиденциальности */}
       <div className="space-y-2">
         <Label htmlFor="privacy_url" className="text-base sm:text-lg">Политика конфиденциальности</Label>

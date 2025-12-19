@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select"
 import { Upload, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { getFormFields, type FormField, type FieldType } from "@/app/actions/form-fields"
+import { getFormFields, type FormField } from "@/app/actions/form-fields"
 import { cn } from "@/lib/utils"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
@@ -31,12 +31,6 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
-  const [content, setContent] = useState({
-    title: "Анализ сайта с помощью ИИ",
-    subtitle: "Получите детальный анализ вашего сайта за 30 секунд",
-    buttonText: "Получить анализ",
-    disclaimer: "Бесплатно • Занимает 30 секунд",
-  })
 
   // Динамические поля
   const [dynamicFields, setDynamicFields] = useState<FormField[]>([])
@@ -44,26 +38,8 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   const [fileNames, setFileNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchFields = async () => {
       setContentLoading(true)
-      const supabase = createClient()
-      
-      // Загружаем контент формы
-      const { data } = await supabase.from("form_content").select("key, value").eq("form_id", effectiveFormId)
-
-      if (data && data.length > 0) {
-        const contentMap: Record<string, string> = {}
-        data.forEach((item) => {
-          contentMap[item.key] = item.value
-        })
-
-        setContent({
-          title: contentMap.page_title || "Анализ сайта с помощью ИИ",
-          subtitle: contentMap.page_subtitle || "Получите детальный анализ вашего сайта за 30 секунд",
-          buttonText: contentMap.submit_button || "Получить анализ",
-          disclaimer: contentMap.disclaimer || "Бесплатно • Занимает 30 секунд",
-        })
-      }
 
       // Загружаем динамические поля
       const fieldsResult = await getFormFields(effectiveFormId)
@@ -86,7 +62,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       setContentLoading(false)
     }
 
-    fetchContent()
+    fetchFields()
   }, [effectiveFormId])
 
   const handleFieldChange = (fieldKey: string, value: unknown) => {
@@ -360,10 +336,58 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
           </div>
         )
 
+      // Заголовки и элементы оформления
+      case "h1":
+        return (
+          <h1 key={field.id} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance text-center">
+            {field.field_label}
+          </h1>
+        )
+
+      case "h2":
+        return (
+          <h2 key={field.id} className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-balance text-center">
+            {field.field_label}
+          </h2>
+        )
+
+      case "h3":
+        return (
+          <p key={field.id} className="text-base sm:text-lg text-muted-foreground text-balance max-w-xl text-center">
+            {field.field_label}
+          </p>
+        )
+
+      case "disclaimer":
+        return (
+          <p key={field.id} className="text-xs sm:text-sm text-muted-foreground text-center">
+            {field.field_label}
+          </p>
+        )
+
+      case "submit_button":
+        // Кнопка отправки формы - рендерится на своём месте
+        return (
+          <Button
+            key={field.id}
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
+          >
+            {isLoading ? "Обработка..." : field.field_label}
+          </Button>
+        )
+
       default:
         return null
     }
   }
+
+  // Типы полей, которые являются элементами оформления (не требуют ввода, не оборачиваются в text-left)
+  const LAYOUT_TYPES = ["h1", "h2", "h3", "disclaimer", "submit_button"]
+  
+  // Проверяем есть ли кнопка отправки
+  const hasSubmitButton = dynamicFields.some(f => f.field_type === "submit_button")
 
   if (contentLoading) {
     return (
@@ -394,28 +418,31 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
-      <div className="space-y-3 sm:space-y-4">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance">{content.title}</h1>
-        <p className="text-base sm:text-lg text-muted-foreground text-balance max-w-xl">{content.subtitle}</p>
-      </div>
-
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         
-        {/* Динамические поля */}
-        {dynamicFields.length > 0 && (
-          <div className="space-y-4 text-left">
-            {dynamicFields.map(renderField)}
-          </div>
-        )}
+        {/* Все поля в порядке как в редакторе */}
+        {dynamicFields.map((field) => {
+          // Layout поля (заголовки, дисклеймер, кнопка) рендерятся как есть
+          if (LAYOUT_TYPES.includes(field.field_type)) {
+            return renderField(field)
+          }
+          // Input поля оборачиваются в контейнер с text-left
+          return (
+            <div key={field.id} className="text-left">
+              {renderField(field)}
+            </div>
+          )
+        })}
 
         {error && <p className="text-sm text-destructive text-left">{error}</p>}
         
-        <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
-          {isLoading ? "Обработка..." : content.buttonText}
-        </Button>
+        {/* Fallback кнопка если не добавлена через динамические поля */}
+        {!hasSubmitButton && (
+          <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
+            {isLoading ? "Обработка..." : "Продолжить"}
+          </Button>
+        )}
       </form>
-
-      <p className="text-xs sm:text-sm text-muted-foreground">{content.disclaimer}</p>
     </div>
   )
 }

@@ -1,26 +1,90 @@
+/**
+ * SuccessStep - Экран результата
+ * 
+ * Показывает сгенерированный результат с кнопками действий.
+ * Использует настройки из form_content.
+ */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Share2, Download } from "lucide-react"
 import { jsPDF } from "jspdf"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { marked } from "marked"
+import { createClient } from "@/lib/supabase/client"
 
 interface SuccessStepProps {
   result: { type: string; text: string; imageUrl?: string }
+  formId?: string
   onRestart: () => void
 }
 
-export function SuccessStep({ result, onRestart }: SuccessStepProps) {
+interface FormContent {
+  result_title?: string
+  result_subtitle?: string
+  result_download_text?: string
+  result_share_text?: string
+  result_restart_text?: string
+  // CTA блок
+  cta_text?: string
+  button_text?: string
+  button_url?: string
+}
+
+export function SuccessStep({ result, formId, onRestart }: SuccessStepProps) {
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [content, setContent] = useState<FormContent>({})
+
+  // Загрузка контента формы
+  useEffect(() => {
+    const fetchContent = async () => {
+      if (!formId) return
+      
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("form_content")
+        .select("key, value")
+        .eq("form_id", formId)
+        .in("key", [
+          "result_title",
+          "result_subtitle",
+          "result_download_text",
+          "result_share_text",
+          "result_restart_text",
+          "cta_text",
+          "button_text",
+          "button_url",
+        ])
+
+      if (data && data.length > 0) {
+        const contentMap: FormContent = {}
+        data.forEach((item) => {
+          (contentMap as Record<string, string>)[item.key] = item.value
+        })
+        setContent(contentMap)
+      }
+    }
+
+    fetchContent()
+  }, [formId])
+
+  // Извлекаем настройки из content
+  const resultTitle = content.result_title || "Ваша персональная рекламная кампания готова!"
+  const resultSubtitle = content.result_subtitle || "А также отправлена на вашу почту"
+  const downloadText = content.result_download_text || "Скачать"
+  const shareText = content.result_share_text || "Поделиться"
+  const restartText = content.result_restart_text || "Проверить другой URL"
+  const ctaText = content.cta_text || ""
+  const buttonText = content.button_text || ""
+  const buttonUrl = content.button_url || ""
 
   const handleShare = async () => {
-    const shareText = `Получил рекомендации! ${window.location.origin}`
+    const shareTextContent = `Получил рекомендации! ${window.location.origin}`
 
     try {
-      await navigator.clipboard.writeText(shareText)
+      await navigator.clipboard.writeText(shareTextContent)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
 
@@ -37,7 +101,7 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
       }
     } catch {
       const textArea = document.createElement("textarea")
-      textArea.value = shareText
+      textArea.value = shareTextContent
       document.body.appendChild(textArea)
       textArea.select()
       document.execCommand("copy")
@@ -102,12 +166,10 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         marked.setOptions({
           breaks: true,
           gfm: true,
-          headerIds: false,
-          mangle: false,
         })
         
         // Конвертируем markdown в HTML для PDF
-        const htmlContent = marked(result.text)
+        const htmlContent = await marked(result.text)
         
         // Создаем временный контейнер для рендеринга текста
         const tempContainer = document.createElement("div")
@@ -126,82 +188,20 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
           <h1 style="font-size: 16px; font-weight: bold; margin: 10px 0 10px 0; padding-top: 10px;">Ваши рекомендации</h1>
           <div style="word-wrap: break-word;">
             <style>
-              h1 {
-                font-size: 16px;
-                font-weight: bold;
-                margin: 10px 0;
-                padding-top: 10px;
-              }
-              h2, h3, h4 {
-                page-break-inside: avoid;
-                break-inside: avoid;
-                white-space: normal;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
-                line-height: 1.4;
-                margin-top: 12px;
-                margin-bottom: 8px;
-                font-weight: bold;
-              }
-              h2 {
-                font-size: 14px;
-              }
-              h3 {
-                font-size: 13px;
-              }
-              h4 {
-                font-size: 12px;
-              }
-              h2 strong, h3 strong, h4 strong {
-                display: inline;
-                font-weight: bold;
-              }
-              p {
-                white-space: normal;
-                word-wrap: break-word;
-                margin: 8px 0;
-                line-height: 1.5;
-              }
-              ul, ol {
-                margin: 8px 0;
-                padding-left: 24px;
-                line-height: 1.5;
-              }
-              ul {
-                list-style-type: disc;
-                list-style-position: outside;
-              }
-              ol {
-                list-style-type: decimal;
-                list-style-position: outside;
-              }
-              li {
-                margin: 4px 0;
-                padding-left: 4px;
-                word-wrap: break-word;
-                white-space: normal;
-                display: list-item;
-              }
-              strong {
-                font-weight: bold;
-              }
-              em {
-                font-style: italic;
-              }
-              code {
-                background-color: #f5f5f5;
-                padding: 2px 4px;
-                border-radius: 3px;
-                font-family: monospace;
-                font-size: 10px;
-              }
-              blockquote {
-                border-left: 3px solid #59191f;
-                padding-left: 12px;
-                margin: 8px 0;
-                font-style: italic;
-                color: #666;
-              }
+              h1 { font-size: 16px; font-weight: bold; margin: 10px 0; padding-top: 10px; }
+              h2, h3, h4 { page-break-inside: avoid; break-inside: avoid; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.4; margin-top: 12px; margin-bottom: 8px; font-weight: bold; }
+              h2 { font-size: 14px; }
+              h3 { font-size: 13px; }
+              h4 { font-size: 12px; }
+              p { white-space: normal; word-wrap: break-word; margin: 8px 0; line-height: 1.5; }
+              ul, ol { margin: 8px 0; padding-left: 24px; line-height: 1.5; }
+              ul { list-style-type: disc; list-style-position: outside; }
+              ol { list-style-type: decimal; list-style-position: outside; }
+              li { margin: 4px 0; padding-left: 4px; word-wrap: break-word; white-space: normal; display: list-item; }
+              strong { font-weight: bold; }
+              em { font-style: italic; }
+              code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 10px; }
+              blockquote { border-left: 3px solid #59191f; padding-left: 12px; margin: 8px 0; font-style: italic; color: #666; }
             </style>
             ${htmlContent}
           </div>
@@ -209,265 +209,153 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         
         document.body.appendChild(tempContainer)
         
-        // Используем html2canvas если доступен, иначе используем простой canvas
-        const renderToCanvas = async () => {
-          try {
-            // Пробуем использовать html2canvas если доступен
-            if (typeof window !== "undefined" && (window as any).html2canvas) {
-              const html2canvas = (window as any).html2canvas
-              const canvas = await html2canvas(tempContainer, {
-                backgroundColor: "#ffffff",
-                scale: 2,
-                useCORS: true,
-              })
-              
-              const imgData = canvas.toDataURL("image/png")
-              const imgWidth = canvas.width / 3.779527559 // конвертация пикселей в мм
-              const imgHeight = canvas.height / 3.779527559
-              
-              // Если изображение не помещается на одну страницу, разбиваем на несколько
-              let yPos = margin
-              const maxHeight = pageHeight - margin * 2
-              
-              if (imgHeight <= maxHeight) {
-                pdf.addImage(imgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), imgHeight)
-              } else {
-                // Разбиваем на страницы
-                const pages = Math.ceil(imgHeight / maxHeight)
-                for (let i = 0; i < pages; i++) {
-                  if (i > 0) pdf.addPage()
-                  const sourceY = (i * maxHeight) * 3.779527559
-                  const sourceHeight = Math.min(maxHeight * 3.779527559, canvas.height - sourceY)
-                  const destHeight = sourceHeight / 3.779527559
-                  
-                  const pageCanvas = document.createElement("canvas")
-                  pageCanvas.width = canvas.width
-                  pageCanvas.height = sourceHeight
-                  const pageCtx = pageCanvas.getContext("2d")
-                  if (pageCtx) {
-                    pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight)
-                    const pageImgData = pageCanvas.toDataURL("image/png")
-                    pdf.addImage(pageImgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), destHeight)
-                  }
-                }
-              }
-              
-              document.body.removeChild(tempContainer)
-              pdf.save("recommendations.pdf")
-              setDownloading(false)
-              return
-            }
-          } catch (error) {
-            console.error("html2canvas error:", error)
-          }
+        // Используем простой canvas для рендеринга текста
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+        
+        if (ctx) {
+          const fontSize = 11
+          const lineHeight = fontSize * 1.5
+          ctx.font = `${fontSize}px Arial`
+          ctx.fillStyle = "#000000"
+          ctx.textBaseline = "top"
           
-          // Fallback: используем простой canvas для рендеринга текста
-          const canvas = document.createElement("canvas")
-          const ctx = canvas.getContext("2d")
+          // Конвертируем markdown в простой текст для canvas
+          const htmlContentParsed = await marked(result.text)
+          const tempDiv = document.createElement("div")
+          tempDiv.innerHTML = htmlContentParsed
           
-          if (ctx) {
-            const fontSize = 11
-            const lineHeight = fontSize * 1.5
-            ctx.font = `${fontSize}px Arial`
-            ctx.fillStyle = "#000000"
-            ctx.textBaseline = "top"
-            
-            // Конвертируем markdown в простой текст для canvas
-            // Используем те же настройки marked
-            const htmlContent = marked(result.text)
-            const tempDiv = document.createElement("div")
-            tempDiv.innerHTML = htmlContent
-            
-            // Извлекаем текст, сохраняя структуру списков
-            let plainText = ""
-            const processNode = (node: Node) => {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const el = node as Element
-                const tagName = el.tagName.toLowerCase()
-                
-                if (tagName === "ol" || tagName === "ul") {
-                  const items = el.querySelectorAll("li")
-                  items.forEach((item, index) => {
-                    const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
-                    plainText += prefix + (item.textContent || "") + "\n"
-                  })
-                } else if (tagName === "li") {
-                  // Пропускаем, так как обрабатываем в родительском ol/ul
-                  return
-                } else {
-                  Array.from(node.childNodes).forEach(processNode)
-                }
-              } else if (node.nodeType === Node.TEXT_NODE) {
-                const text = node.textContent || ""
-                if (text.trim()) {
-                  plainText += text
-                }
+          // Извлекаем текст, сохраняя структуру списков
+          let plainText = ""
+          const processNode = (node: Node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const el = node as Element
+              const tagName = el.tagName.toLowerCase()
+              
+              if (tagName === "ol" || tagName === "ul") {
+                const items = el.querySelectorAll("li")
+                items.forEach((item, index) => {
+                  const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
+                  plainText += prefix + (item.textContent || "") + "\n"
+                })
+              } else if (tagName === "li") {
+                return
               } else {
                 Array.from(node.childNodes).forEach(processNode)
               }
+            } else if (node.nodeType === Node.TEXT_NODE) {
+              const text = node.textContent || ""
+              if (text.trim()) {
+                plainText += text
+              }
+            } else {
+              Array.from(node.childNodes).forEach(processNode)
+            }
+          }
+          
+          processNode(tempDiv)
+          
+          if (!plainText) {
+            plainText = tempDiv.textContent || tempDiv.innerText || result.text
+          }
+          
+          // Рассчитываем размеры
+          const textLines = plainText.split("\n")
+          const maxWidthPx = maxWidth * 3.779527559
+          let totalHeight = 50
+          
+          for (const line of textLines) {
+            const words = line.split(" ")
+            let currentLine = ""
+            
+            for (const word of words) {
+              const testLine = currentLine ? `${currentLine} ${word}` : word
+              const testWidth = ctx.measureText(testLine).width
+              
+              if (testWidth > maxWidthPx && currentLine) {
+                totalHeight += lineHeight
+                currentLine = word
+              } else {
+                currentLine = testLine
+              }
+            }
+            if (currentLine) totalHeight += lineHeight
+          }
+          
+          canvas.width = Math.ceil(maxWidthPx) + 40
+          canvas.height = Math.max(totalHeight, 200)
+          ctx.fillStyle = "#ffffff"
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+          ctx.fillStyle = "#000000"
+          ctx.font = `bold ${16}px Arial`
+          ctx.fillText("Ваши рекомендации", 20, 20)
+          
+          ctx.font = `${fontSize}px Arial`
+          let yPos = 40
+          
+          for (const line of textLines) {
+            if (!line.trim()) {
+              yPos += lineHeight * 0.5
+              continue
             }
             
-            processNode(tempDiv)
+            const words = line.split(" ")
+            let currentLine = ""
             
-            if (!plainText) {
-              plainText = tempDiv.textContent || tempDiv.innerText || result.text
-            }
-            
-            // Рассчитываем размеры
-            const textLines = plainText.split("\n")
-            const maxWidthPx = maxWidth * 3.779527559
-            let totalHeight = 50 // место для заголовка с отступом сверху
-            
-            // Рассчитываем высоту текста
-            for (const line of textLines) {
-              const words = line.split(" ")
-              let currentLine = ""
+            for (const word of words) {
+              const testLine = currentLine ? `${currentLine} ${word}` : word
+              const testWidth = ctx.measureText(testLine).width
               
-              for (const word of words) {
-                const testLine = currentLine ? `${currentLine} ${word}` : word
-                const testWidth = ctx.measureText(testLine).width
-                
-                if (testWidth > maxWidthPx && currentLine) {
-                  totalHeight += lineHeight
-                  currentLine = word
-                } else {
-                  currentLine = testLine
-                }
-              }
-              if (currentLine) totalHeight += lineHeight
-            }
-            
-            canvas.width = Math.ceil(maxWidthPx) + 40
-            canvas.height = Math.max(totalHeight, 200)
-            ctx.fillStyle = "#ffffff"
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-            ctx.fillStyle = "#000000"
-            ctx.font = `bold ${16}px Arial`
-            ctx.fillText("Ваши рекомендации", 20, 20)
-            
-            ctx.font = `${fontSize}px Arial`
-            let yPos = 40
-            
-            for (const line of textLines) {
-              if (!line.trim()) {
-                yPos += lineHeight * 0.5
-                continue
-              }
-              
-              const words = line.split(" ")
-              let currentLine = ""
-              
-              for (const word of words) {
-                const testLine = currentLine ? `${currentLine} ${word}` : word
-                const testWidth = ctx.measureText(testLine).width
-                
-                if (testWidth > maxWidthPx && currentLine) {
-                  ctx.fillText(currentLine, 20, yPos)
-                  yPos += lineHeight
-                  currentLine = word
-                } else {
-                  currentLine = testLine
-                }
-              }
-              
-              if (currentLine) {
+              if (testWidth > maxWidthPx && currentLine) {
                 ctx.fillText(currentLine, 20, yPos)
                 yPos += lineHeight
-              }
-            }
-            
-            const imgData = canvas.toDataURL("image/png")
-            const imgWidth = canvas.width / 3.779527559
-            const imgHeight = canvas.height / 3.779527559
-            
-            const maxHeight = pageHeight - margin * 2
-            if (imgHeight <= maxHeight) {
-              pdf.addImage(imgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), imgHeight)
-            } else {
-              // Разбиваем на страницы
-              const pages = Math.ceil(imgHeight / maxHeight)
-              for (let i = 0; i < pages; i++) {
-                if (i > 0) pdf.addPage()
-                // Для первой страницы начинаем с начала canvas (где заголовок)
-                // Для последующих страниц смещаемся на высоту страницы
-                const sourceY = i === 0 ? 0 : (i * maxHeight) * 3.779527559
-                const remainingHeight = canvas.height - sourceY
-                const sourceHeight = Math.min(maxHeight * 3.779527559, remainingHeight)
-                const destHeight = sourceHeight / 3.779527559
-                
-                const pageCanvas = document.createElement("canvas")
-                pageCanvas.width = canvas.width
-                pageCanvas.height = sourceHeight
-                const pageCtx = pageCanvas.getContext("2d")
-                if (pageCtx) {
-                  pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight)
-                  const pageImgData = pageCanvas.toDataURL("image/png")
-                  pdf.addImage(pageImgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), destHeight)
-                }
-              }
-            }
-          } else {
-            // Последний fallback: стандартный метод jsPDF
-            pdf.setFontSize(16)
-            pdf.setFont("helvetica", "bold")
-            pdf.text("Ваши рекомендации", margin, margin + 5)
-            
-            // Конвертируем markdown в простой текст для PDF с сохранением структуры списков
-            const htmlContent = marked(result.text)
-            const tempDiv = document.createElement("div")
-            tempDiv.innerHTML = htmlContent
-            
-            // Извлекаем текст, сохраняя структуру списков
-            let plainText = ""
-            const processNode = (node: Node) => {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const el = node as Element
-                const tagName = el.tagName.toLowerCase()
-                
-                if (tagName === "ol" || tagName === "ul") {
-                  const items = el.querySelectorAll("li")
-                  items.forEach((item, index) => {
-                    const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
-                    plainText += prefix + (item.textContent || "") + "\n"
-                  })
-                } else if (tagName === "li") {
-                  // Пропускаем, так как обрабатываем в родительском ol/ul
-                  return
-                } else {
-                  Array.from(node.childNodes).forEach(processNode)
-                }
-              } else if (node.nodeType === Node.TEXT_NODE) {
-                const text = node.textContent || ""
-                if (text.trim()) {
-                  plainText += text
-                }
+                currentLine = word
               } else {
-                Array.from(node.childNodes).forEach(processNode)
+                currentLine = testLine
               }
             }
             
-            processNode(tempDiv)
-            
-            if (!plainText) {
-              plainText = tempDiv.textContent || tempDiv.innerText || result.text
+            if (currentLine) {
+              ctx.fillText(currentLine, 20, yPos)
+              yPos += lineHeight
             }
-            
-            pdf.setFontSize(11)
-            pdf.setFont("helvetica", "normal")
-            const lines = pdf.splitTextToSize(plainText, maxWidth)
-            pdf.text(lines, margin, margin + 20)
           }
           
-          document.body.removeChild(tempContainer)
-          pdf.save("recommendations.pdf")
-          setDownloading(false)
+          const imgData = canvas.toDataURL("image/png")
+          const imgWidth = canvas.width / 3.779527559
+          const imgHeight = canvas.height / 3.779527559
+          
+          const maxHeight = pageHeight - margin * 2
+          if (imgHeight <= maxHeight) {
+            pdf.addImage(imgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), imgHeight)
+          } else {
+            const pages = Math.ceil(imgHeight / maxHeight)
+            for (let i = 0; i < pages; i++) {
+              if (i > 0) pdf.addPage()
+              const sourceY = i === 0 ? 0 : (i * maxHeight) * 3.779527559
+              const remainingHeight = canvas.height - sourceY
+              const sourceHeight = Math.min(maxHeight * 3.779527559, remainingHeight)
+              const destHeight = sourceHeight / 3.779527559
+              
+              const pageCanvas = document.createElement("canvas")
+              pageCanvas.width = canvas.width
+              pageCanvas.height = sourceHeight
+              const pageCtx = pageCanvas.getContext("2d")
+              if (pageCtx) {
+                pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight)
+                const pageImgData = pageCanvas.toDataURL("image/png")
+                pdf.addImage(pageImgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), destHeight)
+              }
+            }
+          }
         }
         
-        renderToCanvas()
+        document.body.removeChild(tempContainer)
+        pdf.save("recommendations.pdf")
+        setDownloading(false)
       }
     } catch (error) {
       console.error("Download error:", error)
-      // Fallback для изображения
       if (result.type === "image" && result.imageUrl) {
         window.open(result.imageUrl, "_blank")
       }
@@ -477,17 +365,13 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full max-w-4xl px-4">
-      <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10">
-        <svg className="w-8 h-8 sm:w-10 sm:h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-
+      {/* Заголовок */}
       <div className="space-y-3 sm:space-y-4">
-        <h2 className="text-2xl sm:text-3xl font-bold">Готово!</h2>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-md">Результаты также отправлены на вашу почту</p>
+        <h2 className="text-2xl sm:text-3xl font-bold">{resultTitle}</h2>
+        <p className="text-base sm:text-lg text-muted-foreground max-w-md">{resultSubtitle}</p>
       </div>
 
+      {/* Результат */}
       <div className="w-full bg-card rounded-lg border border-border p-4 sm:p-6">
         <div className="max-w-none text-left">
           {result.type === "image" && result.imageUrl ? (
@@ -498,22 +382,36 @@ export function SuccessStep({ result, onRestart }: SuccessStepProps) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full items-stretch">
-        <Button onClick={handleShare} variant="outline" className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base">
-          <Share2 className="mr-2 h-4 w-4" />
-          {copied ? "Скопировано!" : "Поделиться"}
-        </Button>
+      {/* CTA блок */}
+      {ctaText && (
+        <div className="w-full max-w-md space-y-3">
+          <p className="text-sm sm:text-base font-medium">{ctaText}</p>
+          {buttonText && buttonUrl && (
+            <Button
+              variant="default"
+              className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
+              onClick={() => window.open(buttonUrl, "_blank")}
+            >
+              {buttonText}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Кнопки действий */}
+      <div className="flex flex-col gap-3 w-full max-w-md">
         <Button
           onClick={handleDownload}
           variant="outline"
-          className="flex-1 h-11 sm:h-12 bg-transparent text-sm sm:text-base"
+          className="w-full h-11 sm:h-12 bg-transparent text-sm sm:text-base"
           disabled={downloading}
         >
           <Download className="mr-2 h-4 w-4" />
-          {downloading ? "Загрузка..." : "Скачать"}
+          {downloading ? "Загрузка..." : downloadText}
         </Button>
-        <Button onClick={onRestart} className="flex-1 h-11 sm:h-12 text-sm sm:text-base">
-          Проверить другой URL
+        <Button onClick={handleShare} variant="outline" className="w-full h-11 sm:h-12 bg-transparent text-sm sm:text-base">
+          <Share2 className="mr-2 h-4 w-4" />
+          {copied ? "Скопировано!" : shareText}
         </Button>
       </div>
     </div>

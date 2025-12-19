@@ -3,10 +3,9 @@
 import { useState } from "react"
 import { URLSubmissionStep } from "./url-submission-step"
 import { LoadingStep } from "./loading-step"
-import { ResultStep } from "./result-step"
 import { SuccessStep } from "./success-step"
 
-export type FlowStep = "url" | "loading" | "result" | "success"
+export type FlowStep = "url" | "loading" | "success"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
@@ -43,17 +42,19 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
           formId={effectiveFormId}
           customFields={customFields}
           onComplete={(generatedResult) => {
-            setResult(generatedResult)
-            setStep("result")
+            setResult({
+              type: generatedResult.type,
+              text: generatedResult.text,
+              imageUrl: generatedResult.imageUrl || "",
+            })
+            setStep("success")
           }}
         />
-      )}
-      {step === "result" && (
-        <ResultStep url={url} formId={effectiveFormId} result={result} customFields={customFields} onSuccess={() => setStep("success")} />
       )}
       {step === "success" && (
         <SuccessStep
           result={result}
+          formId={effectiveFormId}
           onRestart={() => {
             setUrl("")
             setCustomFields({})

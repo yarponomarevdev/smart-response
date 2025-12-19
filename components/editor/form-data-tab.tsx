@@ -48,7 +48,7 @@ export function FormDataTab({ content, onChange }: FormDataTabProps) {
           id="submit_button"
           value={content.submit_button || ""}
           onChange={(e) => handleChange("submit_button", e.target.value)}
-          placeholder="Получить анализ"
+          placeholder="Продолжить"
           className="h-10 sm:h-11"
         />
       </div>
