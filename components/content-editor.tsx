@@ -308,7 +308,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleContinue}
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 Продолжить
               </Button>
@@ -316,7 +316,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 onClick={handleBack}
                 variant="outline"
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
               </Button>
@@ -329,7 +329,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleContinue}
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 Продолжить
               </Button>
@@ -337,7 +337,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 onClick={handleBack}
                 variant="outline"
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
               </Button>
@@ -350,7 +350,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleSave}
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 {saveContentMutation.isPending ? "Сохранение..." : "Сохранить и опубликовать"}
               </Button>
@@ -358,7 +358,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 onClick={handleGoToShare}
                 variant="outline"
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Поделиться
               </Button>
@@ -366,7 +366,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 onClick={handleBack}
                 variant="outline"
                 disabled={saveContentMutation.isPending || contentLoading}
-                className="h-12 w-full sm:w-[200px] rounded-[18px]"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
               </Button>
@@ -379,7 +379,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               onClick={handleBack}
               variant="outline"
               disabled={saveContentMutation.isPending || contentLoading}
-              className="h-12 w-full sm:w-[200px] rounded-[18px]"
+              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
             >
               Вернуться назад
             </Button>

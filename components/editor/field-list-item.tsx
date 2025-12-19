@@ -63,13 +63,13 @@ export function FieldListItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 border rounded-lg bg-background transition-shadow ${
+      className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-6 h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border border-[#f4f4f4] dark:border-muted transition-shadow ${
         isDragging ? "shadow-lg opacity-50" : "hover:shadow-sm"
       }`}
     >
       {/* Drag handle */}
       <div
-        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0"
         {...attributes}
         {...listeners}
       >
@@ -77,7 +77,7 @@ export function FieldListItem({
       </div>
 
       {/* Icon */}
-      <div className="text-muted-foreground">
+      <div className="text-muted-foreground flex-shrink-0">
         {FIELD_TYPE_ICONS[field.field_type]}
       </div>
 
@@ -91,10 +91,10 @@ export function FieldListItem({
                 await onFieldUpdate(field.id, { field_label: newValue })
               }}
               placeholder="Название поля"
-              className="font-medium"
+              className="font-medium text-base sm:text-lg"
             />
           ) : (
-            <span className="font-medium truncate">{field.field_label}</span>
+            <span className="font-medium truncate text-base sm:text-lg">{field.field_label}</span>
           )}
           {field.is_required && (
             <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -102,7 +102,7 @@ export function FieldListItem({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
           {onFieldUpdate ? (
             <InlineEditableText
               value={field.placeholder || ""}
@@ -111,7 +111,7 @@ export function FieldListItem({
               }}
               placeholder="Плейсхолдер"
               emptyText="+ плейсхолдер"
-              className="text-xs"
+              className="text-xs sm:text-sm"
             />
           ) : (
             field.placeholder && <span className="truncate">{field.placeholder}</span>
@@ -128,11 +128,11 @@ export function FieldListItem({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" onClick={onEdit}>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Button variant="ghost" size="icon" onClick={onEdit} className="h-8 w-8">
           <Pencil className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete}>
+        <Button variant="ghost" size="icon" onClick={onDelete} className="h-8 w-8">
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </div>

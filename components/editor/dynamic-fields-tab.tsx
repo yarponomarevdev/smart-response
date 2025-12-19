@@ -208,7 +208,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 sm:space-y-8">
       {/* Список полей */}
       {fields.length > 0 ? (
         <DndContext
@@ -220,7 +220,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
             items={fields.map((f) => f.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2">
+            <div className="space-y-3 sm:space-y-4">
               {fields.map((field) => (
                 <FieldListItem
                   key={field.id}
@@ -243,13 +243,13 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
       {/* Кнопка добавления */}
       <Button
         onClick={handleAddField}
-        className="w-full h-12 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
       >
-        <Plus className="h-4 w-4 mr-2" />
+        <Plus className="h-5 w-5 mr-2" />
         Добавить поле
       </Button>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm sm:text-base text-muted-foreground font-light">
         *выберите как минимум одно поле
       </p>
 
