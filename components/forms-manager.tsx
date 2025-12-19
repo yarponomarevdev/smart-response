@@ -190,8 +190,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Button onClick={() => setShowCreateDialog(true)} disabled={createFormMutation.isPending}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={() => setShowCreateDialog(true)} disabled={createFormMutation.isPending} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base">
             Создать форму
           </Button>
           
@@ -227,9 +226,8 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
           </p>
         </div>
         {(limitInfo?.canCreate || isUnlimited) && (
-          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Новая форма
+          <Button onClick={() => setShowCreateDialog(true)} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base w-full sm:w-auto">
+            Создать форму
           </Button>
         )}
       </div>

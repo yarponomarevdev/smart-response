@@ -174,9 +174,9 @@ export function GenerationTab({
             id="use_knowledge_base"
             className="h-6 w-6 rounded-[5px]"
           />
-          <Label htmlFor="use_knowledge_base" className="text-base sm:text-lg cursor-pointer">
+          <span className="text-base sm:text-lg">
             Использовать базу знаний
-          </Label>
+          </span>
         </div>
 
         {/* База знаний / Другие данные */}

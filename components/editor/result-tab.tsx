@@ -1,6 +1,6 @@
 /**
  * ResultTab - Вкладка "Результат"
- * Содержит поля для отображения результата: заголовок, текст блюра
+ * Содержит поля для отображения результата: заголовок, подзаголовок, текст над формой
  */
 "use client"
 
@@ -18,26 +18,37 @@ export function ResultTab({ content, onChange }: ResultTabProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-2xl">
+    <div className="space-y-6 sm:space-y-8 max-w-2xl">
       <div className="space-y-2">
-        <Label htmlFor="result_title" className="text-sm">Заголовок результата</Label>
+        <Label htmlFor="result_title" className="text-base sm:text-lg">Заголовок</Label>
         <Input
           id="result_title"
           value={content.result_title || ""}
           onChange={(e) => handleChange("result_title", e.target.value)}
-          placeholder="Ваш результат"
-          className="h-10 sm:h-11"
+          placeholder="Заголовок"
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="result_blur_text" className="text-sm">Текст блюра результата (до ввода email)</Label>
+        <Label htmlFor="result_subtitle" className="text-base sm:text-lg">Подзаголовок</Label>
         <Input
-          id="result_blur_text"
-          value={content.result_blur_text || ""}
-          onChange={(e) => handleChange("result_blur_text", e.target.value)}
-          placeholder="Введите email чтобы увидеть полный результат"
-          className="h-10 sm:h-11"
+          id="result_subtitle"
+          value={content.result_subtitle || ""}
+          onChange={(e) => handleChange("result_subtitle", e.target.value)}
+          placeholder="Подзаголовок"
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="result_form_text" className="text-base sm:text-lg">Текст над формой</Label>
+        <Input
+          id="result_form_text"
+          value={content.result_form_text || ""}
+          onChange={(e) => handleChange("result_form_text", e.target.value)}
+          placeholder="hello.smartresponse.com"
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </div>
     </div>

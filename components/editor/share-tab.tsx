@@ -51,56 +51,56 @@ export function ShareTab({ formId }: ShareTabProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-2xl">
+    <div className="space-y-6 sm:space-y-8 max-w-2xl">
       <div className="space-y-2">
-        <Label htmlFor="form_url" className="text-sm">Ссылка на форму</Label>
+        <Label htmlFor="form_url" className="text-base sm:text-lg">Ссылка на форму</Label>
         <div className="flex gap-2">
           <Input
             id="form_url"
             value={formUrl}
             readOnly
-            className="h-10 sm:h-11 font-mono text-xs sm:text-sm"
+            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 font-mono"
           />
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="h-10 w-10 sm:h-11 sm:w-11 shrink-0"
+            className="h-12 w-12 sm:h-[70px] sm:w-[70px] rounded-[18px] shrink-0"
             onClick={() => copyToClipboard(formUrl, "url")}
           >
             {copiedUrl ? (
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Copy className="h-5 w-5 sm:h-6 sm:w-6" />
             )}
           </Button>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="embed_code" className="text-sm">Код для сайта</Label>
-        <div className="flex flex-col gap-2">
+        <Label htmlFor="embed_code" className="text-base sm:text-lg">Код для сайта</Label>
+        <div className="flex flex-col gap-3">
           <Textarea
             id="embed_code"
             value={embedCode}
             readOnly
             rows={4}
-            className="font-mono text-xs resize-none"
+            className="h-[150px] sm:h-[242px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 py-4 resize-none font-mono"
           />
           <Button
             type="button"
             variant="outline"
-            className="h-10 sm:h-11 w-full sm:w-auto"
+            className="h-12 sm:h-14 rounded-[18px] w-full text-base sm:text-lg"
             onClick={() => copyToClipboard(embedCode, "embed")}
           >
             {copiedEmbed ? (
               <>
-                <Check className="h-4 w-4 mr-2 text-green-600" />
+                <Check className="h-5 w-5 mr-2 text-green-600" />
                 Скопировано
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4 mr-2" />
+                <Copy className="h-5 w-5 mr-2" />
                 Скопировать код
               </>
             )}
