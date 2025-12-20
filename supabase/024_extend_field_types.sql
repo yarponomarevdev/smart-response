@@ -16,3 +16,6 @@ CHECK (field_type IN ('text', 'url', 'select', 'multiselect', 'checkbox', 'image
 -- Обновляем комментарий к колонке
 COMMENT ON COLUMN public.form_fields.field_type IS 'Тип поля: text, url, select, multiselect, checkbox, image, h1, h2, h3, disclaimer, submit_button';
 
+
+
+
