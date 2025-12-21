@@ -403,13 +403,13 @@ export function SuccessStep({ result, formId, onRestart }: SuccessStepProps) {
         <Button
           onClick={handleDownload}
           variant="outline"
-          className="w-full h-11 sm:h-12 bg-transparent text-sm sm:text-base"
+          className="w-full h-12 sm:h-14 bg-transparent text-sm sm:text-base"
           disabled={downloading}
         >
           <Download className="mr-2 h-4 w-4" />
           {downloading ? "Загрузка..." : downloadText}
         </Button>
-        <Button onClick={handleShare} variant="outline" className="w-full h-11 sm:h-12 bg-transparent text-sm sm:text-base">
+        <Button onClick={handleShare} variant="outline" className="w-full h-12 sm:h-14 bg-transparent text-sm sm:text-base">
           <Share2 className="mr-2 h-4 w-4" />
           {copied ? "Скопировано!" : shareText}
         </Button>

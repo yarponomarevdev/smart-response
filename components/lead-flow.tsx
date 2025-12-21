@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { URLSubmissionStep } from "./url-submission-step"
-import { LoadingStep } from "./loading-step"
+import { ContactsStep } from "./contacts-step"
+import { GenerationStep } from "./generation-step"
 import { SuccessStep } from "./success-step"
 
-export type FlowStep = "url" | "loading" | "success"
+export type FlowStep = "url" | "contacts" | "generation" | "success"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
@@ -13,11 +14,18 @@ interface LeadFlowProps {
   formId?: string
 }
 
+interface ContactData {
+  email: string
+  phone?: string
+  feedback?: boolean
+}
+
 export function LeadFlow({ formId }: LeadFlowProps = {}) {
   const effectiveFormId = formId || MAIN_FORM_ID
   const [step, setStep] = useState<FlowStep>("url")
   const [url, setUrl] = useState("")
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({})
+  const [contactData, setContactData] = useState<ContactData>({ email: "" })
   const [result, setResult] = useState<{ type: string; text: string; imageUrl: string }>({
     type: "text",
     text: "",
@@ -32,15 +40,25 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
           onSubmit={(submittedUrl, fields) => {
             setUrl(submittedUrl)
             setCustomFields(fields || {})
-            setStep("loading")
+            setStep("contacts")
           }}
         />
       )}
-      {step === "loading" && (
-        <LoadingStep
+      {step === "contacts" && (
+        <ContactsStep
+          formId={effectiveFormId}
+          onSubmit={(data) => {
+            setContactData(data)
+            setStep("generation")
+          }}
+        />
+      )}
+      {step === "generation" && (
+        <GenerationStep
           url={url}
           formId={effectiveFormId}
           customFields={customFields}
+          contactData={contactData}
           onComplete={(generatedResult) => {
             setResult({
               type: generatedResult.type,
@@ -58,6 +76,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
           onRestart={() => {
             setUrl("")
             setCustomFields({})
+            setContactData({ email: "" })
             setResult({ type: "text", text: "", imageUrl: "" })
             setStep("url")
           }}
