@@ -172,3 +172,18 @@
 .markdown-content blockquote {
   @apply border-l-4 border-primary text-muted-foreground;
 }
+
+
+/* Анимация shimmer для генерации */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

@@ -9,13 +9,13 @@ export function AuthHeader() {
     <div className="fixed top-0 right-0 p-2 sm:p-4 md:p-6 z-50 flex gap-2 sm:gap-3">
       <ThemeToggle />
       <Link href="/auth/login">
-        <Button variant="outline" className="bg-card/80 backdrop-blur-sm border-border hover:bg-secondary hover:text-secondary-foreground text-foreground h-8 sm:h-10 text-xs sm:text-sm px-3 sm:px-4">
+        <Button className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
           <span className="hidden sm:inline">Login</span>
           <span className="sm:hidden">Вход</span>
         </Button>
       </Link>
       <Link href="/auth/signup">
-        <Button className="bg-primary hover:bg-primary/90 h-8 sm:h-10 text-xs sm:text-sm px-3 sm:px-4">
+        <Button className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base">
           <span className="hidden sm:inline">Sign Up</span>
           <span className="sm:hidden">Регистр.</span>
         </Button>

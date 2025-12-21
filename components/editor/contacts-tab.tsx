@@ -24,6 +24,7 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
   }
 
   const isPhoneEnabled = content.phone_enabled === "true"
+  const isPhoneRequired = content.phone_required === "true"
   const isFeedbackEnabled = content.feedback_enabled === "true"
   const isPrivacyEnabled = content.privacy_enabled === "true"
 
@@ -92,14 +93,30 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
             />
           </div>
         </div>
-        <Input
-          id="phone_placeholder"
-          value={content.phone_placeholder || ""}
-          onChange={(e) => handleChange("phone_placeholder", e.target.value)}
-          placeholder="+375 33 366 76 99"
-          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          disabled={!isPhoneEnabled}
-        />
+        {isPhoneEnabled && (
+          <>
+            <Input
+              id="phone_placeholder"
+              value={content.phone_placeholder || ""}
+              onChange={(e) => handleChange("phone_placeholder", e.target.value)}
+              placeholder="+375 33 366 76 99"
+              className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+            />
+            <div className="flex items-center justify-between pt-2">
+              <Label htmlFor="phone_required" className="text-sm sm:text-base">Сделать обязательным</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {isPhoneRequired ? "Да" : "Нет"}
+                </span>
+                <Switch
+                  id="phone_required"
+                  checked={isPhoneRequired}
+                  onCheckedChange={(checked) => handleBooleanChange("phone_required", checked)}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Обратная связь */}

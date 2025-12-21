@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, RefreshCw } from "lucide-react"
 import { createLead } from "@/app/actions/leads"
+import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
+import * as reactSpring from '@react-spring/three'
 
 interface LoadingStepProps {
   url: string
@@ -29,7 +31,6 @@ interface FormContent {
   gen_title?: string
   gen_subtitle?: string
   // Email форма
-  email_form_description?: string
   email_placeholder?: string
   email_label?: string
   phone_enabled?: string
@@ -39,15 +40,11 @@ interface FormContent {
   feedback_text?: string
   privacy_url?: string
   email_button?: string
-  // CTA блок
-  cta_text?: string
-  button_text?: string
-  button_url?: string
 }
 
 export function LoadingStep({ url, formId, customFields, onComplete, onError }: LoadingStepProps) {
   // Состояние генерации
-  const [isGenerating, setIsGenerating] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [messageIndex, setMessageIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
@@ -115,7 +112,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
   }, [formId])
 
   // Функция генерации результата
-  const generateResult = useCallback(async () => {
+  const generateResult = useCallback(async (): Promise<{ type: string; text: string; imageUrl?: string } | null> => {
     try {
       setError(null)
       setIsGenerating(true)
@@ -147,6 +144,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
       if (data.success && data.result) {
         setResult(data.result)
         setIsGenerating(false)
+        return data.result
       } else {
         console.error("[v0] Generation failed:", data.error || data.details)
         throw new Error(data.details || data.error || "Failed to generate result")
@@ -157,6 +155,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
       setError(errorMessage)
       setIsGenerating(false)
       onError?.(errorMessage)
+      return null
     } finally {
       setIsRetrying(false)
     }
@@ -173,13 +172,8 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
     return () => clearInterval(messageInterval)
   }, [messages.length, error, isGenerating])
 
-  // Запуск генерации - выполняется ОДИН раз
-  useEffect(() => {
-    if (hasStartedRef.current) return
-    hasStartedRef.current = true
-    
-    generateResult()
-  }, [generateResult])
+  // Генерация теперь запускается только после отправки формы с email
+  // (автоматический запуск при монтировании убран)
 
   // Обработчик повторной попытки
   const handleRetry = () => {
@@ -202,10 +196,31 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
   // Отправка формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isEmailValid || isSubmitting || !result || !formId) return
+    if (!isEmailValid || isSubmitting || !formId) return
 
     setIsSubmitting(true)
     setSubmitError(null)
+
+    // СНАЧАЛА запускаем генерацию, если она ещё не была запущена
+    let generatedResult = result
+    if (!generatedResult && !hasStartedRef.current) {
+      hasStartedRef.current = true
+      generatedResult = await generateResult()
+      
+      // Проверяем, не произошла ли ошибка при генерации
+      if (!generatedResult) {
+        setSubmitError("Не удалось сгенерировать результат. Попробуйте ещё раз.")
+        setIsSubmitting(false)
+        return
+      }
+    }
+
+    // Проверяем наличие результата после генерации
+    if (!generatedResult) {
+      setSubmitError("Не удалось сгенерировать результат. Попробуйте ещё раз.")
+      setIsSubmitting(false)
+      return
+    }
 
     // Расширяем customFields данными телефона и обратной связи
     const phoneEnabled = content.phone_enabled === "true"
@@ -221,8 +236,8 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
       formId,
       email,
       url,
-      resultText: result.text,
-      resultImageUrl: result.imageUrl || null,
+      resultText: generatedResult.text,
+      resultImageUrl: generatedResult.imageUrl || null,
       customFields: extendedCustomFields,
     })
 
@@ -239,9 +254,9 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email,
-        resultText: result.text,
-        resultImageUrl: result.imageUrl || null,
-        resultType: result.type,
+        resultText: generatedResult.text,
+        resultImageUrl: generatedResult.imageUrl || null,
+        resultType: generatedResult.type,
         url,
       }),
     }).catch((err) => {
@@ -249,25 +264,21 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
     })
 
     // Переходим к результату
-    onCompleteRef.current(result)
+    onCompleteRef.current(generatedResult)
   }
 
   // Извлекаем настройки из content
   const genTitle = content.gen_title || "Получите персональную рекламную кампанию на основе сайта вашего бизнеса"
   const genSubtitle = content.gen_subtitle || "Подождите несколько секунд..."
-  const emailFormDescription = content.email_form_description || "Куда отправить результат?"
-  const emailPlaceholder = content.email_placeholder || "hello@example.com"
-  const emailLabel = content.email_label || "*Ваш Email (обязательно)"
+  const emailPlaceholder = content.email_placeholder || "hello@vasilkov.digital"
+  const emailLabel = content.email_label || "*Ваш Email (обязательно):"
   const phoneEnabled = content.phone_enabled === "true"
   const phonePlaceholder = content.phone_placeholder || "+7 977 624 76 99"
-  const phoneLabel = content.phone_label || "Ваш номер телефона"
+  const phoneLabel = content.phone_label || "Ваш номер телефона:"
   const feedbackEnabled = content.feedback_enabled === "true"
   const feedbackText = content.feedback_text || "Свяжитесь со мной"
   const privacyUrl = content.privacy_url || ""
   const submitButtonText = content.email_button || "Сгенерировать"
-  const ctaText = content.cta_text || ""
-  const buttonText = content.button_text || ""
-  const buttonUrl = content.button_url || ""
 
   // Отображение ошибки генерации
   if (error) {
@@ -294,34 +305,67 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
   }
 
   return (
-    <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4">
-      {/* Заголовок */}
-      <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold">{genTitle}</h2>
-        <p className="text-sm sm:text-base text-muted-foreground">{genSubtitle}</p>
+    <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4 max-w-2xl mx-auto">
+      {/* Главный заголовок */}
+      <div className="space-y-2 sm:space-y-3">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
+          {genTitle}
+        </h1>
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
+          {genSubtitle}
+        </p>
       </div>
 
-      {/* Превью с анимацией */}
-      <div className="w-full max-w-md">
-        <div className="bg-muted rounded-lg p-4 sm:p-6 relative overflow-hidden aspect-video flex items-center justify-center">
-          {isGenerating ? (
-            <div className="text-center">
-              <div className="animate-pulse text-muted-foreground font-medium">
-                {messages[messageIndex]}
-              </div>
-            </div>
-          ) : result?.type === "image" && result?.imageUrl ? (
+      {/* Блок с анимацией - показываем всегда */}
+      <div className="w-full max-w-[500px] sm:max-w-[600px]">
+        <div className="rounded-[20px] sm:rounded-[24px] relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 10' }}>
+          {result?.type === "image" && result?.imageUrl ? (
             <img
               src={result.imageUrl}
               alt="Generated result"
-              className="w-full rounded blur-xl"
+              className="w-full h-full object-cover rounded-[20px] sm:rounded-[24px] blur-xl"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10 rounded blur-sm" />
+            <>
+              {/* ShaderGradient анимация */}
+              <ShaderGradientCanvas
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+              >
+                <ShaderGradient
+                  control='props'
+                  animate='on'
+                  type='waterPlane'
+                  uTime={0}
+                  uSpeed={isGenerating ? 0.4 : 0.2}
+                  uStrength={isGenerating ? 3.5 : 2}
+                  uDensity={1.2}
+                  uFrequency={5.5}
+                  uAmplitude={0}
+                  color1='#606080'
+                  color2='#8d7dca'
+                  color3='#212121'
+                  brightness={1.2}
+                  grain='on'
+                  grainBlending={0.3}
+                  cAzimuthAngle={180}
+                  cPolarAngle={90}
+                  cDistance={3.6}
+                  wireframe={false}
+                  shader='defaults'
+                />
+              </ShaderGradientCanvas>
+            </>
           )}
           
           {/* Overlay с текстом */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
             <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
               {isGenerating ? messages[messageIndex] : "Происходит что-то магическое..."}
             </p>
@@ -329,52 +373,58 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
         </div>
       </div>
 
+      {/* Заголовок формы */}
+      <h2 className="text-xl sm:text-2xl font-normal mt-2">
+        Куда отправить результат?
+      </h2>
+
       {/* Форма email */}
-      <div className="w-full max-w-md">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {emailFormDescription && (
-            <p className="text-sm text-muted-foreground text-left font-medium">{emailFormDescription}</p>
-          )}
-          
+      <div className="w-full max-w-[534px]">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div className="space-y-2 text-left">
-            <Label htmlFor="email" className="text-sm">{emailLabel}</Label>
+            <Label htmlFor="email" className="text-sm sm:text-base font-normal">
+              {emailLabel}
+            </Label>
             <Input
               id="email"
               type="email"
               placeholder={emailPlaceholder}
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
-              className="h-12 sm:h-14 text-base px-4 bg-card border-border"
+              className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-5 bg-[#f4f4f4] dark:bg-[#262626] border-0 rounded-[16px] placeholder:text-[#c3c3c3] text-center"
               disabled={isSubmitting}
             />
           </div>
 
           {phoneEnabled && (
             <div className="space-y-2 text-left">
-              <Label htmlFor="phone" className="text-sm">{phoneLabel}</Label>
+              <Label htmlFor="phone" className="text-sm sm:text-base font-medium">
+                {phoneLabel}
+              </Label>
               <Input
                 id="phone"
                 type="tel"
                 placeholder={phonePlaceholder}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="h-12 sm:h-14 text-base px-4 bg-card border-border"
+                className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-5 bg-[#f4f4f4] dark:bg-[#262626] border-0 rounded-[16px] placeholder:text-[#c3c3c3] text-center"
                 disabled={isSubmitting}
               />
             </div>
           )}
 
           {feedbackEnabled && (
-            <div className="flex items-center space-x-2 text-left">
+            <div className="flex items-center space-x-2 sm:space-x-3 text-left">
               <Checkbox
                 id="feedback"
                 checked={feedback}
                 onCheckedChange={(checked) => setFeedback(checked === true)}
                 disabled={isSubmitting}
+                className="size-5 sm:size-6 rounded-[5px] border-2 border-black dark:border-white"
               />
               <Label
                 htmlFor="feedback"
-                className="text-sm font-normal cursor-pointer"
+                className="text-sm sm:text-base font-normal cursor-pointer"
               >
                 {feedbackText}
               </Label>
@@ -385,46 +435,33 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
           
           <Button 
             type="submit" 
-            disabled={!isEmailValid || isSubmitting || isGenerating} 
-            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
+            disabled={!isEmailValid || isSubmitting} 
+            className="w-full h-12 sm:h-14 text-base sm:text-lg font-normal bg-black hover:bg-black/90 dark:bg-white dark:hover:bg-white/90 text-white dark:text-black rounded-[16px]"
           >
-            {isSubmitting ? "Отправка..." : isGenerating ? "Генерация..." : submitButtonText}
+            {isSubmitting 
+              ? (isGenerating ? "Генерируем результат..." : "Отправка...") 
+              : submitButtonText}
           </Button>
 
           {/* Политика конфиденциальности */}
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs sm:text-sm text-center leading-relaxed">
             Отправляя данную форму вы соглашаетесь{" "}
             {privacyUrl ? (
               <a
                 href={privacyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="underline hover:no-underline"
               >
                 с политикой конфиденциальности
               </a>
             ) : (
-              "с политикой конфиденциальности"
+              <span className="underline">с политикой конфиденциальности</span>
             )}
           </p>
         </form>
       </div>
 
-      {/* CTA блок */}
-      {ctaText && (
-        <div className="w-full max-w-md space-y-3 pt-4">
-          <p className="text-sm sm:text-base font-medium">{ctaText}</p>
-          {buttonText && buttonUrl && (
-            <Button
-              variant="default"
-              className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
-              onClick={() => window.open(buttonUrl, "_blank")}
-            >
-              {buttonText}
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

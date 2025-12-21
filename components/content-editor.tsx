@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 import { useEditorForms, useFormContent, useSaveFormContent, useCurrentUser } from "@/lib/hooks"
+import { useToggleFormActive } from "@/lib/hooks/use-forms"
 import {
   FormDataTab,
   ContactsTab,
@@ -41,6 +42,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   // React Query хуки
   const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
   const saveContentMutation = useSaveFormContent()
+  const toggleActiveMutation = useToggleFormActive()
 
   // Локальное состояние
   const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
@@ -110,7 +112,22 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         systemPrompt,
         resultFormat,
       })
-      toast.success("Контент сохранён!")
+      
+      // Проверяем и активируем форму, если она не активна
+      const selectedForm = forms.find(f => f.id === selectedFormId)
+      if (selectedForm && !selectedForm.is_active) {
+        try {
+          await toggleActiveMutation.mutateAsync({ 
+            formId: selectedFormId, 
+            currentIsActive: false 
+          })
+          toast.success("Контент сохранён и форма опубликована!")
+        } catch (toggleErr) {
+          toast.warning("Контент сохранён, но не удалось активировать форму: " + (toggleErr instanceof Error ? toggleErr.message : "Неизвестная ошибка"))
+        }
+      } else {
+        toast.success("Контент сохранён!")
+      }
     } catch (err) {
       toast.error("Ошибка сохранения: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
     }

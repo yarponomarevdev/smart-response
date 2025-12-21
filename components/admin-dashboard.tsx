@@ -93,8 +93,8 @@ export function AdminDashboard() {
             <h1 className="text-2xl sm:text-3xl font-bold">{getPanelTitle()}</h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button onClick={handleLogout} variant="outline" size="sm" className="h-9 sm:h-10 text-xs sm:text-sm">
-                <LogOut className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
+                <LogOut className="mr-1 sm:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Logout</span>
                 <span className="sm:hidden">Выход</span>
               </Button>
