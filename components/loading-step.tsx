@@ -27,15 +27,15 @@ interface LoadingStepProps {
 }
 
 interface FormContent {
-  // Заголовки генерации
-  gen_title?: string
-  gen_subtitle?: string
+  // Заголовки формы контактов
+  email_title?: string
+  email_subtitle?: string
+  email_form_description?: string
   // Email форма
   email_placeholder?: string
-  email_label?: string
   phone_enabled?: string
   phone_placeholder?: string
-  phone_label?: string
+  phone_required?: string
   feedback_enabled?: string
   feedback_text?: string
   privacy_url?: string
@@ -193,10 +193,21 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
     setSubmitError(null)
   }
 
+  // Извлекаем настройки из content (до использования в handleSubmit)
+  const phoneEnabled = content.phone_enabled === "true"
+  const phoneRequired = content.phone_required === "true"
+  const feedbackEnabled = content.feedback_enabled === "true"
+
   // Отправка формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isEmailValid || isSubmitting || !formId) return
+    
+    // Проверяем обязательность телефона
+    if (phoneEnabled && phoneRequired && !phone) {
+      setSubmitError("Поле телефона обязательно для заполнения")
+      return
+    }
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -223,8 +234,6 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
     }
 
     // Расширяем customFields данными телефона и обратной связи
-    const phoneEnabled = content.phone_enabled === "true"
-    const feedbackEnabled = content.feedback_enabled === "true"
     
     const extendedCustomFields = {
       ...customFields,
@@ -267,16 +276,13 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
     onCompleteRef.current(generatedResult)
   }
 
-  // Извлекаем настройки из content
-  const genTitle = content.gen_title || "Получите персональную рекламную кампанию на основе сайта вашего бизнеса"
-  const genSubtitle = content.gen_subtitle || "Подождите несколько секунд..."
-  const emailPlaceholder = content.email_placeholder || "hello@vasilkov.digital"
-  const emailLabel = content.email_label || "*Ваш Email (обязательно):"
-  const phoneEnabled = content.phone_enabled === "true"
-  const phonePlaceholder = content.phone_placeholder || "+7 977 624 76 99"
-  const phoneLabel = content.phone_label || "Ваш номер телефона:"
-  const feedbackEnabled = content.feedback_enabled === "true"
-  const feedbackText = content.feedback_text || "Свяжитесь со мной"
+  // Извлекаем остальные настройки из content
+  const emailTitle = content.email_title || "Получите результаты"
+  const emailSubtitle = content.email_subtitle || "Введите email чтобы получить полный анализ"
+  const emailFormDescription = content.email_form_description || "Происходит что-то магическое..."
+  const emailPlaceholder = content.email_placeholder || "your@email.com"
+  const phonePlaceholder = content.phone_placeholder || "+375 33 366 76 99"
+  const feedbackText = content.feedback_text || "Да, свяжитесь со мной"
   const privacyUrl = content.privacy_url || ""
   const submitButtonText = content.email_button || "Сгенерировать"
 
@@ -309,10 +315,10 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
       {/* Главный заголовок */}
       <div className="space-y-2 sm:space-y-3">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
-          {genTitle}
+          {emailTitle}
         </h1>
         <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-          {genSubtitle}
+          {emailSubtitle}
         </p>
       </div>
 
@@ -367,23 +373,18 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
           {/* Overlay с текстом */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
             <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
-              {isGenerating ? messages[messageIndex] : "Происходит что-то магическое..."}
+              {isGenerating ? messages[messageIndex] : emailFormDescription}
             </p>
           </div>
         </div>
       </div>
-
-      {/* Заголовок формы */}
-      <h2 className="text-xl sm:text-2xl font-normal mt-2">
-        Куда отправить результат?
-      </h2>
 
       {/* Форма email */}
       <div className="w-full max-w-[534px]">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div className="space-y-2 text-left">
             <Label htmlFor="email" className="text-sm sm:text-base font-normal">
-              {emailLabel}
+              *Ваш Email (обязательно):
             </Label>
             <Input
               id="email"
@@ -399,7 +400,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
           {phoneEnabled && (
             <div className="space-y-2 text-left">
               <Label htmlFor="phone" className="text-sm sm:text-base font-medium">
-                {phoneLabel}
+                Ваш номер телефона{phoneRequired ? ":" : ":"}
               </Label>
               <Input
                 id="phone"
@@ -409,6 +410,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
                 onChange={(e) => setPhone(e.target.value)}
                 className="h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-5 bg-[#f4f4f4] dark:bg-[#262626] border-0 rounded-[16px] placeholder:text-[#c3c3c3] text-center"
                 disabled={isSubmitting}
+                required={phoneRequired}
               />
             </div>
           )}
@@ -435,7 +437,7 @@ export function LoadingStep({ url, formId, customFields, onComplete, onError }: 
           
           <Button 
             type="submit" 
-            disabled={!isEmailValid || isSubmitting} 
+            disabled={!isEmailValid || isSubmitting || (phoneEnabled && phoneRequired && !phone)} 
             className="w-full h-12 sm:h-14 text-base sm:text-lg font-normal bg-black hover:bg-black/90 dark:bg-white dark:hover:bg-white/90 text-white dark:text-black rounded-[16px]"
           >
             {isSubmitting 
