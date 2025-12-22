@@ -57,13 +57,17 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   const forms = formsData?.forms || []
   const firstFormId = forms.length > 0 ? forms[0].id : null
 
-  const tabTitles: Record<string, string> = {
-    data: "Данные формы",
-    contacts: "Контакты",
-    generation: "Генерация",
-    result: "Результат",
-    share: "Поделиться"
-  }
+  const tabs = [
+    { value: "data", label: "Данные формы" },
+    { value: "contacts", label: "Контакты" },
+    { value: "generation", label: "Генерация" },
+    { value: "result", label: "Результат" },
+    { value: "share", label: "Поделиться" }
+  ]
+
+  const tabTitles: Record<string, string> = Object.fromEntries(
+    tabs.map((tab, index) => [tab.value, `${index + 1}. ${tab.label}`])
+  )
 
   // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
   useEffect(() => {
@@ -134,12 +138,11 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }
 
   const handleContinue = async () => {
-    const tabs = ["data", "contacts", "generation", "result", "share"]
-    const currentIndex = tabs.indexOf(activeTab)
+    const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
     
     if (currentIndex < tabs.length - 1) {
       // Переходим на следующую вкладку
-      setActiveTab(tabs[currentIndex + 1])
+      setActiveTab(tabs[currentIndex + 1].value)
     } else {
       // На последней вкладке сохраняем
       await handleSave()
@@ -147,15 +150,14 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }
 
   const handleBack = () => {
-    const tabs = ["data", "contacts", "generation", "result", "share"]
-    const currentIndex = tabs.indexOf(activeTab)
+    const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
     
     if (currentIndex === 0) {
       // На первой вкладке возвращаемся на дашборд
       onBackToDashboard?.()
     } else if (currentIndex > 0) {
       // На остальных переходим на предыдущую вкладку
-      setActiveTab(tabs[currentIndex - 1])
+      setActiveTab(tabs[currentIndex - 1].value)
     }
   }
 
@@ -253,36 +255,15 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         {/* Вкладки редактора */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-0">
-            <TabsTrigger
-              value="data"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-            >
-              Данные формы
-            </TabsTrigger>
-            <TabsTrigger
-              value="contacts"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-            >
-              Контакты
-            </TabsTrigger>
-            <TabsTrigger
-              value="generation"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-            >
-              Генерация
-            </TabsTrigger>
-            <TabsTrigger
-              value="result"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-            >
-              Результат
-            </TabsTrigger>
-            <TabsTrigger
-              value="share"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-            >
-              Поделиться
-            </TabsTrigger>
+            {tabs.map((tab, index) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                {index + 1}. {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <div className="pt-6">

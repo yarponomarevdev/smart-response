@@ -248,16 +248,16 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
               className="relative overflow-hidden"
             >
               <CardHeader className="pb-2">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base sm:text-lg truncate">{form.name}</CardTitle>
-                    <CardDescription className="text-xs font-mono truncate">
-                      {form.id}
-                    </CardDescription>
-                  </div>
-                  <Badge variant={form.is_active ? "default" : "secondary"} className="shrink-0 text-xs w-fit self-start sm:self-auto">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <Badge variant={form.is_active ? "default" : "secondary"} className="shrink-0 text-xs whitespace-nowrap">
                     {form.is_active ? "Активна" : "Неактивна"}
                   </Badge>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base sm:text-lg truncate">{form.name}</CardTitle>
+                  <CardDescription className="text-xs font-mono truncate">
+                    {form.id}
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">

@@ -19,31 +19,6 @@ export function ResultTab({ content, onChange }: ResultTabProps) {
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      {/* Основные настройки */}
-      <div className="space-y-6 sm:space-y-8 max-w-2xl">
-        <div className="space-y-2">
-          <Label htmlFor="result_title" className="text-base sm:text-lg">Заголовок</Label>
-          <Input
-            id="result_title"
-            value={content.result_title || ""}
-            onChange={(e) => handleChange("result_title", e.target.value)}
-            placeholder="Ваша персональная рекламная кампания готова!"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="result_subtitle" className="text-base sm:text-lg">Подзаголовок</Label>
-          <Input
-            id="result_subtitle"
-            value={content.result_subtitle || ""}
-            onChange={(e) => handleChange("result_subtitle", e.target.value)}
-            placeholder="А также отправлена на вашу почту"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-      </div>
-
       {/* CTA блок */}
       <div className="space-y-4 max-w-2xl">
         <h3 className="text-2xl sm:text-3xl font-bold">CTA-блок</h3>

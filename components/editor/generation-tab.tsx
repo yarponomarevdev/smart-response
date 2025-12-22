@@ -34,44 +34,6 @@ export function GenerationTab({
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      <div className="space-y-8 sm:space-y-10 max-w-2xl">
-        {/* Заголовок */}
-        <div className="space-y-2">
-          <Label htmlFor="gen_title" className="text-base sm:text-lg">Заголовок</Label>
-          <Input
-            id="gen_title"
-            value={content.gen_title || ""}
-            onChange={(e) => handleChange("gen_title", e.target.value)}
-            placeholder="Заголовок"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-
-        {/* Подзаголовок */}
-        <div className="space-y-2">
-          <Label htmlFor="gen_subtitle" className="text-base sm:text-lg">Подзаголовок</Label>
-          <Input
-            id="gen_subtitle"
-            value={content.gen_subtitle || ""}
-            onChange={(e) => handleChange("gen_subtitle", e.target.value)}
-            placeholder="Подзаголовок"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-
-        {/* Текст над формой */}
-        <div className="space-y-2">
-          <Label htmlFor="gen_description" className="text-base sm:text-lg">Текст над формой</Label>
-          <Input
-            id="gen_description"
-            value={content.gen_description || ""}
-            onChange={(e) => handleChange("gen_description", e.target.value)}
-            placeholder="hello.smartresponse.com"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-      </div>
-
       {/* Генерация ответа - ВЫНЕСЛИ ИЗ max-w-2xl */}
       <div className="space-y-4">
         <h3 className="text-2xl sm:text-3xl font-bold">Генерация ответа</h3>

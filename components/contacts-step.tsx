@@ -2,6 +2,7 @@
  * ContactsStep - Этап сбора контактных данных
  * 
  * Показывает форму для ввода email, телефона и чекбокс обратной связи.
+ * Элементы оформления (H1, H2, H3, дисклеймер) берутся из динамических полей формы.
  * Настраивается через вкладку "Контакты" в редакторе.
  */
 "use client"
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
+import { getFormFields, type FormField } from "@/app/actions/form-fields"
 
 interface ContactsStepProps {
   formId: string
@@ -21,10 +23,6 @@ interface ContactsStepProps {
 }
 
 interface FormContent {
-  // Заголовки формы контактов
-  email_title?: string
-  email_subtitle?: string
-  email_form_description?: string
   // Email форма
   email_placeholder?: string
   phone_enabled?: string
@@ -36,6 +34,9 @@ interface FormContent {
   email_button?: string
 }
 
+// Типы элементов оформления
+const LAYOUT_TYPES = ["h1", "h2", "h3", "disclaimer"]
+
 export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   // Состояние формы
   const [email, setEmail] = useState("")
@@ -46,21 +47,23 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   
   // Контент формы
   const [content, setContent] = useState<FormContent>({})
+  
+  // Элементы оформления из динамических полей
+  const [layoutFields, setLayoutFields] = useState<FormField[]>([])
 
-  // Загрузка контента формы
+  // Загрузка контента формы и динамических полей
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchData = async () => {
       if (!formId) return
       
       const supabase = createClient()
+      
+      // Загружаем настройки формы контактов
       const { data } = await supabase
         .from("form_content")
         .select("key, value")
         .eq("form_id", formId)
         .in("key", [
-          "email_title",
-          "email_subtitle",
-          "email_form_description",
           "email_placeholder",
           "phone_enabled",
           "phone_placeholder",
@@ -78,15 +81,20 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
         })
         setContent(contentMap)
       }
+      
+      // Загружаем динамические поля для элементов оформления
+      const fieldsResult = await getFormFields(formId)
+      if ("fields" in fieldsResult && fieldsResult.fields.length > 0) {
+        // Фильтруем только элементы оформления (не кнопку submit)
+        const layouts = fieldsResult.fields.filter(f => LAYOUT_TYPES.includes(f.field_type))
+        setLayoutFields(layouts)
+      }
     }
 
-    fetchContent()
+    fetchData()
   }, [formId])
 
   // Извлекаем настройки из content
-  const emailTitle = content.email_title || "Получите результаты"
-  const emailSubtitle = content.email_subtitle || "Введите email чтобы получить полный анализ"
-  const emailFormDescription = content.email_form_description || "Происходит что-то магическое..."
   const emailPlaceholder = content.email_placeholder || "your@email.com"
   const phoneEnabled = content.phone_enabled === "true"
   const phonePlaceholder = content.phone_placeholder || "+375 33 366 76 99"
@@ -95,6 +103,38 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   const feedbackText = content.feedback_text || "Да, свяжитесь со мной"
   const privacyUrl = content.privacy_url || ""
   const submitButtonText = content.email_button || "Сгенерировать"
+  
+  // Рендер элемента оформления
+  const renderLayoutField = (field: FormField) => {
+    switch (field.field_type) {
+      case "h1":
+        return (
+          <h1 key={field.id} className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight text-balance">
+            {field.field_label}
+          </h1>
+        )
+      case "h2":
+        return (
+          <h2 key={field.id} className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight text-balance">
+            {field.field_label}
+          </h2>
+        )
+      case "h3":
+        return (
+          <p key={field.id} className="text-base sm:text-lg md:text-xl text-muted-foreground text-balance">
+            {field.field_label}
+          </p>
+        )
+      case "disclaimer":
+        return (
+          <p key={field.id} className="text-xs sm:text-sm text-muted-foreground">
+            {field.field_label}
+          </p>
+        )
+      default:
+        return null
+    }
+  }
 
   // Валидация email
   const validateEmail = (value: string) => {
@@ -127,15 +167,12 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4 max-w-2xl mx-auto">
-      {/* Главный заголовок */}
-      <div className="space-y-2 sm:space-y-3">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
-          {emailTitle}
-        </h1>
-        <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-          {emailSubtitle}
-        </p>
-      </div>
+      {/* Элементы оформления из динамических полей */}
+      {layoutFields.length > 0 && (
+        <div className="space-y-2 sm:space-y-3">
+          {layoutFields.map(renderLayoutField)}
+        </div>
+      )}
 
       {/* Блок с анимацией */}
       <div className="w-full max-w-[500px] sm:max-w-[600px]">
@@ -178,7 +215,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           {/* Overlay с текстом */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
             <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
-              {emailFormDescription}
+              Происходит что-то магическое...
             </p>
           </div>
         </div>

@@ -30,42 +30,6 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
-      {/* Заголовок */}
-      <div className="space-y-2">
-        <Label htmlFor="email_title" className="text-base sm:text-lg">Заголовок</Label>
-        <Input
-          id="email_title"
-          value={content.email_title || ""}
-          onChange={(e) => handleChange("email_title", e.target.value)}
-          placeholder="Заголовок"
-          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-        />
-      </div>
-
-      {/* Подзаголовок */}
-      <div className="space-y-2">
-        <Label htmlFor="email_subtitle" className="text-base sm:text-lg">Подзаголовок</Label>
-        <Input
-          id="email_subtitle"
-          value={content.email_subtitle || ""}
-          onChange={(e) => handleChange("email_subtitle", e.target.value)}
-          placeholder="Подзаголовок"
-          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-        />
-      </div>
-
-      {/* Текст над формой */}
-      <div className="space-y-2">
-        <Label htmlFor="email_form_description" className="text-base sm:text-lg">Текст над формой</Label>
-        <Input
-          id="email_form_description"
-          value={content.email_form_description || ""}
-          onChange={(e) => handleChange("email_form_description", e.target.value)}
-          placeholder="hello.smartresponse.com"
-          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-        />
-      </div>
-
       {/* Email (обязательное поле) */}
       <div className="space-y-2">
         <Label htmlFor="email_placeholder" className="text-base sm:text-lg">Email (обязательное поле)</Label>
