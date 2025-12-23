@@ -30,6 +30,18 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
+      {/* Текст в градиенте */}
+      <div className="space-y-2">
+        <Label htmlFor="gradient_text" className="text-base sm:text-lg">Текст в градиенте</Label>
+        <Input
+          id="gradient_text"
+          value={content.gradient_text || ""}
+          onChange={(e) => handleChange("gradient_text", e.target.value)}
+          placeholder="Происходит что-то магическое..."
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+        />
+      </div>
+
       {/* Email (обязательное поле) */}
       <div className="space-y-2">
         <Label htmlFor="email_placeholder" className="text-base sm:text-lg">Email (обязательное поле)</Label>

@@ -32,6 +32,7 @@ interface FormContent {
   feedback_text?: string
   privacy_url?: string
   email_button?: string
+  gradient_text?: string
 }
 
 // Типы элементов оформления
@@ -72,6 +73,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           "feedback_text",
           "privacy_url",
           "email_button",
+          "gradient_text",
         ])
 
       if (data && data.length > 0) {
@@ -103,6 +105,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   const feedbackText = content.feedback_text || "Да, свяжитесь со мной"
   const privacyUrl = content.privacy_url || ""
   const submitButtonText = content.email_button || "Сгенерировать"
+  const gradientText = content.gradient_text || "Происходит что-то магическое..."
   
   // Рендер элемента оформления
   const renderLayoutField = (field: FormField) => {
@@ -193,14 +196,14 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
               animate='on'
               type='waterPlane'
               uTime={0}
-              uSpeed={0.2}
+              uSpeed={0.15}
               uStrength={2}
               uDensity={1.2}
               uFrequency={5.5}
               uAmplitude={0}
-              color1='#606080'
-              color2='#8d7dca'
-              color3='#212121'
+              color1='#505050'
+              color2='#808080'
+              color3='#1a1a1a'
               brightness={1.2}
               grain='on'
               grainBlending={0.3}
@@ -215,7 +218,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           {/* Overlay с текстом */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
             <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
-              Происходит что-то магическое...
+              {gradientText}
             </p>
           </div>
         </div>
