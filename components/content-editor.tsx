@@ -27,6 +27,7 @@ import {
   GenerationTab,
   ResultTab,
   ShareTab,
+  SettingsTab,
   DynamicFieldsTab,
 } from "@/components/editor"
 
@@ -62,7 +63,8 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     { value: "contacts", label: "Контакты" },
     { value: "generation", label: "Генерация" },
     { value: "result", label: "Результат" },
-    { value: "share", label: "Поделиться" }
+    { value: "share", label: "Поделиться" },
+    { value: "settings", label: "Настройки" }
   ]
 
   const tabTitles: Record<string, string> = Object.fromEntries(
@@ -295,6 +297,10 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             <TabsContent value="share" className="mt-0">
               <ShareTab formId={selectedFormId} />
             </TabsContent>
+
+            <TabsContent value="settings" className="mt-0">
+              <SettingsTab formId={selectedFormId} />
+            </TabsContent>
           </div>
         </Tabs>
 
@@ -373,6 +379,18 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
           {/* Вкладка "Поделиться" */}
           {activeTab === "share" && (
+            <Button
+              onClick={handleBack}
+              variant="outline"
+              disabled={saveContentMutation.isPending || contentLoading}
+              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+            >
+              Вернуться назад
+            </Button>
+          )}
+
+          {/* Вкладка "Настройки" */}
+          {activeTab === "settings" && (
             <Button
               onClick={handleBack}
               variant="outline"

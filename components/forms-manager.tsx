@@ -11,7 +11,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Copy, ExternalLink, Users, Code2, Settings, AlertCircle, Plus, Loader2, Trash2, FileEdit } from "lucide-react"
+import { Copy, ExternalLink, Users, Code2, AlertCircle, Plus, Loader2, Trash2, FileEdit } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,9 +23,7 @@ import {
   useUserForms,
   useCreateForm,
   useDeleteForm,
-  useUpdateFormName,
   useToggleFormActive,
-  useUpdateFormNotification,
 } from "@/lib/hooks"
 
 interface Form {
@@ -49,24 +47,19 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   const { data, isLoading, error: queryError } = useUserForms()
   const createFormMutation = useCreateForm()
   const deleteFormMutation = useDeleteForm()
-  const updateNameMutation = useUpdateFormName()
   const toggleActiveMutation = useToggleFormActive()
-  const updateNotificationMutation = useUpdateFormNotification()
 
   // Локальное состояние для UI
   const [error, setError] = useState<string | null>(null)
   
   // Диалоги
   const [showEmbedDialog, setShowEmbedDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   
   // Текущая форма для редактирования
   const [selectedForm, setSelectedForm] = useState<Form | null>(null)
-  const [formName, setFormName] = useState("")
   const [newFormName, setNewFormName] = useState("")
-  const [notifyOnNewLead, setNotifyOnNewLead] = useState(true)
 
   const forms = data?.forms || []
   const totalLeads = data?.totalLeads || 0
@@ -115,18 +108,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
     }
   }
 
-  const updateFormNameHandler = async () => {
-    if (!selectedForm) return
-
-    try {
-      await updateNameMutation.mutateAsync({ formId: selectedForm.id, name: formName })
-      setShowEditDialog(false)
-      toast.success("Имя формы обновлено!")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка обновления имени")
-    }
-  }
-
   const toggleFormActive = async (form: Form) => {
     try {
       await toggleActiveMutation.mutateAsync({ formId: form.id, currentIsActive: form.is_active })
@@ -146,24 +127,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
     const embedCode = `<iframe src="${window.location.origin}/form/${selectedForm.id}" width="100%" height="700" frameborder="0" style="border: none; border-radius: 8px;"></iframe>`
     navigator.clipboard.writeText(embedCode)
     toast.success("Код для встраивания скопирован!")
-  }
-
-  const openEditDialog = (form: Form) => {
-    setSelectedForm(form)
-    setFormName(form.name)
-    setNotifyOnNewLead(form.notify_on_new_lead ?? true)
-    setShowEditDialog(true)
-  }
-
-  const handleNotificationToggle = async (checked: boolean) => {
-    if (!selectedForm) return
-
-    try {
-      await updateNotificationMutation.mutateAsync({ formId: selectedForm.id, notify: checked })
-      setNotifyOnNewLead(checked)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка обновления настройки")
-    }
   }
 
   const openEmbedDialog = (form: Form) => {
@@ -286,11 +249,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <Settings className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">Настройки</span>
-                    <span className="sm:hidden">Настр.</span>
-                  </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -350,47 +308,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
               </Button>
               <Button variant="outline" onClick={() => setShowEmbedDialog(false)} className="h-10 sm:h-11">
                 Закрыть
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Диалог редактирования */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Настройки формы</DialogTitle>
-            <DialogDescription className="text-sm">Настройте параметры вашей формы</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="formName">Название формы</Label>
-              <Input id="formName" value={formName} onChange={(e) => setFormName(e.target.value)} className="mt-2 h-10 sm:h-11" />
-            </div>
-            
-            {/* Настройка email уведомлений */}
-            <div className="flex items-center justify-between rounded-lg border p-3 sm:p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="notify" className="text-sm font-medium">Email уведомления</Label>
-                <p className="text-xs text-muted-foreground">
-                  Получать письмо при новой заявке
-                </p>
-              </div>
-              <Switch
-                id="notify"
-                checked={notifyOnNewLead}
-                onCheckedChange={handleNotificationToggle}
-                disabled={updateNotificationMutation.isPending}
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={updateFormNameHandler} disabled={updateNameMutation.isPending} className="flex-1 h-10 sm:h-11">
-                {updateNameMutation.isPending ? "Сохранение..." : "Сохранить"}
-              </Button>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)} className="h-10 sm:h-11">
-                Отмена
               </Button>
             </div>
           </div>
