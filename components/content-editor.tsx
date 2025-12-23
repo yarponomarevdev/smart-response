@@ -67,10 +67,6 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     { value: "settings", label: "Настройки" }
   ]
 
-  const tabTitles: Record<string, string> = Object.fromEntries(
-    tabs.map((tab, index) => [tab.value, `${index + 1}. ${tab.label}`])
-  )
-
   // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
   useEffect(() => {
     if (propFormId !== propFormIdRef.current) {
@@ -221,47 +217,39 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   const selectedForm = forms.find(f => f.id === selectedFormId)
 
   return (
-    <div className="py-4">
-      <div className="space-y-6 sm:space-y-8">
-        {/* Заголовок с выбором формы */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold">
-              Редактор — {tabTitles[activeTab]}
-            </h2>
+    <div className="space-y-6 sm:space-y-8">
+      {/* Выбор формы */}
+      <div>
+        {/* Выбор формы (если несколько) */}
+        {forms.length > 1 && (
+          <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
+            <SelectTrigger className="h-12 w-auto rounded-[18px] hover:bg-accent/50 gap-2 px-0">
+              <SelectValue placeholder="Выберите форму" />
+            </SelectTrigger>
+            <SelectContent>
+              {forms.map((form) => (
+                <SelectItem key={form.id} value={form.id} className="text-base">
+                  {form.isMain ? `${form.name} (Главная)` : form.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {forms.length === 1 && (
+          <div className="h-12 flex items-center rounded-[18px]">
+            <span className="text-sm">{selectedForm?.name || "Форма"}</span>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-            {/* Выбор формы (если несколько) */}
-            {forms.length > 1 && (
-              <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-                <SelectTrigger className="relative h-12 w-full sm:w-[280px] rounded-[18px] bg-white dark:bg-background border border-input hover:bg-accent/50 !justify-center [&>span]:text-center [&>svg]:absolute [&>svg]:right-3">
-                  <SelectValue placeholder="Выберите форму" />
-                </SelectTrigger>
-                <SelectContent>
-                  {forms.map((form) => (
-                    <SelectItem key={form.id} value={form.id} className="text-base">
-                      {form.isMain ? `${form.name} (Главная)` : form.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {forms.length === 1 && (
-              <div className="h-12 px-4 flex items-center justify-center rounded-[18px] border border-input bg-white dark:bg-background">
-                <span className="text-sm">{selectedForm?.name || "Форма"}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
+      </div>
 
-        {/* Вкладки редактора */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-0">
+      {/* Вкладки редактора */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-6">
             {tabs.map((tab, index) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 py-2"
               >
                 {index + 1}. {tab.label}
               </TabsTrigger>
@@ -401,7 +389,6 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </Button>
           )}
         </div>
-      </div>
     </div>
   )
 }

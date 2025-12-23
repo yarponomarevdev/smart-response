@@ -104,7 +104,7 @@ export function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="flex-wrap h-auto border-b border-border">
+          <TabsList className="flex-wrap h-auto border-b border-border p-0 gap-6">
             {isSuperAdmin ? (
               <>
                 <TabsTrigger value="dashboard">Дашборд</TabsTrigger>

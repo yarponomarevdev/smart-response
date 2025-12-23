@@ -85,6 +85,10 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
 
   const createForm = async () => {
     setError(null)
+    if (newFormName.length > 30) {
+      setError("Название формы не может превышать 30 символов")
+      return
+    }
     try {
       await createFormMutation.mutateAsync(newFormName || undefined)
       setNewFormName("")
@@ -388,10 +392,14 @@ function CreateFormDialog({
               onChange={(e) => setNewFormName(e.target.value)} 
               placeholder="Моя форма"
               className="mt-2 h-10 sm:h-11" 
+              maxLength={30}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {newFormName.length}/30 символов
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={onCreate} className="flex-1 h-10 sm:h-11" disabled={creating}>
+            <Button onClick={onCreate} className="flex-1 h-10 sm:h-11" disabled={creating || !newFormName.trim() || newFormName.length > 30}>
               {creating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

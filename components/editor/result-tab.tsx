@@ -59,33 +59,6 @@ export function ResultTab({ content, onChange }: ResultTabProps) {
           />
         </div>
       </div>
-
-      {/* Кнопки действий */}
-      <div className="space-y-4 max-w-2xl">
-        <h3 className="text-2xl sm:text-3xl font-bold">Кнопки действий</h3>
-
-        <div className="space-y-2">
-          <Label htmlFor="result_download_text" className="text-base sm:text-lg">Текст кнопки "Скачать"</Label>
-          <Input
-            id="result_download_text"
-            value={content.result_download_text || ""}
-            onChange={(e) => handleChange("result_download_text", e.target.value)}
-            placeholder="Скачать"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="result_share_text" className="text-base sm:text-lg">Текст кнопки "Поделиться"</Label>
-          <Input
-            id="result_share_text"
-            value={content.result_share_text || ""}
-            onChange={(e) => handleChange("result_share_text", e.target.value)}
-            placeholder="Поделиться"
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          />
-        </div>
-      </div>
     </div>
   )
 }

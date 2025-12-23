@@ -95,6 +95,10 @@ export function SettingsTab({ formId }: SettingsTabProps) {
 
   const handleSaveName = async () => {
     if (!formId || !formName.trim()) return
+    if (formName.length > 30) {
+      toast.error("Название формы не может превышать 30 символов")
+      return
+    }
 
     try {
       await updateNameMutation.mutateAsync({ formId, name: formName })
@@ -131,10 +135,14 @@ export function SettingsTab({ formId }: SettingsTabProps) {
             onChange={(e) => setFormName(e.target.value)}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
             placeholder="Название формы"
+            maxLength={30}
           />
+          <p className="text-xs text-muted-foreground">
+            {formName.length}/30 символов
+          </p>
           <Button
             onClick={handleSaveName}
-            disabled={updateNameMutation.isPending || !formName.trim()}
+            disabled={updateNameMutation.isPending || !formName.trim() || formName.length > 30}
             className="h-12 sm:h-14 rounded-[18px] w-full text-base sm:text-lg"
           >
             {updateNameMutation.isPending ? "Сохранение..." : "Сохранить название"}
