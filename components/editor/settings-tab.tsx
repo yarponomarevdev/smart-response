@@ -1,6 +1,7 @@
 /**
  * SettingsTab - Вкладка "Настройки"
  * Позволяет настраивать параметры формы: название и email уведомления
+ * С автосохранением названия формы
  */
 "use client"
 
@@ -8,10 +9,11 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Button } from "@/components/ui/button"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { useUpdateFormName, useUpdateFormNotification } from "@/lib/hooks/use-forms"
+import { useUpdateFormNotification } from "@/lib/hooks/use-forms"
+import { useAutoSaveFormName } from "@/lib/hooks/use-autosave"
+import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
 
@@ -44,11 +46,9 @@ async function fetchFormData(formId: string): Promise<FormData> {
 }
 
 export function SettingsTab({ formId }: SettingsTabProps) {
-  const [formName, setFormName] = useState("")
   const [notifyOnNewLead, setNotifyOnNewLead] = useState(true)
   const queryClient = useQueryClient()
 
-  const updateNameMutation = useUpdateFormName()
   const updateNotificationMutation = useUpdateFormNotification()
 
   // Загружаем данные формы
@@ -59,10 +59,16 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Обновляем локальное состояние при загрузке данных
+  // Автосохранение названия формы
+  const formName = useAutoSaveFormName({
+    formId,
+    initialValue: formData?.name || "",
+    maxLength: 30,
+  })
+
+  // Обновляем локальное состояние уведомлений при загрузке данных
   useEffect(() => {
     if (formData) {
-      setFormName(formData.name)
       setNotifyOnNewLead(formData.notify_on_new_lead ?? true)
     }
   }, [formData])
@@ -93,23 +99,6 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     )
   }
 
-  const handleSaveName = async () => {
-    if (!formId || !formName.trim()) return
-    if (formName.length > 30) {
-      toast.error("Название формы не может превышать 30 символов")
-      return
-    }
-
-    try {
-      await updateNameMutation.mutateAsync({ formId, name: formName })
-      // Инвалидируем кэш настроек формы для обновления данных
-      queryClient.invalidateQueries({ queryKey: ["formSettings", formId] })
-      toast.success("Название формы обновлено!")
-    } catch (err) {
-      toast.error("Ошибка обновления названия: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
-    }
-  }
-
   const handleNotificationToggle = async (checked: boolean) => {
     if (!formId) return
 
@@ -126,29 +115,21 @@ export function SettingsTab({ formId }: SettingsTabProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
-      <div className="space-y-2">
-        <Label htmlFor="formName" className="text-base sm:text-lg">Название формы</Label>
-        <div className="flex flex-col gap-3">
-          <Input
-            id="formName"
-            value={formName}
-            onChange={(e) => setFormName(e.target.value)}
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-            placeholder="Название формы"
-            maxLength={30}
-          />
-          <p className="text-xs text-muted-foreground">
-            {formName.length}/30 символов
-          </p>
-          <Button
-            onClick={handleSaveName}
-            disabled={updateNameMutation.isPending || !formName.trim() || formName.length > 30}
-            className="h-12 sm:h-14 rounded-[18px] w-full text-base sm:text-lg"
-          >
-            {updateNameMutation.isPending ? "Сохранение..." : "Сохранить название"}
-          </Button>
-        </div>
-      </div>
+      <AutoSaveFieldWrapper
+        label="Название формы"
+        labelFor="formName"
+        status={formName.status}
+        counter={{ current: formName.value.length, max: 30 }}
+      >
+        <Input
+          id="formName"
+          value={formName.value}
+          onChange={(e) => formName.onChange(e.target.value)}
+          className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+          placeholder="Название формы"
+          maxLength={30}
+        />
+      </AutoSaveFieldWrapper>
 
       <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
         <div className="flex items-center justify-between">
@@ -169,4 +150,3 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     </div>
   )
 }
-

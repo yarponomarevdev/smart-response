@@ -3,7 +3,7 @@
  * Позволяет настраивать тексты, AI-промпты и другие параметры формы
  * Разделён на вкладки: Данные формы, Контакты, Генерация, Результат, Поделиться
  * 
- * Использует React Query для кэширования данных
+ * Все поля автосохраняются при изменении
  */
 "use client"
 
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
-import { useEditorForms, useFormContent, useSaveFormContent, useCurrentUser } from "@/lib/hooks"
+import { useEditorForms, useFormContent, useCurrentUser } from "@/lib/hooks"
 import { useToggleFormActive } from "@/lib/hooks/use-forms"
 import {
   FormDataTab,
@@ -42,15 +42,10 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   
   // React Query хуки
   const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
-  const saveContentMutation = useSaveFormContent()
   const toggleActiveMutation = useToggleFormActive()
 
   // Локальное состояние
   const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
-  const [content, setContent] = useState<Record<string, string>>({})
-  const [loadingMessages, setLoadingMessages] = useState<string[]>(["", "", ""])
-  const [systemPrompt, setSystemPrompt] = useState<string>("")
-  const [resultFormat, setResultFormat] = useState<string>("text")
   const [activeTab, setActiveTab] = useState("data")
   const propFormIdRef = useRef<string | undefined>(propFormId)
   const userHasSelectedRef = useRef<boolean>(false)
@@ -88,62 +83,36 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   // Загружаем контент выбранной формы
   const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
 
-  // Обновляем локальное состояние когда загружаем контент
-  useEffect(() => {
-    if (contentData) {
-      setContent(contentData.content)
-      setLoadingMessages(contentData.loadingMessages)
-      setSystemPrompt(contentData.systemPrompt)
-      setResultFormat(contentData.resultFormat)
-    }
-  }, [contentData])
-
   const handleFormChange = (formId: string) => {
     userHasSelectedRef.current = true
     setSelectedFormId(formId)
   }
 
-  const handleSave = async () => {
+  const handlePublish = async () => {
     if (!selectedFormId) return
 
     try {
-      await saveContentMutation.mutateAsync({
-        formId: selectedFormId,
-        content,
-        loadingMessages,
-        systemPrompt,
-        resultFormat,
-      })
-      
       // Проверяем и активируем форму, если она не активна
       const selectedForm = forms.find(f => f.id === selectedFormId)
       if (selectedForm && !selectedForm.is_active) {
-        try {
-          await toggleActiveMutation.mutateAsync({ 
-            formId: selectedFormId, 
-            currentIsActive: false 
-          })
-          toast.success("Контент сохранён и форма опубликована!")
-        } catch (toggleErr) {
-          toast.warning("Контент сохранён, но не удалось активировать форму: " + (toggleErr instanceof Error ? toggleErr.message : "Неизвестная ошибка"))
-        }
+        await toggleActiveMutation.mutateAsync({ 
+          formId: selectedFormId, 
+          currentIsActive: false 
+        })
+        toast.success("Форма опубликована!")
       } else {
-        toast.success("Контент сохранён!")
+        toast.info("Форма уже опубликована")
       }
     } catch (err) {
-      toast.error("Ошибка сохранения: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error("Ошибка публикации: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
     }
   }
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
     
     if (currentIndex < tabs.length - 1) {
-      // Переходим на следующую вкладку
       setActiveTab(tabs[currentIndex + 1].value)
-    } else {
-      // На последней вкладке сохраняем
-      await handleSave()
     }
   }
 
@@ -161,12 +130,6 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
   const handleGoToShare = () => {
     setActiveTab("share")
-  }
-
-  const handleLoadingMessageChange = (index: number, value: string) => {
-    const newMessages = [...loadingMessages]
-    newMessages[index] = value
-    setLoadingMessages(newMessages)
   }
 
   const isLoading = userLoading || formsLoading || contentLoading
@@ -215,6 +178,9 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }
 
   const selectedForm = forms.find(f => f.id === selectedFormId)
+  const content = contentData?.content || {}
+  const loadingMessages = contentData?.loadingMessages || ["", "", ""]
+  const systemPrompt = contentData?.systemPrompt || ""
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -262,24 +228,20 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </TabsContent>
 
             <TabsContent value="contacts" className="mt-0">
-              <ContactsTab content={content} onChange={setContent} />
+              <ContactsTab formId={selectedFormId} content={content} />
             </TabsContent>
 
             <TabsContent value="generation" className="mt-0">
               <GenerationTab
-                content={content}
+                formId={selectedFormId}
                 systemPrompt={systemPrompt}
-                resultFormat={resultFormat}
                 loadingMessages={loadingMessages}
-                onContentChange={setContent}
-                onSystemPromptChange={setSystemPrompt}
-                onResultFormatChange={setResultFormat}
-                onLoadingMessageChange={handleLoadingMessageChange}
+                content={content}
               />
             </TabsContent>
 
             <TabsContent value="result" className="mt-0">
-              <ResultTab content={content} onChange={setContent} />
+              <ResultTab formId={selectedFormId} content={content} />
             </TabsContent>
 
             <TabsContent value="share" className="mt-0">
@@ -299,7 +261,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             <>
               <Button
                 onClick={handleContinue}
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 Продолжить
@@ -307,7 +269,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleBack}
                 variant="outline"
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
@@ -320,7 +282,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             <>
               <Button
                 onClick={handleContinue}
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 Продолжить
@@ -328,7 +290,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleBack}
                 variant="outline"
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
@@ -340,16 +302,16 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
           {activeTab === "result" && (
             <>
               <Button
-                onClick={handleSave}
-                disabled={saveContentMutation.isPending || contentLoading}
+                onClick={handlePublish}
+                disabled={toggleActiveMutation.isPending || contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
-                {saveContentMutation.isPending ? "Сохранение..." : "Сохранить и опубликовать"}
+                {toggleActiveMutation.isPending ? "Публикация..." : "Сохранить и опубликовать"}
               </Button>
               <Button
                 onClick={handleGoToShare}
                 variant="outline"
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Поделиться
@@ -357,7 +319,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               <Button
                 onClick={handleBack}
                 variant="outline"
-                disabled={saveContentMutation.isPending || contentLoading}
+                disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
                 Вернуться назад
@@ -370,7 +332,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             <Button
               onClick={handleBack}
               variant="outline"
-              disabled={saveContentMutation.isPending || contentLoading}
+              disabled={contentLoading}
               className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
             >
               Вернуться назад
@@ -382,7 +344,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             <Button
               onClick={handleBack}
               variant="outline"
-              disabled={saveContentMutation.isPending || contentLoading}
+              disabled={contentLoading}
               className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
             >
               Вернуться назад
