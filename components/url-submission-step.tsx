@@ -365,29 +365,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
           </p>
         )
 
-      case "submit_button":
-        // Кнопка отправки формы - рендерится на своём месте
-        return (
-          <Button
-            key={field.id}
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
-          >
-            {isLoading ? "Обработка..." : field.field_label}
-          </Button>
-        )
-
       default:
         return null
     }
   }
 
   // Типы полей, которые являются элементами оформления (не требуют ввода, не оборачиваются в text-left)
-  const LAYOUT_TYPES = ["h1", "h2", "h3", "disclaimer", "submit_button"]
-  
-  // Проверяем есть ли кнопка отправки
-  const hasSubmitButton = dynamicFields.some(f => f.field_type === "submit_button")
+  const LAYOUT_TYPES = ["h1", "h2", "h3", "disclaimer"]
 
   if (contentLoading) {
     return (
@@ -436,12 +420,10 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
         {error && <p className="text-sm text-destructive text-left">{error}</p>}
         
-        {/* Fallback кнопка если не добавлена через динамические поля */}
-        {!hasSubmitButton && (
-          <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
-            {isLoading ? "Обработка..." : "Продолжить"}
-          </Button>
-        )}
+        {/* Кнопка отправки формы */}
+        <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
+          {isLoading ? "Обработка..." : "Продолжить"}
+        </Button>
       </form>
     </div>
   )

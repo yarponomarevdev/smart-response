@@ -15,7 +15,7 @@ const supabaseAdmin = createClient(
 )
 
 // Типы полей формы
-export type FieldType = "text" | "url" | "select" | "multiselect" | "checkbox" | "image" | "h1" | "h2" | "h3" | "disclaimer" | "submit_button"
+export type FieldType = "text" | "url" | "select" | "multiselect" | "checkbox" | "image" | "h1" | "h2" | "h3" | "disclaimer"
 
 export interface FieldOption {
   value: string

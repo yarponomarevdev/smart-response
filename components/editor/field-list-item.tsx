@@ -7,7 +7,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InlineEditableText } from "@/components/ui/inline-editable-text"
-import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info, ArrowRight } from "lucide-react"
+import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
@@ -31,7 +31,6 @@ const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
   h2: <Heading2 className="h-4 w-4" />,
   h3: <Heading3 className="h-4 w-4" />,
   disclaimer: <Info className="h-4 w-4" />,
-  submit_button: <ArrowRight className="h-4 w-4" />,
 }
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
@@ -45,11 +44,10 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   h2: "Заголовок H2",
   h3: "Заголовок H3",
   disclaimer: "Дисклеймер",
-  submit_button: "Кнопка",
 }
 
 // Типы полей, для которых не нужен placeholder
-const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer", "submit_button"]
+const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
 
 export function FieldListItem({
   id,

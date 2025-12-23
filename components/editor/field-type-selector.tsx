@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info, ArrowRight } from "lucide-react"
+import { Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info } from "lucide-react"
 import type { FieldType } from "@/app/actions/form-fields"
 
 interface FieldTypeSelectorProps {
@@ -48,13 +48,6 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: React.ReactNode; desc
     label: "Дисклеймер",
     icon: <Info className="h-5 w-5" />,
     description: "Мелкий текст примечания",
-    category: "layout",
-  },
-  {
-    type: "submit_button",
-    label: "Кнопка продолжения",
-    icon: <ArrowRight className="h-5 w-5" />,
-    description: "Кнопка перехода к следующему шагу",
     category: "layout",
   },
   // Поля ввода

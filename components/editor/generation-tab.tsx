@@ -86,44 +86,6 @@ export function GenerationTab({
             </div>
           ))}
         </div>
-
-        <div className="space-y-4 max-w-2xl">
-          {/* СТА-текст */}
-          <div className="space-y-2">
-            <Label htmlFor="cta_text" className="text-base sm:text-lg">СТА-текст</Label>
-            <Input
-              id="cta_text"
-              value={content.cta_text || ""}
-              onChange={(e) => handleChange("cta_text", e.target.value)}
-              placeholder="Покупай"
-              className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-            />
-          </div>
-
-          {/* Название кнопки */}
-          <div className="space-y-2">
-            <Label htmlFor="button_text" className="text-base sm:text-lg">Название кнопки</Label>
-            <Input
-              id="button_text"
-              value={content.button_text || ""}
-              onChange={(e) => handleChange("button_text", e.target.value)}
-              placeholder="Подписаться в Instagram*"
-              className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-            />
-          </div>
-
-          {/* Ссылка кнопки */}
-          <div className="space-y-2">
-            <Label htmlFor="button_url" className="text-base sm:text-lg">Ссылка кнопки</Label>
-            <Input
-              id="button_url"
-              value={content.button_url || ""}
-              onChange={(e) => handleChange("button_url", e.target.value)}
-              placeholder="https://instagram.com/username"
-              className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-            />
-          </div>
-        </div>
       </div>
 
       {/* Доп. настройки */}

@@ -51,11 +51,10 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   h2: "Заголовок H2",
   h3: "Заголовок H3",
   disclaimer: "Дисклеймер",
-  submit_button: "Кнопка продолжения",
 }
 
 // Типы полей, для которых не нужен placeholder и is_required
-const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer", "submit_button"]
+const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
 
 // Типы полей, для которых нужны опции
 const OPTION_FIELD_TYPES: FieldType[] = ["select", "multiselect"]
@@ -134,14 +133,12 @@ export function FieldForm({
 
   // Определяем label для поля ввода текста в зависимости от типа
   const getLabelText = () => {
-    if (fieldType === "submit_button") return "Текст кнопки"
     if (fieldType === "disclaimer") return "Текст дисклеймера"
     if (fieldType === "h1" || fieldType === "h2" || fieldType === "h3") return "Текст заголовка"
     return "Название поля"
   }
 
   const getPlaceholderText = () => {
-    if (fieldType === "submit_button") return "Например: Продолжить"
     if (fieldType === "disclaimer") return "Например: Бесплатно • Занимает 30 секунд"
     if (fieldType === "h1") return "Например: Анализ сайта с помощью ИИ"
     if (fieldType === "h2" || fieldType === "h3") return "Введите текст заголовка"
