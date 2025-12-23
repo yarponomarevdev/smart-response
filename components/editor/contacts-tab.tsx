@@ -32,7 +32,7 @@ export function ContactsTab({ content, onChange }: ContactsTabProps) {
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
       {/* Текст в градиенте */}
       <div className="space-y-2">
-        <Label htmlFor="gradient_text" className="text-base sm:text-lg">Текст в градиенте</Label>
+        <Label htmlFor="gradient_text" className="text-base sm:text-lg">Текст для мотивации оставить контакты</Label>
         <Input
           id="gradient_text"
           value={content.gradient_text || ""}

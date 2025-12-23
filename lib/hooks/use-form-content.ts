@@ -10,6 +10,7 @@ const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 interface Form {
   id: string
   name: string
+  is_active: boolean
   isMain?: boolean
 }
 
@@ -53,11 +54,11 @@ async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
   // Загружаем все формы пользователя
   const { data: userForms } = await supabase
     .from("forms")
-    .select("id, name")
+    .select("id, name, is_active")
     .eq("owner_id", userId)
     .order("created_at", { ascending: false })
 
-  let allForms: Form[] = userForms || []
+  let allForms: Form[] = (userForms || []) as Form[]
 
   // Для пользователя с доступом к Main form добавляем её
   if (canSeeMainForm) {
@@ -65,7 +66,7 @@ async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
     if (!hasMainForm) {
       const { data: mainForm } = await supabase
         .from("forms")
-        .select("id, name")
+        .select("id, name, is_active")
         .eq("id", MAIN_FORM_ID)
         .single()
       

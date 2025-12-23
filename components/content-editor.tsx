@@ -223,7 +223,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         {/* Выбор формы (если несколько) */}
         {forms.length > 1 && (
           <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-            <SelectTrigger className="h-12 w-auto rounded-[18px] hover:bg-accent/50 gap-2 px-0">
+            <SelectTrigger className="h-12 w-auto rounded-[18px] gap-2 px-0">
               <SelectValue placeholder="Выберите форму" />
             </SelectTrigger>
             <SelectContent>
