@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { URLSubmissionStep } from "./url-submission-step"
 import { ContactsStep } from "./contacts-step"
 import { GenerationStep } from "./generation-step"
 import { SuccessStep } from "./success-step"
+import { createClient } from "@/lib/supabase/client"
 
 export type FlowStep = "url" | "contacts" | "generation" | "success"
 
@@ -31,6 +32,25 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
     text: "",
     imageUrl: "",
   })
+  const [sendEmailToRespondent, setSendEmailToRespondent] = useState(true)
+
+  // Загружаем настройку отправки email респонденту
+  useEffect(() => {
+    const fetchFormSettings = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("forms")
+        .select("send_email_to_respondent")
+        .eq("id", effectiveFormId)
+        .single()
+
+      if (data) {
+        setSendEmailToRespondent(data.send_email_to_respondent ?? true)
+      }
+    }
+
+    fetchFormSettings()
+  }, [effectiveFormId])
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -59,6 +79,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
           formId={effectiveFormId}
           customFields={customFields}
           contactData={contactData}
+          sendEmailToRespondent={sendEmailToRespondent}
           onComplete={(generatedResult) => {
             setResult({
               type: generatedResult.type,

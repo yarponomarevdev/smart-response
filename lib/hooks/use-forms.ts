@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { createUserForm, deleteUserForm, canCreateMoreForms, updateFormNotificationSetting } from "@/app/actions/forms"
+import { createUserForm, deleteUserForm, canCreateMoreForms, updateFormNotificationSetting, updateFormRespondentEmailSetting, updateFormTheme } from "@/app/actions/forms"
 import { useCurrentUser } from "./use-auth"
 
 interface Form {
@@ -208,25 +208,46 @@ export function useToggleFormActive() {
 }
 
 /**
+ * Фабрика хуков для обновления настроек формы
+ */
+function createUpdateFormSettingHook<T>(
+  updateFn: (userId: string, formId: string, value: T) => Promise<{ success?: boolean; error?: string }>
+) {
+  return function useUpdateFormSetting() {
+    const queryClient = useQueryClient()
+    const { data: user } = useCurrentUser()
+
+    return useMutation({
+      mutationFn: async ({ formId, value }: { formId: string; value: T }) => {
+        if (!user) throw new Error("Пользователь не авторизован")
+        const result = await updateFn(user.id, formId, value)
+        if (result.error) throw new Error(result.error)
+        return result
+      },
+      onSuccess: () => {
+        // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
+        queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
+        // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
+        queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
+        // Инвалидируем кэш настроек формы
+        queryClient.invalidateQueries({ queryKey: ["formSettings"], exact: false })
+      },
+    })
+  }
+}
+
+/**
  * Хук для обновления настройки уведомлений формы
  */
-export function useUpdateFormNotification() {
-  const queryClient = useQueryClient()
-  const { data: user } = useCurrentUser()
+export const useUpdateFormNotification = createUpdateFormSettingHook(updateFormNotificationSetting)
 
-  return useMutation({
-    mutationFn: async ({ formId, notify }: { formId: string; notify: boolean }) => {
-      if (!user) throw new Error("Пользователь не авторизован")
-      const result = await updateFormNotificationSetting(user.id, formId, notify)
-      if (result.error) throw new Error(result.error)
-      return result
-    },
-    onSuccess: () => {
-      // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
-      // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
-      queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
-    },
-  })
-}
+/**
+ * Хук для обновления настройки отправки email респондентам
+ */
+export const useUpdateFormRespondentEmail = createUpdateFormSettingHook(updateFormRespondentEmailSetting)
+
+/**
+ * Хук для обновления темы формы
+ */
+export const useUpdateFormTheme = createUpdateFormSettingHook(updateFormTheme)
 

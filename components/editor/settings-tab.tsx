@@ -1,7 +1,9 @@
 /**
  * SettingsTab - Вкладка "Настройки"
- * Позволяет настраивать параметры формы: название и email уведомления
- * С автосохранением названия формы
+ * Позволяет настраивать параметры формы:
+ * - Название формы (с автосохранением)
+ * - Email уведомления владельцу при новой заявке
+ * - Email респонденту с результатом
  */
 "use client"
 
@@ -9,11 +11,12 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { useUpdateFormNotification } from "@/lib/hooks/use-forms"
+import { useUpdateFormNotification, useUpdateFormRespondentEmail, useUpdateFormTheme } from "@/lib/hooks/use-forms"
 import { useAutoSaveFormName } from "@/lib/hooks/use-autosave"
-import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
+import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
 
@@ -25,6 +28,8 @@ interface FormData {
   id: string
   name: string
   notify_on_new_lead: boolean
+  send_email_to_respondent: boolean
+  theme: "light" | "dark"
 }
 
 /**
@@ -34,7 +39,7 @@ async function fetchFormData(formId: string): Promise<FormData> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from("forms")
-    .select("id, name, notify_on_new_lead")
+    .select("id, name, notify_on_new_lead, send_email_to_respondent, theme")
     .eq("id", formId)
     .single()
 
@@ -47,9 +52,13 @@ async function fetchFormData(formId: string): Promise<FormData> {
 
 export function SettingsTab({ formId }: SettingsTabProps) {
   const [notifyOnNewLead, setNotifyOnNewLead] = useState(true)
+  const [sendEmailToRespondent, setSendEmailToRespondent] = useState(true)
+  const [theme, setTheme] = useState<"light" | "dark">("light")
   const queryClient = useQueryClient()
 
   const updateNotificationMutation = useUpdateFormNotification()
+  const updateRespondentEmailMutation = useUpdateFormRespondentEmail()
+  const updateThemeMutation = useUpdateFormTheme()
 
   // Загружаем данные формы
   const { data: formData, isLoading, error } = useQuery({
@@ -70,6 +79,8 @@ export function SettingsTab({ formId }: SettingsTabProps) {
   useEffect(() => {
     if (formData) {
       setNotifyOnNewLead(formData.notify_on_new_lead ?? true)
+      setSendEmailToRespondent(formData.send_email_to_respondent ?? true)
+      setTheme(formData.theme ?? "light")
     }
   }, [formData])
 
@@ -103,13 +114,36 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     if (!formId) return
 
     try {
-      await updateNotificationMutation.mutateAsync({ formId, notify: checked })
+      await updateNotificationMutation.mutateAsync({ formId, value: checked })
       setNotifyOnNewLead(checked)
-      // Инвалидируем кэш настроек формы для обновления данных
-      queryClient.invalidateQueries({ queryKey: ["formSettings", formId] })
       toast.success(checked ? "Уведомления включены" : "Уведомления отключены")
     } catch (err) {
       toast.error("Ошибка обновления настройки: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+    }
+  }
+
+  const handleRespondentEmailToggle = async (checked: boolean) => {
+    if (!formId) return
+
+    try {
+      await updateRespondentEmailMutation.mutateAsync({ formId, value: checked })
+      setSendEmailToRespondent(checked)
+      toast.success(checked ? "Отправка писем респондентам включена" : "Отправка писем респондентам отключена")
+    } catch (err) {
+      toast.error("Ошибка обновления настройки: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+    }
+  }
+
+  const handleThemeChange = async (newTheme: "light" | "dark") => {
+    if (!formId) return
+
+    try {
+      await updateThemeMutation.mutateAsync({ formId, value: newTheme })
+      setTheme(newTheme)
+      const themeNames = { light: "Светлая", dark: "Тёмная" }
+      toast.success(`Тема изменена на "${themeNames[newTheme]}"`)
+    } catch (err) {
+      toast.error("Ошибка обновления темы: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
     }
   }
 
@@ -145,6 +179,50 @@ export function SettingsTab({ formId }: SettingsTabProps) {
             onCheckedChange={handleNotificationToggle}
             disabled={updateNotificationMutation.isPending}
           />
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="respondentEmail" className="text-base sm:text-lg font-medium">Email респонденту</Label>
+            <p className="text-sm text-muted-foreground">
+              Отправлять письмо с результатом заполнившему форму
+            </p>
+          </div>
+          <Switch
+            id="respondentEmail"
+            checked={sendEmailToRespondent}
+            onCheckedChange={handleRespondentEmailToggle}
+            disabled={updateRespondentEmailMutation.isPending}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
+        <div className="space-y-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="theme" className="text-base sm:text-lg font-medium">Тема формы</Label>
+            <p className="text-sm text-muted-foreground">
+              Выберите тему отображения для вашей формы
+            </p>
+          </div>
+          <Select
+            value={theme}
+            onValueChange={(value) => handleThemeChange(value as "light" | "dark")}
+            disabled={updateThemeMutation.isPending}
+          >
+            <SelectTrigger 
+              id="theme"
+              className="h-12 sm:h-[70px] rounded-[18px] bg-white dark:bg-background border-border text-base sm:text-lg"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Светлая</SelectItem>
+              <SelectItem value="dark">Тёмная</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

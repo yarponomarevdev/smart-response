@@ -3,7 +3,9 @@
  * - createUserForm: создание новой формы для пользователя
  * - deleteUserForm: удаление формы пользователя
  * - canCreateMoreForms: проверка лимита форм
- * - updateFormNotificationSetting: обновление настройки уведомлений
+ * - updateFormNotificationSetting: обновление настройки уведомлений владельцу
+ * - updateFormRespondentEmailSetting: обновление настройки отправки email респондентам
+ * - updateFormTheme: обновление темы формы
  */
 "use server"
 
@@ -186,10 +188,9 @@ export async function deleteUserForm(userId: string, formId: string) {
 }
 
 /**
- * Обновляет настройку email уведомлений для формы
+ * Проверяет права владельца на форму
  */
-export async function updateFormNotificationSetting(userId: string, formId: string, notifyOnNewLead: boolean) {
-  // Проверяем что форма принадлежит пользователю
+async function verifyFormOwnership(userId: string, formId: string) {
   const { data: form } = await supabaseAdmin
     .from("forms")
     .select("owner_id")
@@ -204,16 +205,52 @@ export async function updateFormNotificationSetting(userId: string, formId: stri
     return { error: "Нет прав на изменение этой формы" }
   }
 
-  // Обновляем настройку
+  return { success: true }
+}
+
+/**
+ * Обновляет поле формы (общая функция)
+ */
+async function updateFormField<T>(
+  userId: string,
+  formId: string,
+  field: string,
+  value: T,
+  errorMessage: string
+) {
+  const ownershipCheck = await verifyFormOwnership(userId, formId)
+  if (ownershipCheck.error) return ownershipCheck
+
   const { error } = await supabaseAdmin
     .from("forms")
-    .update({ notify_on_new_lead: notifyOnNewLead })
+    .update({ [field]: value })
     .eq("id", formId)
 
   if (error) {
-    console.error("Error updating notification setting:", error)
-    return { error: "Ошибка обновления настройки: " + error.message }
+    console.error(`Error updating ${field}:`, error)
+    return { error: `${errorMessage}: ${error.message}` }
   }
 
   return { success: true }
+}
+
+/**
+ * Обновляет настройку email уведомлений для формы
+ */
+export async function updateFormNotificationSetting(userId: string, formId: string, notifyOnNewLead: boolean) {
+  return updateFormField(userId, formId, "notify_on_new_lead", notifyOnNewLead, "Ошибка обновления настройки")
+}
+
+/**
+ * Обновляет настройку отправки email респондентам для формы
+ */
+export async function updateFormRespondentEmailSetting(userId: string, formId: string, sendEmailToRespondent: boolean) {
+  return updateFormField(userId, formId, "send_email_to_respondent", sendEmailToRespondent, "Ошибка обновления настройки")
+}
+
+/**
+ * Обновляет тему формы
+ */
+export async function updateFormTheme(userId: string, formId: string, theme: "light" | "dark") {
+  return updateFormField(userId, formId, "theme", theme, "Ошибка обновления темы")
 }

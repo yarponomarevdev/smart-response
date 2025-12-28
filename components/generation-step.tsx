@@ -18,6 +18,7 @@ interface GenerationStepProps {
   formId: string
   customFields?: Record<string, unknown>
   contactData: { email: string; phone?: string; feedback?: boolean }
+  sendEmailToRespondent?: boolean
   onComplete: (result: { type: string; text: string; imageUrl?: string }) => void
   onError?: (error: string) => void
 }
@@ -37,6 +38,7 @@ export function GenerationStep({
   formId, 
   customFields, 
   contactData,
+  sendEmailToRespondent = true,
   onComplete, 
   onError 
 }: GenerationStepProps) {
@@ -153,24 +155,26 @@ export function GenerationStep({
           // Продолжаем даже если лид не создался
         }
 
-        // Отправляем email асинхронно
-        const emailApiUrl = typeof window !== "undefined" 
-          ? `${window.location.origin}/api/send-email` 
-          : "/api/send-email"
-        
-        fetch(emailApiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: contactData.email,
-            resultText: generatedResult.text,
-            resultImageUrl: generatedResult.imageUrl || null,
-            resultType: generatedResult.type,
-            url,
-          }),
-        }).catch((err) => {
-          console.error("[v0] Error sending email:", err)
-        })
+        // Отправляем email асинхронно, если включена настройка
+        if (sendEmailToRespondent) {
+          const emailApiUrl = typeof window !== "undefined" 
+            ? `${window.location.origin}/api/send-email` 
+            : "/api/send-email"
+          
+          fetch(emailApiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: contactData.email,
+              resultText: generatedResult.text,
+              resultImageUrl: generatedResult.imageUrl || null,
+              resultType: generatedResult.type,
+              url,
+            }),
+          }).catch((err) => {
+            console.error("[v0] Error sending email:", err)
+          })
+        }
 
         setIsGenerating(false)
         onCompleteRef.current(generatedResult)
@@ -187,7 +191,7 @@ export function GenerationStep({
     } finally {
       setIsRetrying(false)
     }
-  }, [url, formId, customFields, contactData, onError])
+  }, [url, formId, customFields, contactData, sendEmailToRespondent, onError])
 
   // Ротация сообщений
   useEffect(() => {
