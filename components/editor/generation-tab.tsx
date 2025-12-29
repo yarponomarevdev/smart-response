@@ -5,14 +5,15 @@
  */
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
-import { useAutoSaveField } from "@/lib/hooks/use-autosave"
-import { Loader2, Sparkles } from "lucide-react"
+import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
+import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
+import { useKnowledgeFiles, useUploadKnowledgeFile, useDeleteKnowledgeFile, formatFileSize } from "@/lib/hooks/use-knowledge-files"
+import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File } from "lucide-react"
 
 interface GenerationTabProps {
   formId: string | null
@@ -20,6 +21,12 @@ interface GenerationTabProps {
   loadingMessages: string[]
   content: Record<string, string>
 }
+
+// Максимальное количество файлов
+const MAX_FILES = 10
+
+// Разрешённые расширения файлов
+const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".json"]
 
 export function GenerationTab({
   formId,
@@ -61,13 +68,31 @@ export function GenerationTab({
     initialValue: content.knowledge_url || "",
   })
 
+  // Автосохранение чекбокса базы знаний
+  const useKnowledgeBase = useAutoSaveBoolean({
+    formId,
+    fieldKey: "use_knowledge_base",
+    initialValue: content.use_knowledge_base === "true",
+  })
+
+  // Хуки для работы с файлами
+  const { data: files = [], isLoading: filesLoading } = useKnowledgeFiles(formId)
+  const uploadFile = useUploadKnowledgeFile()
+  const deleteFile = useDeleteKnowledgeFile()
+
   const loadingFields = [loadingMessage1, loadingMessage2, loadingMessage3]
 
   // Состояние для кнопки "Улучшить с AI"
   const [isImproving, setIsImproving] = useState(false)
 
+  // Состояние для drag-and-drop
+  const [isDragging, setIsDragging] = useState(false)
+
   // Ref для textarea с автоматическим расширением
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Ref для скрытого input файла
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Автоматическое расширение textarea по высоте
   useEffect(() => {
@@ -115,6 +140,88 @@ export function GenerationTab({
       alert("Произошла ошибка при улучшении промпта")
     } finally {
       setIsImproving(false)
+    }
+  }
+
+  // Обработка загрузки файлов
+  const handleFileUpload = useCallback(async (fileList: FileList | null) => {
+    if (!fileList || !formId) return
+
+    // Проверяем лимит файлов
+    if (files.length >= MAX_FILES) {
+      alert(`Достигнут лимит файлов (${MAX_FILES})`)
+      return
+    }
+
+    const filesToUpload = Array.from(fileList).slice(0, MAX_FILES - files.length)
+
+    for (const file of filesToUpload) {
+      // Проверяем расширение
+      const ext = `.${file.name.split(".").pop()?.toLowerCase()}`
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        alert(`Файл "${file.name}" имеет неподдерживаемый формат. Разрешены: ${ALLOWED_EXTENSIONS.join(", ")}`)
+        continue
+      }
+
+      try {
+        await uploadFile.mutateAsync({ formId, file })
+      } catch (error) {
+        console.error("Ошибка загрузки файла:", error)
+        alert(error instanceof Error ? error.message : "Ошибка загрузки файла")
+      }
+    }
+  }, [formId, files.length, uploadFile])
+
+  // Обработка удаления файла
+  const handleDeleteFile = useCallback(async (fileId: string) => {
+    if (!formId) return
+
+    if (!confirm("Удалить этот файл?")) return
+
+    try {
+      await deleteFile.mutateAsync({ fileId, formId })
+    } catch (error) {
+      console.error("Ошибка удаления файла:", error)
+      alert(error instanceof Error ? error.message : "Ошибка удаления файла")
+    }
+  }, [formId, deleteFile])
+
+  // Drag-and-drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    handleFileUpload(e.dataTransfer.files)
+  }, [handleFileUpload])
+
+  // Получение иконки для типа файла
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split(".").pop()?.toLowerCase()
+    switch (ext) {
+      case "pdf":
+      case "doc":
+      case "docx":
+      case "txt":
+      case "md":
+        return <FileText className="h-4 w-4" />
+      case "csv":
+        return <FileSpreadsheet className="h-4 w-4" />
+      case "json":
+        return <FileJson className="h-4 w-4" />
+      default:
+        return <File className="h-4 w-4" />
     }
   }
 
@@ -199,27 +306,115 @@ export function GenerationTab({
         <div className="flex items-center gap-3 pt-2">
           <Checkbox
             id="use_knowledge_base"
+            checked={useKnowledgeBase.value}
+            onCheckedChange={(checked) => useKnowledgeBase.onChange(checked === true)}
             className="h-6 w-6 rounded-[5px]"
           />
-          <span className="text-base sm:text-lg">
+          <label htmlFor="use_knowledge_base" className="text-base sm:text-lg cursor-pointer">
             Использовать базу знаний
-          </span>
+          </label>
         </div>
 
         {/* База знаний / Другие данные */}
         <div className="space-y-2">
           <label className="text-base sm:text-lg">База знаний / Другие данные</label>
-          <Button
-            variant="default"
-            className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-base sm:text-lg"
+          
+          {/* Скрытый input для файлов */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ALLOWED_EXTENSIONS.join(",")}
+            onChange={(e) => handleFileUpload(e.target.files)}
+            className="hidden"
+          />
+
+          {/* Область загрузки с drag-and-drop */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`
+              relative border-2 border-dashed rounded-[18px] p-4 transition-colors
+              ${isDragging 
+                ? "border-black dark:border-white bg-black/5 dark:bg-white/5" 
+                : "border-[#e0e0e0] dark:border-muted"
+              }
+            `}
           >
-            Загрузить файл
-          </Button>
-          <div className="space-y-1 pt-2">
-            <p className="text-sm sm:text-base text-muted-foreground italic">Файл_1</p>
-            <p className="text-sm sm:text-base text-muted-foreground italic">Файл_2</p>
-            <p className="text-sm sm:text-base text-muted-foreground italic">Файл_3</p>
+            <Button
+              variant="default"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={files.length >= MAX_FILES || uploadFile.isPending}
+              className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-base sm:text-lg"
+            >
+              {uploadFile.isPending ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Загрузка...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5 mr-2" />
+                  Загрузить файл
+                </>
+              )}
+            </Button>
+            
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              или перетащите файлы сюда
+            </p>
+            <p className="text-center text-xs text-muted-foreground">
+              PDF, DOCX, DOC, TXT, MD, CSV, JSON • до 10MB • макс. {MAX_FILES} файлов
+            </p>
           </div>
+
+          {/* Список загруженных файлов */}
+          <div className="space-y-2 pt-2">
+            {filesLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Загрузка файлов...</span>
+              </div>
+            ) : files.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Файлы не загружены</p>
+            ) : (
+              files.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between gap-2 p-3 bg-[#f4f4f4] dark:bg-muted rounded-[12px] group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {getFileIcon(file.file_name)}
+                    <span className="text-sm truncate">{file.file_name}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {formatFileSize(file.file_size)}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteFile(file.id)}
+                    disabled={deleteFile.isPending}
+                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
+                  >
+                    {deleteFile.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Счётчик файлов */}
+          {files.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Загружено: {files.length} / {MAX_FILES}
+            </p>
+          )}
         </div>
 
         {/* Ссылка */}
@@ -232,7 +427,7 @@ export function GenerationTab({
             id="knowledge_url"
             value={knowledgeUrl.value}
             onChange={(e) => knowledgeUrl.onChange(e.target.value)}
-            placeholder="Плейсхолдер"
+            placeholder="https://example.com/data"
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
         </AutoSaveFieldWrapper>

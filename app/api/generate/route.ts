@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
+import { extractTextFromFile } from "@/lib/file-parser"
 
 export const maxDuration = 60
 
@@ -47,6 +48,79 @@ async function fetchUrlContent(url: string): Promise<string> {
   }
 }
 
+/**
+ * Загружает и извлекает текст из файлов базы знаний
+ */
+async function getKnowledgeBaseContent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formId: string
+): Promise<string> {
+  try {
+    // Получаем список файлов
+    const { data: files, error } = await supabase
+      .from("form_knowledge_files")
+      .select("*")
+      .eq("form_id", formId)
+      .order("created_at", { ascending: true })
+
+    if (error || !files || files.length === 0) {
+      return ""
+    }
+
+    const fileContents: string[] = []
+    
+    // Ограничиваем общий размер контекста (~30000 символов для файлов)
+    const maxTotalLength = 30000
+    let totalLength = 0
+
+    for (const file of files) {
+      if (totalLength >= maxTotalLength) {
+        fileContents.push("\n[Достигнут лимит контекста, остальные файлы пропущены]")
+        break
+      }
+
+      try {
+        // Скачиваем файл из Storage
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from("knowledge-files")
+          .download(file.file_path)
+
+        if (downloadError || !fileData) {
+          console.error(`[v0] Ошибка загрузки файла ${file.file_name}:`, downloadError)
+          continue
+        }
+
+        // Извлекаем текст из файла
+        const arrayBuffer = await fileData.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const text = await extractTextFromFile(buffer, file.file_type, file.file_name)
+
+        if (text) {
+          // Ограничиваем размер каждого файла
+          const maxFileLength = Math.min(10000, maxTotalLength - totalLength)
+          const truncatedText = text.length > maxFileLength 
+            ? text.slice(0, maxFileLength) + "\n[Файл обрезан из-за ограничений размера]"
+            : text
+
+          fileContents.push(`--- Файл: ${file.file_name} ---\n${truncatedText}`)
+          totalLength += truncatedText.length
+        }
+      } catch (fileError) {
+        console.error(`[v0] Ошибка обработки файла ${file.file_name}:`, fileError)
+      }
+    }
+
+    if (fileContents.length === 0) {
+      return ""
+    }
+
+    return fileContents.join("\n\n")
+  } catch (error) {
+    console.error("[v0] Ошибка получения базы знаний:", error)
+    return ""
+  }
+}
+
 export async function POST(req: Request) {
   try {
     // Валидация входных данных
@@ -77,16 +151,16 @@ export async function POST(req: Request) {
       )
     }
 
-    // Форматируем кастомные поля для включения в промпт
+    // Форматируем кастомные поля для включения в контекст
     let customFieldsContext = ""
     if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
-      customFieldsContext = "\n\nAdditional user-provided information:\n"
+      customFieldsContext = "\n\n--- Данные пользователя ---\n"
       for (const [key, value] of Object.entries(customFields)) {
         if (value !== undefined && value !== null && value !== "") {
           if (Array.isArray(value)) {
             customFieldsContext += `- ${key}: ${value.join(", ")}\n`
           } else if (typeof value === "boolean") {
-            customFieldsContext += `- ${key}: ${value ? "Yes" : "No"}\n`
+            customFieldsContext += `- ${key}: ${value ? "Да" : "Нет"}\n`
           } else {
             customFieldsContext += `- ${key}: ${value}\n`
           }
@@ -135,7 +209,41 @@ export async function POST(req: Request) {
     // Получаем индивидуальный промпт формы (может быть пустым)
     const formPrompt = getContent("ai_system_prompt", "")
 
+    // Проверяем, включена ли база знаний
+    const useKnowledgeBase = getContent("use_knowledge_base", "false") === "true"
+    const knowledgeUrl = getContent("knowledge_url", "")
+
+    // Получаем контент из URL пользователя
     const urlContent = await fetchUrlContent(url)
+
+    // Формируем контекст базы знаний
+    let knowledgeBaseContext = ""
+    
+    if (useKnowledgeBase) {
+      // Получаем контент из файлов базы знаний
+      const filesContent = await getKnowledgeBaseContent(supabase, formId)
+      
+      // Получаем контент из ссылки базы знаний
+      let knowledgeUrlContent = ""
+      if (knowledgeUrl && knowledgeUrl.trim()) {
+        try {
+          knowledgeUrlContent = await fetchUrlContent(knowledgeUrl.trim())
+          if (knowledgeUrlContent && !knowledgeUrlContent.startsWith("Error") && !knowledgeUrlContent.startsWith("Unable")) {
+            knowledgeUrlContent = `--- Ссылка базы знаний: ${knowledgeUrl} ---\n${knowledgeUrlContent}`
+          } else {
+            knowledgeUrlContent = ""
+          }
+        } catch (e) {
+          console.error("[v0] Ошибка загрузки ссылки базы знаний:", e)
+        }
+      }
+
+      // Объединяем контент базы знаний
+      const knowledgeParts = [filesContent, knowledgeUrlContent].filter(Boolean)
+      if (knowledgeParts.length > 0) {
+        knowledgeBaseContext = `\n\n=== БАЗА ЗНАНИЙ ===\n${knowledgeParts.join("\n\n")}\n=== КОНЕЦ БАЗЫ ЗНАНИЙ ===`
+      }
+    }
 
     if (resultFormat === "image") {
       // Получаем модель для генерации изображений
@@ -175,7 +283,8 @@ export async function POST(req: Request) {
       }
 
       // Формируем финальный промпт для генерации изображения
-      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${customFieldsContext}`
+      // Для изображений база знаний добавляется как часть промпта (ограничение API)
+      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${customFieldsContext}${knowledgeBaseContext.slice(0, 2000)}`
 
       console.log("[v0] Using image model:", imageModel)
       console.log("[v0] Image prompt preview:", imagePrompt.slice(0, 100) + "...")
@@ -195,12 +304,12 @@ export async function POST(req: Request) {
             size: "1024x1024",
           }),
         })
-      } catch (imageFetchError: any) {
+      } catch (imageFetchError: unknown) {
         console.error("[v0] Image generation connection error:", imageFetchError)
         return Response.json(
           {
             error: "Ошибка подключения к API генерации изображений",
-            details: imageFetchError.message || "Failed to connect to OpenAI API",
+            details: imageFetchError instanceof Error ? imageFetchError.message : "Failed to connect to OpenAI API",
           },
           { status: 502, headers: corsHeaders },
         )
@@ -287,6 +396,16 @@ export async function POST(req: Request) {
       }
 
       console.log("[v0] Using text model:", textModel)
+      console.log("[v0] Knowledge base enabled:", useKnowledgeBase)
+
+      // Формируем user message с контекстом
+      const userMessage = `URL: ${url}
+
+--- Контент страницы ---
+${urlContent}
+${customFieldsContext}${knowledgeBaseContext}
+
+Please provide your analysis and recommendations.`
 
       let response
       try {
@@ -305,19 +424,19 @@ export async function POST(req: Request) {
               },
               {
                 role: "user",
-                content: `URL: ${url}\n\nContent:\n${urlContent}${customFieldsContext}\n\nPlease provide your analysis and recommendations.`,
+                content: userMessage,
               },
             ],
             max_completion_tokens: 1500,
             temperature: 0.7,
           }),
         })
-      } catch (fetchError: any) {
+      } catch (fetchError: unknown) {
         console.error("[v0] OpenAI connection error:", fetchError)
         return Response.json(
           {
             error: "OpenAI connection failed",
-            details: fetchError.message || "Failed to connect to OpenAI API",
+            details: fetchError instanceof Error ? fetchError.message : "Failed to connect to OpenAI API",
           },
           { status: 502, headers: corsHeaders },
         )
@@ -365,13 +484,13 @@ export async function POST(req: Request) {
         { headers: corsHeaders },
       )
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[v0] Generation error:", error)
-    console.error("[v0] Error stack:", error?.stack)
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : undefined)
     return Response.json(
       {
         error: "Failed to generate result",
-        details: error?.message || "Unknown error",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500, headers: corsHeaders },
     )
