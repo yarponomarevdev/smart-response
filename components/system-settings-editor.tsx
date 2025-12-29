@@ -12,7 +12,23 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react"
+
+// Доступные модели OpenAI
+const TEXT_MODELS = [
+  { value: "gpt-5.1", label: "GPT-5.1" },
+  { value: "gpt-5.1-mini", label: "GPT-5.1 Mini" },
+  { value: "gpt-5.1-nano", label: "GPT-5.1 Nano" },
+  { value: "gpt-5.2", label: "GPT-5.2" },
+  { value: "gpt-5.2-mini", label: "GPT-5.2 Mini" },
+  { value: "gpt-5.2-nano", label: "GPT-5.2 Nano" },
+]
+
+const IMAGE_MODELS = [
+  { value: "gpt-image-1", label: "GPT-Image-1" },
+  { value: "gpt-image-1.5", label: "GPT-Image-1.5" },
+]
 import { useSystemSettings, useSaveSystemSettings } from "@/lib/hooks"
 
 export function SystemSettingsEditor() {
@@ -23,6 +39,8 @@ export function SystemSettingsEditor() {
   // Локальное состояние для редактирования
   const [globalTextPrompt, setGlobalTextPrompt] = useState<string>("")
   const [globalImagePrompt, setGlobalImagePrompt] = useState<string>("")
+  const [textModel, setTextModel] = useState<string>("")
+  const [imageModel, setImageModel] = useState<string>("")
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
 
   // Синхронизируем локальное состояние с данными из кэша
@@ -30,6 +48,8 @@ export function SystemSettingsEditor() {
     if (data) {
       setGlobalTextPrompt(data.globalTextPrompt)
       setGlobalImagePrompt(data.globalImagePrompt)
+      setTextModel(data.textModel)
+      setImageModel(data.imageModel)
     }
   }, [data])
 
@@ -48,6 +68,8 @@ export function SystemSettingsEditor() {
       await saveSettingsMutation.mutateAsync({
         globalTextPrompt,
         globalImagePrompt,
+        textModel,
+        imageModel,
       })
       setSaveStatus("success")
     } catch (err) {
@@ -114,15 +136,41 @@ export function SystemSettingsEditor() {
         )}
 
         <div className="space-y-4 sm:space-y-6">
-          {/* Глобальный промпт для текста */}
+          {/* Настройки генерации текста */}
           <div className="p-3 sm:p-4 border border-accent/20 rounded-lg space-y-3 sm:space-y-4 bg-accent/5">
             <h3 className="text-base sm:text-lg font-semibold text-accent">
-              Системный промпт для текста
+              Генерация текста
             </h3>
 
+            {/* Выбор модели для текста */}
+            <div className="space-y-2">
+              <Label htmlFor="text_model" className="text-sm">
+                Модель OpenAI для генерации текста
+              </Label>
+              <Select value={textModel} onValueChange={setTextModel}>
+                <SelectTrigger id="text_model" className="w-full sm:w-[300px]">
+                  <SelectValue placeholder="Выберите модель..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEXT_MODELS.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!textModel && (
+                <div className="flex items-center gap-2 text-amber-500 text-xs">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Модель не выбрана. Генерация текста не будет работать.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Промпт для текста */}
             <div className="space-y-2">
               <Label htmlFor="global_text_prompt" className="text-sm">
-                Инструкции AI для генерации текстовых результатов
+                Системный промпт
               </Label>
               <Textarea
                 id="global_text_prompt"
@@ -139,15 +187,41 @@ export function SystemSettingsEditor() {
             </div>
           </div>
 
-          {/* Глобальный промпт для изображений */}
+          {/* Настройки генерации изображений */}
           <div className="p-3 sm:p-4 border border-purple-500/20 rounded-lg space-y-3 sm:space-y-4 bg-purple-500/5">
             <h3 className="text-base sm:text-lg font-semibold text-purple-500">
-              Системный промпт для изображений (DALL-E)
+              Генерация изображений
             </h3>
 
+            {/* Выбор модели для изображений */}
+            <div className="space-y-2">
+              <Label htmlFor="image_model" className="text-sm">
+                Модель OpenAI для генерации изображений
+              </Label>
+              <Select value={imageModel} onValueChange={setImageModel}>
+                <SelectTrigger id="image_model" className="w-full sm:w-[300px]">
+                  <SelectValue placeholder="Выберите модель..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {IMAGE_MODELS.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!imageModel && (
+                <div className="flex items-center gap-2 text-amber-500 text-xs">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Модель не выбрана. Генерация изображений не будет работать.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Промпт для изображений */}
             <div className="space-y-2">
               <Label htmlFor="global_image_prompt" className="text-sm">
-                Инструкции AI для генерации промптов DALL-E
+                Системный промпт
               </Label>
               <Textarea
                 id="global_image_prompt"
@@ -158,8 +232,8 @@ export function SystemSettingsEditor() {
                 className="font-mono text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Применяется к формам с форматом результата «Изображение». GPT использует этот промпт 
-                для создания безопасного промпта DALL-E. Индивидуальный промпт формы добавляется сюда.
+                Применяется к формам с форматом результата «Изображение». Модель использует этот промпт 
+                для создания изображения. Индивидуальный промпт формы добавляется сюда.
               </p>
             </div>
           </div>

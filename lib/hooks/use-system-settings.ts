@@ -7,23 +7,31 @@ import { useCurrentUser } from "./use-auth"
 interface SystemSettings {
   globalTextPrompt: string
   globalImagePrompt: string
+  textModel: string
+  imageModel: string
 }
 
 /**
  * Загрузка системных настроек
  */
 async function fetchSystemSettings(): Promise<SystemSettings> {
-  const [textResult, imageResult] = await Promise.all([
+  const [textPromptResult, imagePromptResult, textModelResult, imageModelResult] = await Promise.all([
     getSystemSetting("global_text_prompt"),
     getSystemSetting("global_image_prompt"),
+    getSystemSetting("text_model"),
+    getSystemSetting("image_model"),
   ])
 
-  if (textResult.error) throw new Error(textResult.error)
-  if (imageResult.error) throw new Error(imageResult.error)
+  if (textPromptResult.error) throw new Error(textPromptResult.error)
+  if (imagePromptResult.error) throw new Error(imagePromptResult.error)
+  if (textModelResult.error) throw new Error(textModelResult.error)
+  if (imageModelResult.error) throw new Error(imageModelResult.error)
 
   return {
-    globalTextPrompt: textResult.value || "",
-    globalImagePrompt: imageResult.value || "",
+    globalTextPrompt: textPromptResult.value || "",
+    globalImagePrompt: imagePromptResult.value || "",
+    textModel: textModelResult.value || "",
+    imageModel: imageModelResult.value || "",
   }
 }
 
@@ -49,19 +57,27 @@ export function useSaveSystemSettings() {
     mutationFn: async ({
       globalTextPrompt,
       globalImagePrompt,
+      textModel,
+      imageModel,
     }: {
       globalTextPrompt: string
       globalImagePrompt: string
+      textModel: string
+      imageModel: string
     }) => {
       if (!user) throw new Error("Пользователь не авторизован")
 
-      const [textResult, imageResult] = await Promise.all([
+      const [textPromptResult, imagePromptResult, textModelResult, imageModelResult] = await Promise.all([
         updateSystemSetting(user.id, "global_text_prompt", globalTextPrompt),
         updateSystemSetting(user.id, "global_image_prompt", globalImagePrompt),
+        updateSystemSetting(user.id, "text_model", textModel),
+        updateSystemSetting(user.id, "image_model", imageModel),
       ])
 
-      if (!textResult.success) throw new Error(textResult.error || "Ошибка сохранения текстового промпта")
-      if (!imageResult.success) throw new Error(imageResult.error || "Ошибка сохранения промпта изображений")
+      if (!textPromptResult.success) throw new Error(textPromptResult.error || "Ошибка сохранения текстового промпта")
+      if (!imagePromptResult.success) throw new Error(imagePromptResult.error || "Ошибка сохранения промпта изображений")
+      if (!textModelResult.success) throw new Error(textModelResult.error || "Ошибка сохранения модели текста")
+      if (!imageModelResult.success) throw new Error(imageModelResult.error || "Ошибка сохранения модели изображений")
 
       return { success: true }
     },

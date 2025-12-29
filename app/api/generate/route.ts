@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getGlobalTextPrompt, getGlobalImagePrompt } from "@/app/actions/system-settings"
+import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 
 export const maxDuration = 60
 
@@ -138,6 +138,19 @@ export async function POST(req: Request) {
     const urlContent = await fetchUrlContent(url)
 
     if (resultFormat === "image") {
+      // Получаем модель для генерации изображений
+      const imageModel = await getImageModel()
+      
+      if (!imageModel) {
+        return Response.json(
+          {
+            error: "Модель для генерации изображений не настроена",
+            details: "Выберите модель изображений в системных настройках супер-админа",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
+
       // Получаем глобальный промпт для изображений
       const globalImagePrompt = await getGlobalImagePrompt()
 
@@ -161,77 +174,11 @@ export async function POST(req: Request) {
         )
       }
 
-      // Используем GPT для создания промпта для DALL-E на основе контента URL
-      let dallePrompt: string
-      
-      try {
-        const promptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content: imageSystemPrompt,
-              },
-              {
-                role: "user",
-                content: `User preferences from URL content:
-${urlContent.slice(0, 1500)}${customFieldsContext}
+      // Формируем финальный промпт для генерации изображения
+      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${customFieldsContext}`
 
-Create an image prompt based on this content:`,
-              },
-            ],
-            max_tokens: 300,
-            temperature: 0.7,
-          }),
-        })
-
-        if (!promptResponse.ok) {
-          let promptErrorData
-          try {
-            promptErrorData = await promptResponse.json()
-          } catch {
-            promptErrorData = { error: { message: `HTTP ${promptResponse.status}: ${promptResponse.statusText}` } }
-          }
-          console.error("[v0] GPT prompt generation failed:", promptErrorData)
-          return Response.json(
-            {
-              error: "Не удалось сгенерировать промпт для изображения",
-              details: promptErrorData.error?.message || "Проверьте настройки промптов в админ-панели",
-            },
-            { status: promptResponse.status, headers: corsHeaders },
-          )
-        } else {
-          const promptData = await promptResponse.json()
-          dallePrompt = promptData.choices[0]?.message?.content?.trim() || ""
-          if (!dallePrompt) {
-            console.error("[v0] Empty DALL-E prompt from GPT:", promptData)
-            return Response.json(
-              {
-                error: "Пустой промпт для изображения",
-                details: "GPT вернул пустой промпт. Проверьте настройки промптов.",
-              },
-              { status: 500, headers: corsHeaders },
-            )
-          }
-        }
-      } catch (promptError) {
-        console.error("[v0] Error generating DALL-E prompt:", promptError)
-        return Response.json(
-          {
-            error: "Ошибка генерации промпта для изображения",
-            details: promptError instanceof Error ? promptError.message : "Неизвестная ошибка",
-          },
-          { status: 500, headers: corsHeaders },
-        )
-      }
-
-      console.log("[v0] Generated DALL-E prompt:", dallePrompt.slice(0, 100) + "...")
+      console.log("[v0] Using image model:", imageModel)
+      console.log("[v0] Image prompt preview:", imagePrompt.slice(0, 100) + "...")
 
       let imageResponse
       try {
@@ -242,19 +189,18 @@ Create an image prompt based on this content:`,
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: dallePrompt,
+            model: imageModel,
+            prompt: imagePrompt,
             n: 1,
             size: "1024x1024",
-            quality: "standard",
           }),
         })
       } catch (imageFetchError: any) {
-        console.error("[v0] DALL-E connection error:", imageFetchError)
+        console.error("[v0] Image generation connection error:", imageFetchError)
         return Response.json(
           {
-            error: "DALL-E connection failed",
-            details: imageFetchError.message || "Failed to connect to DALL-E API",
+            error: "Ошибка подключения к API генерации изображений",
+            details: imageFetchError.message || "Failed to connect to OpenAI API",
           },
           { status: 502, headers: corsHeaders },
         )
@@ -267,12 +213,12 @@ Create an image prompt based on this content:`,
         } catch {
           errorData = { error: { message: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` } }
         }
-        console.error("[v0] DALL-E API error:", errorData)
+        console.error("[v0] Image generation API error:", errorData)
 
         return Response.json(
           {
             error: "Ошибка генерации изображения",
-            details: errorData.error?.message || "Не удалось сгенерировать изображение. Проверьте промпты в админке.",
+            details: errorData.error?.message || "Не удалось сгенерировать изображение. Проверьте настройки в админке.",
           },
           { status: imageResponse.status, headers: corsHeaders },
         )
@@ -282,11 +228,11 @@ Create an image prompt based on this content:`,
       const imageUrl = imageData.data[0]?.url || ""
 
       if (!imageUrl) {
-        console.error("[v0] Empty image URL from DALL-E:", imageData)
+        console.error("[v0] Empty image URL:", imageData)
         return Response.json(
           {
-            error: "Пустой ответ от DALL-E",
-            details: "DALL-E не вернул ссылку на изображение. Попробуйте другие настройки промптов.",
+            error: "Пустой ответ от API",
+            details: "API не вернул ссылку на изображение. Попробуйте другие настройки промптов.",
           },
           { status: 500, headers: corsHeaders },
         )
@@ -304,6 +250,19 @@ Create an image prompt based on this content:`,
         { headers: corsHeaders },
       )
     } else {
+      // Получаем модель для генерации текста
+      const textModel = await getTextModel()
+      
+      if (!textModel) {
+        return Response.json(
+          {
+            error: "Модель для генерации текста не настроена",
+            details: "Выберите модель текста в системных настройках супер-админа",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
+
       // Получаем глобальный промпт для текста
       const globalTextPrompt = await getGlobalTextPrompt()
 
@@ -327,6 +286,8 @@ Create an image prompt based on this content:`,
         )
       }
 
+      console.log("[v0] Using text model:", textModel)
+
       let response
       try {
         response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -336,7 +297,7 @@ Create an image prompt based on this content:`,
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            model: textModel,
             messages: [
               {
                 role: "system",
@@ -347,7 +308,7 @@ Create an image prompt based on this content:`,
                 content: `URL: ${url}\n\nContent:\n${urlContent}${customFieldsContext}\n\nPlease provide your analysis and recommendations.`,
               },
             ],
-            max_tokens: 1500,
+            max_completion_tokens: 1500,
             temperature: 0.7,
           }),
         })

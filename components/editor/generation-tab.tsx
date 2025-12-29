@@ -5,12 +5,14 @@
  */
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
 import { useAutoSaveField } from "@/lib/hooks/use-autosave"
+import { Loader2, Sparkles } from "lucide-react"
 
 interface GenerationTabProps {
   formId: string | null
@@ -61,6 +63,61 @@ export function GenerationTab({
 
   const loadingFields = [loadingMessage1, loadingMessage2, loadingMessage3]
 
+  // Состояние для кнопки "Улучшить с AI"
+  const [isImproving, setIsImproving] = useState(false)
+
+  // Ref для textarea с автоматическим расширением
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Автоматическое расширение textarea по высоте
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const updateHeight = () => {
+      // Сбрасываем высоту для корректного расчета scrollHeight
+      textarea.style.height = "auto"
+      // Устанавливаем высоту на основе содержимого
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
+
+    updateHeight()
+
+    // Обновляем высоту при изменении размера окна
+    window.addEventListener("resize", updateHeight)
+    return () => window.removeEventListener("resize", updateHeight)
+  }, [systemPrompt.value])
+
+  const handleImprovePrompt = async () => {
+    if (!systemPrompt.value.trim()) return
+
+    setIsImproving(true)
+    try {
+      const response = await fetch("/api/improve-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: systemPrompt.value }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error("Ошибка улучшения промпта:", data.error)
+        alert(data.error || "Не удалось улучшить промпт")
+        return
+      }
+
+      if (data.improvedPrompt) {
+        systemPrompt.onChange(data.improvedPrompt)
+      }
+    } catch (error) {
+      console.error("Ошибка при вызове API:", error)
+      alert("Произошла ошибка при улучшении промпта")
+    } finally {
+      setIsImproving(false)
+    }
+  }
+
   return (
     <div className="space-y-8 sm:space-y-10">
       {/* Генерация ответа */}
@@ -74,18 +131,32 @@ export function GenerationTab({
           <div className="flex items-center justify-end mb-2">
             <Button
               variant="default"
+              onClick={handleImprovePrompt}
+              disabled={isImproving || !systemPrompt.value.trim()}
               className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[30px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base"
             >
-              Улучшить с AI
+              {isImproving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Улучшаем...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Улучшить с AI
+                </>
+              )}
             </Button>
           </div>
           <Textarea
+            ref={textareaRef}
             id="system_prompt"
             value={systemPrompt.value}
             onChange={(e) => systemPrompt.onChange(e.target.value)}
             placeholder="Плейсхолдер"
             rows={6}
-            className="h-[150px] sm:h-[242px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 py-4 resize-none"
+            className="min-h-[150px] sm:min-h-[242px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 py-4 resize-none overflow-hidden"
+            style={{ height: "auto" }}
           />
         </AutoSaveFieldWrapper>
       </div>
