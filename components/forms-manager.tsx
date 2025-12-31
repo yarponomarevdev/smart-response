@@ -257,15 +257,19 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => toggleFormActive(form)}
-                    disabled={toggleActiveMutation.isPending}
+                    disabled={toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id}
                     className="text-xs sm:text-sm h-8 sm:h-9"
                   >
-                    {form.is_active ? "Выкл" : "Вкл"}
+                    {toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      form.is_active ? "Выкл" : "Вкл"
+                    )}
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-destructive hover:text-destructive h-8 sm:h-9"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 sm:h-9"
                     onClick={() => openDeleteDialog(form)}
                   >
                     <Trash2 className="h-3 w-3" />

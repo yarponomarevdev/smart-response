@@ -170,6 +170,7 @@ export function useUpdateFormName() {
  */
 export function useToggleFormActive() {
   const queryClient = useQueryClient()
+  const { data: user } = useCurrentUser()
 
   return useMutation({
     mutationFn: async ({ formId, currentIsActive }: { formId: string; currentIsActive: boolean }) => {
@@ -197,10 +198,23 @@ export function useToggleFormActive() {
         .eq("id", formId)
       
       if (error) throw new Error(error.message)
+      
+      return { formId, newIsActive }
     },
-    onSuccess: () => {
-      // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
+    onSuccess: (data) => {
+      // Оптимистично обновляем кэш
+      queryClient.setQueryData<UserFormsData>(["forms", user?.id], (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          forms: old.forms.map(form => 
+            form.id === data.formId 
+              ? { ...form, is_active: data.newIsActive }
+              : form
+          )
+        }
+      })
+      
       // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
       queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
     },
