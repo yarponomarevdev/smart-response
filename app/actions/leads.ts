@@ -75,7 +75,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     const fromEmail = "hello@vasilkov.digital"
-    const subject = `Новая заявка с формы "${form.name}"`
+    const subject = "Новая заявка"
 
     console.log("[Notification] Sending notification to owner:", ownerEmail, "for form:", form.name)
 
@@ -127,9 +127,10 @@ function generateOwnerNotificationHTML({
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Новая заявка - ${formName}</title>
+        <title>Новая заявка</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #000000; color: #ffffff;">
+        <span style="display:none !important; visibility:hidden; mso-hide:all; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">Новый пользователь заполнил форму ${formName}</span>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
           <tr>
             <td align="center" style="padding: 40px 20px;">
