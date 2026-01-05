@@ -21,12 +21,14 @@ import {
 import { toast } from "sonner"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { useLeads, useDeleteLead } from "@/lib/hooks"
+import { useTranslation } from "@/lib/i18n"
 
 interface LeadsTableProps {
   formId?: string
 }
 
 export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
+  const { t } = useTranslation()
   const [selectedFormId, setSelectedFormId] = useState<string | "all">("all")
   const { confirm, ConfirmDialog } = useConfirm()
   
@@ -40,10 +42,10 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirm({
-      title: "Удалить этот лид?",
-      description: "Это действие нельзя отменить.",
-      confirmText: "Удалить",
-      cancelText: "Отмена",
+      title: t("leads.deleteDialog.title"),
+      description: t("leads.deleteDialog.description"),
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel"),
       variant: "destructive"
     })
 
@@ -51,10 +53,10 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
 
     try {
       await deleteLeadMutation.mutateAsync(id)
-      toast.success("Лид успешно удалён")
+      toast.success(t("leads.toast.deleted"))
     } catch (err) {
       console.error("Ошибка удаления лида:", err)
-      toast.error("Не удалось удалить лид: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error(t("leads.toast.deleteError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
@@ -73,12 +75,12 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
     }
     
     const csv = [
-      ["URL", "Email", "Статус", "Дата", "Результат", "Форма"],
+      [t("leads.table.url"), t("leads.table.email"), t("leads.table.status"), t("leads.table.date"), t("leads.table.result"), t("leads.table.form")],
       ...dataToExport.map((lead) => [
         escapeCsvValue(lead.url),
         escapeCsvValue(lead.email || ""),
         escapeCsvValue(lead.status),
-        escapeCsvValue(new Date(lead.created_at).toLocaleString("ru-RU")),
+        escapeCsvValue(new Date(lead.created_at).toLocaleString()),
         escapeCsvValue(lead.result_text || lead.result_image_url || ""),
         escapeCsvValue(forms.find(f => f.id === lead.form_id)?.name || ""),
       ]),
@@ -112,7 +114,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
   }
 
   if (isLoading) {
-    return <div className="text-center py-8">Загрузка лидов...</div>
+    return <div className="text-center py-8">{t("leads.loading")}</div>
   }
 
   if (error) {
@@ -120,7 +122,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg font-medium mb-2">Ошибка загрузки</p>
+          <p className="text-lg font-medium mb-2">{t("errors.loadingFailed")}</p>
           <p className="text-sm text-muted-foreground">{error.message}</p>
         </div>
       </div>
@@ -131,9 +133,9 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
     <div className="py-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Лиды</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">{t("leads.title")}</h2>
           <p className="text-sm sm:text-base text-muted-foreground">
-            {filteredLeads.length} {selectedFormId === "all" ? "всего" : "в выбранной форме"}
+            {filteredLeads.length} {selectedFormId === "all" ? t("leads.inTotal") : t("leads.inSelectedForm")}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -143,10 +145,10 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
               <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedFormId} onValueChange={setSelectedFormId}>
                 <SelectTrigger className="h-9 w-full sm:w-[200px]">
-                  <SelectValue placeholder="Выберите форму" />
+                  <SelectValue placeholder={t("leads.selectForm")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Все формы ({leads.length})</SelectItem>
+                  <SelectItem value="all">{t("leads.allForms")} ({leads.length})</SelectItem>
                   {forms.map((form) => {
                     const count = leads.filter(l => l.form_id === form.id).length
                     return (
@@ -161,7 +163,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
           )}
           <Button onClick={handleExport} variant="outline" disabled={filteredLeads.length === 0} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
             <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Экспорт CSV</span>
+            <span className="hidden sm:inline">{t("leads.exportCSV")}</span>
             <span className="sm:hidden">CSV</span>
           </Button>
         </div>
@@ -171,20 +173,20 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[150px]">URL</TableHead>
-              <TableHead className="min-w-[120px]">Email</TableHead>
-              <TableHead className="min-w-[100px]">Статус</TableHead>
-              <TableHead className="min-w-[150px]">Результат</TableHead>
-              {(forms.length > 1 || isSuperAdmin) && !propFormId && <TableHead className="min-w-[100px]">Форма</TableHead>}
-              <TableHead className="min-w-[100px]">Дата</TableHead>
-              <TableHead className="text-right min-w-[80px]">Действия</TableHead>
+              <TableHead className="min-w-[150px]">{t("leads.table.url")}</TableHead>
+              <TableHead className="min-w-[120px]">{t("leads.table.email")}</TableHead>
+              <TableHead className="min-w-[100px]">{t("leads.table.status")}</TableHead>
+              <TableHead className="min-w-[150px]">{t("leads.table.result")}</TableHead>
+              {(forms.length > 1 || isSuperAdmin) && !propFormId && <TableHead className="min-w-[100px]">{t("leads.table.form")}</TableHead>}
+              <TableHead className="min-w-[100px]">{t("leads.table.date")}</TableHead>
+              <TableHead className="text-right min-w-[80px]">{t("leads.table.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeads.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={(forms.length > 1 || isSuperAdmin) && !propFormId ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                  Лидов пока нет
+                  {t("leads.noLeads")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -194,7 +196,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                   <TableCell className="text-xs sm:text-sm">{lead.email || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={lead.status === "completed" ? "default" : "outline"} className="text-xs">
-                      {lead.status === "completed" ? "Завершен" : "В обработке"}
+                      {lead.status === "completed" ? t("leads.status.completed") : t("leads.status.processing")}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-[150px] truncate text-xs sm:text-sm">
@@ -205,7 +207,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:underline"
                       >
-                        Картинка
+                        {t("leads.image")}
                       </a>
                     ) : lead.result_text ? (
                       <span className="text-xs">{lead.result_text.substring(0, 50)}...</span>
@@ -218,7 +220,7 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                       {getFormName(lead.form_id)}
                     </TableCell>
                   )}
-                  <TableCell className="text-xs sm:text-sm">{new Date(lead.created_at).toLocaleDateString("ru-RU")}</TableCell>
+                  <TableCell className="text-xs sm:text-sm">{new Date(lead.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <Button 
                       onClick={() => handleDelete(lead.id)} 

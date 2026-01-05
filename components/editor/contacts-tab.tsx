@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
 import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
+import { useTranslation } from "@/lib/i18n"
 
 interface ContactsTabProps {
   formId: string | null
@@ -16,6 +17,8 @@ interface ContactsTabProps {
 }
 
 export function ContactsTab({ formId, content }: ContactsTabProps) {
+  const { t } = useTranslation()
+  
   // Автосохраняемые текстовые поля
   const gradientText = useAutoSaveField({
     formId,
@@ -76,7 +79,7 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
       {/* Текст в градиенте */}
       <AutoSaveFieldWrapper
-        label="Текст для мотивации оставить контакты"
+        label={t("editor.contactsTab.motivationText")}
         labelFor="gradient_text"
         status={gradientText.status}
       >
@@ -84,14 +87,14 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
           id="gradient_text"
           value={gradientText.value}
           onChange={(e) => gradientText.onChange(e.target.value)}
-          placeholder="Происходит что-то магическое..."
+          placeholder={t("editor.contactsTab.motivationPlaceholder")}
           className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </AutoSaveFieldWrapper>
 
       {/* Email (обязательное поле) */}
       <AutoSaveFieldWrapper
-        label="Email (обязательное поле)"
+        label={t("editor.contactsTab.emailRequired")}
         labelFor="email_placeholder"
         status={emailPlaceholder.status}
       >
@@ -99,7 +102,7 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
           id="email_placeholder"
           value={emailPlaceholder.value}
           onChange={(e) => emailPlaceholder.onChange(e.target.value)}
-          placeholder="hello.smartresponse.com"
+          placeholder={t("editor.contactsTab.emailPlaceholder")}
           className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </AutoSaveFieldWrapper>
@@ -107,11 +110,11 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
       {/* Телефон */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label htmlFor="phone_placeholder" className="text-base sm:text-lg">Телефон</label>
+          <label htmlFor="phone_placeholder" className="text-base sm:text-lg">{t("editor.contactsTab.phone")}</label>
           <div className="flex items-center gap-2">
             <SaveStatusIndicator status={phoneEnabled.status} />
             <span className="text-sm text-muted-foreground">
-              {phoneEnabled.value ? "Показывать" : "Не показывать"}
+              {phoneEnabled.value ? t("editor.contactsTab.show") : t("editor.contactsTab.hide")}
             </span>
             <Switch
               id="phone_enabled"
@@ -127,7 +130,7 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
                 id="phone_placeholder"
                 value={phonePlaceholder.value}
                 onChange={(e) => phonePlaceholder.onChange(e.target.value)}
-                placeholder="+375 33 366 76 99"
+                placeholder={t("editor.contactsTab.phonePlaceholder")}
                 className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -135,11 +138,11 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
               </div>
             </div>
             <div className="flex items-center justify-between pt-2">
-              <label htmlFor="phone_required" className="text-sm sm:text-base">Сделать обязательным</label>
+              <label htmlFor="phone_required" className="text-sm sm:text-base">{t("editor.contactsTab.makeRequired")}</label>
               <div className="flex items-center gap-2">
                 <SaveStatusIndicator status={phoneRequired.status} />
                 <span className="text-sm text-muted-foreground">
-                  {phoneRequired.value ? "Да" : "Нет"}
+                  {phoneRequired.value ? t("common.yes") : t("common.no")}
                 </span>
                 <Switch
                   id="phone_required"
@@ -155,11 +158,11 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
       {/* Обратная связь */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-base sm:text-lg">Обратная связь</label>
+          <label className="text-base sm:text-lg">{t("editor.contactsTab.feedback")}</label>
           <div className="flex items-center gap-2">
             <SaveStatusIndicator status={feedbackEnabled.status} />
             <span className="text-sm text-muted-foreground">
-              {feedbackEnabled.value ? "Показывать" : "Не показывать"}
+              {feedbackEnabled.value ? t("editor.contactsTab.show") : t("editor.contactsTab.hide")}
             </span>
             <Switch
               id="feedback_enabled"
@@ -176,7 +179,7 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
                 id="feedback_text"
                 value={feedbackText.value}
                 onChange={(e) => feedbackText.onChange(e.target.value)}
-                placeholder="Да, свяжитесь со мной"
+                placeholder={t("editor.contactsTab.feedbackPlaceholder")}
                 className="h-10 border-none bg-transparent text-base sm:text-lg px-0"
               />
             </div>
@@ -187,7 +190,7 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
 
       {/* Текст кнопки отправки */}
       <AutoSaveFieldWrapper
-        label="Текст кнопки отправки"
+        label={t("editor.contactsTab.submitText")}
         labelFor="email_button"
         status={emailButton.status}
       >
@@ -195,23 +198,23 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
           id="email_button"
           value={emailButton.value}
           onChange={(e) => emailButton.onChange(e.target.value)}
-          placeholder="Сгенерировать"
+          placeholder={t("editor.contactsTab.submitPlaceholder")}
           className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </AutoSaveFieldWrapper>
 
       {/* Политика конфиденциальности */}
       <AutoSaveFieldWrapper
-        label="Политика конфиденциальности"
+        label={t("editor.contactsTab.privacyPolicy")}
         labelFor="privacy_url"
         status={privacyUrl.status}
-        description={`"Отправляя данную форму вы соглашаетесь с политикой конфиденциальности"`}
+        description={t("editor.contactsTab.privacyText")}
       >
         <Input
           id="privacy_url"
           value={privacyUrl.value}
           onChange={(e) => privacyUrl.onChange(e.target.value)}
-          placeholder="www.example.com/privacy"
+          placeholder={t("editor.contactsTab.privacyPlaceholder")}
           className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
         />
       </AutoSaveFieldWrapper>

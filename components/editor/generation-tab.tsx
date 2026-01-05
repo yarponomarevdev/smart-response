@@ -14,6 +14,7 @@ import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
 import { useKnowledgeFiles, useUploadKnowledgeFile, useDeleteKnowledgeFile, formatFileSize } from "@/lib/hooks/use-knowledge-files"
 import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 
 interface GenerationTabProps {
   formId: string | null
@@ -34,6 +35,8 @@ export function GenerationTab({
   loadingMessages: initialLoadingMessages,
   content,
 }: GenerationTabProps) {
+  const { t } = useTranslation()
+  
   // Автосохранение системного промпта
   const systemPrompt = useAutoSaveField({
     formId,
@@ -149,7 +152,7 @@ export function GenerationTab({
 
     // Проверяем лимит файлов
     if (files.length >= MAX_FILES) {
-      alert(`Достигнут лимит файлов (${MAX_FILES})`)
+      alert(t("editor.generationTab.fileLimit").replace("{max}", String(MAX_FILES)))
       return
     }
 
@@ -159,7 +162,11 @@ export function GenerationTab({
       // Проверяем расширение
       const ext = `.${file.name.split(".").pop()?.toLowerCase()}`
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        alert(`Файл "${file.name}" имеет неподдерживаемый формат. Разрешены: ${ALLOWED_EXTENSIONS.join(", ")}`)
+        alert(
+          t("editor.generationTab.unsupportedFormat")
+            .replace("{name}", file.name)
+            .replace("{formats}", ALLOWED_EXTENSIONS.join(", "))
+        )
         continue
       }
 
@@ -176,7 +183,7 @@ export function GenerationTab({
   const handleDeleteFile = useCallback(async (fileId: string) => {
     if (!formId) return
 
-    if (!confirm("Удалить этот файл?")) return
+    if (!confirm(t("editor.generationTab.deleteFile"))) return
 
     try {
       await deleteFile.mutateAsync({ fileId, formId })
@@ -229,9 +236,9 @@ export function GenerationTab({
     <div className="space-y-8 sm:space-y-10">
       {/* Генерация ответа */}
       <div className="space-y-4">
-        <h3 className="text-2xl sm:text-3xl font-bold">Генерация ответа</h3>
+        <h3 className="text-2xl sm:text-3xl font-bold">{t("editor.generationTab.responseGeneration")}</h3>
         <AutoSaveFieldWrapper
-          label="Напишите промпт или опишите идею для генерации ответа:"
+          label={t("editor.generationTab.promptLabel")}
           labelFor="system_prompt"
           status={systemPrompt.status}
         >
@@ -245,12 +252,12 @@ export function GenerationTab({
               {isImproving ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Улучшаем...
+                  {t("editor.generationTab.improving")}
                 </>
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Улучшить с AI
+                  {t("editor.generationTab.improveWithAI")}
                 </>
               )}
             </Button>
@@ -260,7 +267,7 @@ export function GenerationTab({
             id="system_prompt"
             value={systemPrompt.value}
             onChange={(e) => systemPrompt.onChange(e.target.value)}
-            placeholder="Плейсхолдер"
+            placeholder={t("editor.generationTab.promptPlaceholder")}
             rows={6}
             className="min-h-[150px] sm:min-h-[242px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 py-4 resize-none overflow-hidden"
             style={{ height: "auto" }}
@@ -271,9 +278,9 @@ export function GenerationTab({
       {/* Процесс генерации */}
       <div className="space-y-4">
         <div className="max-w-2xl">
-          <h3 className="text-2xl sm:text-3xl font-bold">Процесс генерации</h3>
+          <h3 className="text-2xl sm:text-3xl font-bold">{t("editor.generationTab.generationProcess")}</h3>
           <p className="text-sm sm:text-base text-muted-foreground italic">
-            *текст появляется в виде слайд-шоу во время генерации ответа
+            {t("editor.generationTab.generationHint")}
           </p>
         </div>
 
@@ -282,7 +289,7 @@ export function GenerationTab({
           {loadingFields.map((field, index) => (
             <AutoSaveFieldWrapper
               key={index}
-              label={`Поле ${index + 1}`}
+              label={`${t("editor.generationTab.field")} ${index + 1}`}
               labelFor={`loading_${index}`}
               status={field.status}
             >
@@ -300,7 +307,7 @@ export function GenerationTab({
 
       {/* Доп. настройки */}
       <div className="space-y-4 max-w-2xl">
-        <h3 className="text-2xl sm:text-3xl font-bold">Доп. настройки</h3>
+        <h3 className="text-2xl sm:text-3xl font-bold">{t("editor.generationTab.additionalSettings")}</h3>
 
         {/* Чекбокс базы знаний */}
         <div className="flex items-center gap-3 pt-2">
@@ -311,13 +318,13 @@ export function GenerationTab({
             className="h-6 w-6 rounded-[5px]"
           />
           <label htmlFor="use_knowledge_base" className="text-base sm:text-lg cursor-pointer">
-            Использовать базу знаний
+            {t("editor.generationTab.useKnowledgeBase")}
           </label>
         </div>
 
         {/* База знаний / Другие данные */}
         <div className="space-y-2">
-          <label className="text-base sm:text-lg">База знаний / Другие данные</label>
+          <label className="text-base sm:text-lg">{t("editor.generationTab.knowledgeBase")}</label>
           
           {/* Скрытый input для файлов */}
           <input
@@ -351,21 +358,21 @@ export function GenerationTab({
               {uploadFile.isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Загрузка...
+                  {t("editor.generationTab.uploading")}
                 </>
               ) : (
                 <>
                   <Upload className="h-5 w-5 mr-2" />
-                  Загрузить файл
+                  {t("editor.generationTab.uploadFile")}
                 </>
               )}
             </Button>
             
             <p className="text-center text-sm text-muted-foreground mt-2">
-              или перетащите файлы сюда
+              {t("editor.generationTab.dragFilesHere")}
             </p>
             <p className="text-center text-xs text-muted-foreground">
-              PDF, DOCX, DOC, TXT, MD, CSV, JSON • до 10MB • макс. {MAX_FILES} файлов
+              {t("editor.generationTab.fileFormats").replace("{max}", String(MAX_FILES))}
             </p>
           </div>
 
@@ -374,10 +381,10 @@ export function GenerationTab({
             {filesLoading ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Загрузка файлов...</span>
+                <span className="text-sm">{t("editor.generationTab.loadingFiles")}</span>
               </div>
             ) : files.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">Файлы не загружены</p>
+              <p className="text-sm text-muted-foreground italic">{t("editor.generationTab.noFiles")}</p>
             ) : (
               files.map((file) => (
                 <div
@@ -412,14 +419,14 @@ export function GenerationTab({
           {/* Счётчик файлов */}
           {files.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Загружено: {files.length} / {MAX_FILES}
+              {t("editor.generationTab.uploaded").replace("{count}", String(files.length)).replace("{max}", String(MAX_FILES))}
             </p>
           )}
         </div>
 
         {/* Ссылка */}
         <AutoSaveFieldWrapper
-          label="Ссылка"
+          label={t("editor.generationTab.link")}
           labelFor="knowledge_url"
           status={knowledgeUrl.status}
         >
@@ -427,7 +434,7 @@ export function GenerationTab({
             id="knowledge_url"
             value={knowledgeUrl.value}
             onChange={(e) => knowledgeUrl.onChange(e.target.value)}
-            placeholder="https://example.com/data"
+            placeholder={t("editor.generationTab.linkPlaceholder")}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
         </AutoSaveFieldWrapper>

@@ -14,8 +14,11 @@ import { QuotaCounter } from "@/components/quota-counter"
 import { cn } from "@/lib/utils"
 import { useUsers, useUpdateUserQuotas } from "@/lib/hooks"
 import { AlertCircle } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 
 export function UsersTable() {
+  const { t } = useTranslation()
+  
   // React Query хуки
   const { data: users, isLoading, error } = useUsers()
   const updateQuotasMutation = useUpdateUserQuotas()
@@ -39,20 +42,20 @@ export function UsersTable() {
   }
 
   if (isLoading) {
-    return <div className="text-center py-8">Загрузка пользователей...</div>
+    return <div className="text-center py-8">{t("users.loading")}</div>
   }
 
   if (error) {
     return (
       <div className="py-4 space-y-6">
         <div className="space-y-1">
-          <h2 className="text-xl sm:text-2xl font-bold">Пользователи</h2>
-          <p className="text-sm text-muted-foreground">Все зарегистрированные пользователи и их статистика</p>
+          <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("users.description")}</p>
         </div>
         <div>
           <div className="flex flex-col items-center justify-center py-8">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-            <p className="text-lg font-medium mb-2">Ошибка загрузки</p>
+            <p className="text-lg font-medium mb-2">{t("errors.loadingFailed")}</p>
             <p className="text-sm text-muted-foreground">{error.message}</p>
           </div>
         </div>
@@ -63,28 +66,28 @@ export function UsersTable() {
   return (
     <div className="py-4 space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl sm:text-2xl font-bold">Пользователи</h2>
-        <p className="text-sm text-muted-foreground">Управление квотами и статистика пользователей</p>
+        <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("users.description")}</p>
       </div>
       <div>
         <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[150px]">Email</TableHead>
-                <TableHead className="min-w-[100px]">Роль</TableHead>
-                <TableHead className="min-w-[80px] text-center">Формы</TableHead>
-                <TableHead className="min-w-[150px] text-center">Лимит форм</TableHead>
-                <TableHead className="min-w-[180px] text-center">Использование лидов</TableHead>
-                <TableHead className="min-w-[100px] text-center">Публикация</TableHead>
-                <TableHead className="min-w-[120px]">Регистрация</TableHead>
+                <TableHead className="min-w-[150px]">{t("users.table.email")}</TableHead>
+                <TableHead className="min-w-[100px]">{t("users.table.role")}</TableHead>
+                <TableHead className="min-w-[80px] text-center">{t("users.table.forms")}</TableHead>
+                <TableHead className="min-w-[150px] text-center">{t("users.table.formsLimit")}</TableHead>
+                <TableHead className="min-w-[180px] text-center">{t("users.table.leadsUsage")}</TableHead>
+                <TableHead className="min-w-[100px] text-center">{t("users.table.publication")}</TableHead>
+                <TableHead className="min-w-[120px]">{t("users.table.registration")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!users || users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Пользователей пока нет
+                    {t("users.noUsers")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -102,7 +105,7 @@ export function UsersTable() {
                           variant={user.role === "superadmin" ? "default" : user.role === "admin" ? "secondary" : "outline"} 
                           className="text-xs"
                         >
-                          {user.role === "superadmin" ? "Суперадмин" : user.role === "admin" ? "Админ" : "Пользователь"}
+                          {user.role === "superadmin" ? t("users.roles.superadmin") : user.role === "admin" ? t("users.roles.admin") : t("users.roles.user")}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm text-center tabular-nums">
@@ -168,7 +171,7 @@ export function UsersTable() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm">
-                        {new Date(user.created_at).toLocaleDateString("ru-RU")}
+                        {new Date(user.created_at).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
                   )

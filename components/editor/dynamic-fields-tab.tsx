@@ -45,6 +45,7 @@ import {
   type FormField,
   type FormFieldInput,
 } from "@/lib/hooks"
+import { useTranslation } from "@/lib/i18n"
 import type { FieldType } from "@/app/actions/form-fields"
 
 interface DynamicFieldsTabProps {
@@ -52,6 +53,7 @@ interface DynamicFieldsTabProps {
 }
 
 export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
+  const { t } = useTranslation()
   // Состояние диалогов
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [showFieldForm, setShowFieldForm] = useState(false)
@@ -99,10 +101,10 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         },
         {
           onSuccess: () => {
-            toast.success("Порядок полей изменен")
+            toast.success(t("editor.dynamicFieldsTab.orderChanged"))
           },
           onError: () => {
-            toast.error("Ошибка изменения порядка")
+            toast.error(t("editor.dynamicFieldsTab.orderChangeError"))
           },
         }
       )
@@ -134,11 +136,11 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
 
     try {
       await saveFieldMutation.mutateAsync({ formId, fieldData: data })
-      toast.success(data.id ? "Поле обновлено" : "Поле добавлено")
+      toast.success(data.id ? t("editor.dynamicFieldsTab.fieldUpdated") : t("editor.dynamicFieldsTab.fieldAdded"))
       setShowFieldForm(false)
       setEditingField(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ошибка сохранения поля")
+      toast.error(error instanceof Error ? error.message : t("editor.dynamicFieldsTab.fieldSaveError"))
     }
   }
 
@@ -172,7 +174,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         },
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ошибка обновления поля")
+      toast.error(error instanceof Error ? error.message : t("editor.dynamicFieldsTab.fieldUpdateError"))
       throw error // Пробрасываем ошибку для InlineEditableText
     }
   }
@@ -183,18 +185,18 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
 
     try {
       await deleteFieldMutation.mutateAsync({ formId, fieldId: deletingField.id })
-      toast.success("Поле удалено")
+      toast.success(t("editor.dynamicFieldsTab.fieldDeleted"))
       setShowDeleteDialog(false)
       setDeletingField(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ошибка удаления поля")
+      toast.error(error instanceof Error ? error.message : t("editor.dynamicFieldsTab.fieldDeleteError"))
     }
   }
 
   if (!formId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Выберите форму для управления полями
+        {t("editor.dynamicFieldsTab.selectForm")}
       </div>
     )
   }
@@ -210,9 +212,9 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
       <div>
-        <h3 className="text-2xl sm:text-3xl font-bold mb-2">Поля формы</h3>
+        <h3 className="text-2xl sm:text-3xl font-bold mb-2">{t("editor.dynamicFieldsTab.title")}</h3>
         <p className="text-sm text-muted-foreground">
-          Добавьте заголовки (H1, H2, H3), поля ввода, дисклеймер и кнопку продолжения
+          {t("editor.dynamicFieldsTab.description")}
         </p>
       </div>
 
@@ -243,7 +245,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         </DndContext>
       ) : (
         <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-          Нет добавленных полей
+          {t("editor.dynamicFieldsTab.noFields")}
         </div>
       )}
 
@@ -253,11 +255,11 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
       >
         <Plus className="h-5 w-5 mr-2" />
-        Добавить поле
+        {t("editor.dynamicFieldsTab.addField")}
       </Button>
 
       <p className="text-sm sm:text-base text-muted-foreground font-light">
-        *выберите как минимум одно поле
+        {t("editor.formDataTab.minOneField")}
       </p>
 
       {/* Диалог выбора типа поля */}
@@ -293,18 +295,18 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить поле?</AlertDialogTitle>
+            <AlertDialogTitle>{t("editor.dynamicFieldsTab.deleteDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Поле &quot;{deletingField?.field_label}&quot; будет удалено. Это действие нельзя отменить.
+              {t("editor.dynamicFieldsTab.deleteDialog.description", { label: deletingField?.field_label || "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>{t("editor.dynamicFieldsTab.deleteDialog.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteFieldMutation.isPending ? "Удаление..." : "Удалить"}
+              {deleteFieldMutation.isPending ? t("editor.dynamicFieldsTab.deleteDialog.deleting") : t("editor.dynamicFieldsTab.deleteDialog.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

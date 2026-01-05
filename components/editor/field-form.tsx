@@ -18,6 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Plus, Trash2 } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
+import { useMemo } from "react"
 import type { FieldType, FormFieldInput, FieldOption } from "@/app/actions/form-fields"
 
 /**
@@ -40,18 +42,6 @@ interface FieldFormProps {
   isLoading?: boolean
 }
 
-const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  text: "Текст",
-  url: "Ссылка",
-  select: "Выпадающий список",
-  multiselect: "Множественный выбор",
-  checkbox: "Чек-бокс",
-  image: "Изображение",
-  h1: "Заголовок H1",
-  h2: "Заголовок H2",
-  h3: "Заголовок H3",
-  disclaimer: "Дисклеймер",
-}
 
 // Типы полей, для которых не нужен placeholder и is_required
 const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
@@ -67,6 +57,7 @@ export function FieldForm({
   onSave,
   isLoading,
 }: FieldFormProps) {
+  const { t, language } = useTranslation()
   const [label, setLabel] = useState(initialData?.field_label || "")
   const [key, setKey] = useState(initialData?.field_key || "")
   const [placeholder, setPlaceholder] = useState(initialData?.placeholder || "")
@@ -76,6 +67,19 @@ export function FieldForm({
 
   const isLayoutField = LAYOUT_FIELD_TYPES.includes(fieldType)
   const needsOptions = OPTION_FIELD_TYPES.includes(fieldType)
+
+  const FIELD_TYPE_LABELS = useMemo(() => ({
+    text: t("editor.fieldTypes.text"),
+    url: t("editor.fieldTypes.url"),
+    select: t("editor.fieldTypes.select"),
+    multiselect: t("editor.fieldTypes.multiselect"),
+    checkbox: t("editor.fieldTypes.checkbox"),
+    image: t("editor.fieldTypes.image"),
+    h1: t("editor.fieldTypes.h1"),
+    h2: t("editor.fieldTypes.h2"),
+    h3: t("editor.fieldTypes.h3"),
+    disclaimer: t("editor.fieldTypes.disclaimer"),
+  }), [t, language])
 
   // Сбрасываем форму при открытии с новыми данными
   useEffect(() => {
@@ -133,16 +137,16 @@ export function FieldForm({
 
   // Определяем label для поля ввода текста в зависимости от типа
   const getLabelText = () => {
-    if (fieldType === "disclaimer") return "Текст дисклеймера"
-    if (fieldType === "h1" || fieldType === "h2" || fieldType === "h3") return "Текст заголовка"
-    return "Название поля"
+    if (fieldType === "disclaimer") return t("editor.fieldForm.disclaimerLabel")
+    if (fieldType === "h1" || fieldType === "h2" || fieldType === "h3") return t("editor.fieldForm.headingLabel")
+    return t("editor.fieldForm.fieldNameLabel")
   }
 
   const getPlaceholderText = () => {
-    if (fieldType === "disclaimer") return "Например: Бесплатно • Занимает 30 секунд"
-    if (fieldType === "h1") return "Например: Анализ сайта с помощью ИИ"
-    if (fieldType === "h2" || fieldType === "h3") return "Введите текст заголовка"
-    return "Например: Ваше имя"
+    if (fieldType === "disclaimer") return t("editor.fieldForm.disclaimerPlaceholder")
+    if (fieldType === "h1") return t("editor.fieldForm.h1Placeholder")
+    if (fieldType === "h2" || fieldType === "h3") return t("editor.fieldForm.h2Placeholder")
+    return t("editor.fieldForm.fieldPlaceholder")
   }
 
   return (
@@ -150,7 +154,7 @@ export function FieldForm({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {initialData?.id ? "Редактировать" : "Новое поле"}: {FIELD_TYPE_LABELS[fieldType]}
+            {initialData?.id ? t("editor.fieldForm.editField") : t("editor.fieldForm.newField")}: {FIELD_TYPE_LABELS[fieldType]}
           </DialogTitle>
         </DialogHeader>
 
@@ -166,7 +170,7 @@ export function FieldForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="field_key">Ключ поля</Label>
+            <Label htmlFor="field_key">{t("editor.fieldForm.fieldIdLabel")}</Label>
             <Input
               id="field_key"
               value={key}
@@ -174,23 +178,23 @@ export function FieldForm({
                 setKey(e.target.value)
                 setKeyManuallyEdited(true)
               }}
-              placeholder="например: your_name"
+              placeholder={t("editor.fieldForm.fieldIdPlaceholder")}
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Уникальный идентификатор поля (автогенерируется из названия)
+              {t("editor.fieldForm.fieldIdDescription")}
             </p>
           </div>
 
           {/* Плейсхолдер - только для полей ввода */}
           {!isLayoutField && (
             <div className="space-y-2">
-              <Label htmlFor="field_placeholder">Плейсхолдер</Label>
+              <Label htmlFor="field_placeholder">{t("editor.fieldForm.placeholderLabel")}</Label>
               <Input
                 id="field_placeholder"
                 value={placeholder}
                 onChange={(e) => setPlaceholder(e.target.value)}
-                placeholder="Текст-подсказка в поле ввода"
+                placeholder={t("editor.fieldForm.placeholderPlaceholder")}
               />
             </div>
           )}
@@ -198,7 +202,7 @@ export function FieldForm({
           {/* Обязательность - только для полей ввода */}
           {!isLayoutField && (
             <div className="flex items-center justify-between">
-              <Label htmlFor="is_required">Обязательное поле</Label>
+              <Label htmlFor="is_required">{t("editor.fieldForm.requiredField")}</Label>
               <Switch
                 id="is_required"
                 checked={isRequired}
@@ -209,20 +213,20 @@ export function FieldForm({
 
           {needsOptions && (
             <div className="space-y-2">
-              <Label>Опции</Label>
+              <Label>{t("editor.fieldForm.optionsLabel")}</Label>
               <div className="space-y-2">
                 {options.map((option, index) => (
                   <div key={index} className="flex gap-2">
                     <Input
                       value={option.label}
                       onChange={(e) => handleOptionChange(index, "label", e.target.value)}
-                      placeholder="Название"
+                      placeholder={t("editor.fieldForm.optionName")}
                       className="flex-1"
                     />
                     <Input
                       value={option.value}
                       onChange={(e) => handleOptionChange(index, "value", e.target.value)}
-                      placeholder="Значение"
+                      placeholder={t("editor.fieldForm.optionValue")}
                       className="flex-1 font-mono text-sm"
                     />
                     <Button
@@ -244,7 +248,7 @@ export function FieldForm({
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Добавить опцию
+                {t("editor.fieldForm.addOption")}
               </Button>
             </div>
           )}
@@ -252,10 +256,10 @@ export function FieldForm({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Отмена
+            {t("editor.fieldForm.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!isValid || isLoading}>
-            {isLoading ? "Сохранение..." : "Сохранить"}
+            {isLoading ? t("editor.fieldForm.saving") : t("editor.fieldForm.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

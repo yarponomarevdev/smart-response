@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
+import { useMemo } from "react"
 import type { FieldType } from "@/app/actions/form-fields"
 
 interface FieldTypeSelectorProps {
@@ -20,82 +22,84 @@ interface FieldTypeSelectorProps {
   onSelect: (type: FieldType) => void
 }
 
-const FIELD_TYPES: { type: FieldType; label: string; icon: React.ReactNode; description: string; category: "layout" | "input" }[] = [
-  // Элементы оформления
-  {
-    type: "h1",
-    label: "Заголовок H1",
-    icon: <Heading1 className="h-5 w-5" />,
-    description: "Крупный заголовок",
-    category: "layout",
-  },
-  {
-    type: "h2",
-    label: "Заголовок H2",
-    icon: <Heading2 className="h-5 w-5" />,
-    description: "Средний заголовок",
-    category: "layout",
-  },
-  {
-    type: "h3",
-    label: "Заголовок H3",
-    icon: <Heading3 className="h-5 w-5" />,
-    description: "Малый заголовок",
-    category: "layout",
-  },
-  {
-    type: "disclaimer",
-    label: "Дисклеймер",
-    icon: <Info className="h-5 w-5" />,
-    description: "Мелкий текст примечания",
-    category: "layout",
-  },
-  // Поля ввода
-  {
-    type: "text",
-    label: "Текст",
-    icon: <Type className="h-5 w-5" />,
-    description: "Однострочное текстовое поле",
-    category: "input",
-  },
-  {
-    type: "url",
-    label: "Ссылка",
-    icon: <Link className="h-5 w-5" />,
-    description: "Поле для ввода URL",
-    category: "input",
-  },
-  {
-    type: "select",
-    label: "Выпадающий список (один выбор)",
-    icon: <List className="h-5 w-5" />,
-    description: "Выбор одного значения из списка",
-    category: "input",
-  },
-  {
-    type: "multiselect",
-    label: "Выпадающий список (множ. выбор)",
-    icon: <ListChecks className="h-5 w-5" />,
-    description: "Выбор нескольких значений из списка",
-    category: "input",
-  },
-  {
-    type: "checkbox",
-    label: "Чек-бокс с текстом",
-    icon: <CheckSquare className="h-5 w-5" />,
-    description: "Галочка с текстовой подписью",
-    category: "input",
-  },
-  {
-    type: "image",
-    label: "Изображение (jpeg, png)",
-    icon: <Image className="h-5 w-5" />,
-    description: "Загрузка изображения",
-    category: "input",
-  },
-]
-
 export function FieldTypeSelector({ open, onOpenChange, onSelect }: FieldTypeSelectorProps) {
+  const { t, language } = useTranslation()
+
+  const FIELD_TYPES = useMemo(() => [
+    // Элементы оформления
+    {
+      type: "h1" as FieldType,
+      label: t("editor.fieldTypes.h1"),
+      icon: <Heading1 className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.h1"),
+      category: "layout" as const,
+    },
+    {
+      type: "h2" as FieldType,
+      label: t("editor.fieldTypes.h2"),
+      icon: <Heading2 className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.h2"),
+      category: "layout" as const,
+    },
+    {
+      type: "h3" as FieldType,
+      label: t("editor.fieldTypes.h3"),
+      icon: <Heading3 className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.h3"),
+      category: "layout" as const,
+    },
+    {
+      type: "disclaimer" as FieldType,
+      label: t("editor.fieldTypes.disclaimer"),
+      icon: <Info className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.disclaimer"),
+      category: "layout" as const,
+    },
+    // Поля ввода
+    {
+      type: "text" as FieldType,
+      label: t("editor.fieldTypes.text"),
+      icon: <Type className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.text"),
+      category: "input" as const,
+    },
+    {
+      type: "url" as FieldType,
+      label: t("editor.fieldTypes.url"),
+      icon: <Link className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.url"),
+      category: "input" as const,
+    },
+    {
+      type: "select" as FieldType,
+      label: t("editor.fieldTypes.select"),
+      icon: <List className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.select"),
+      category: "input" as const,
+    },
+    {
+      type: "multiselect" as FieldType,
+      label: t("editor.fieldTypes.multiselect"),
+      icon: <ListChecks className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.multiselect"),
+      category: "input" as const,
+    },
+    {
+      type: "checkbox" as FieldType,
+      label: t("editor.fieldTypes.checkbox"),
+      icon: <CheckSquare className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.checkbox"),
+      category: "input" as const,
+    },
+    {
+      type: "image" as FieldType,
+      label: t("editor.fieldTypes.image"),
+      icon: <Image className="h-5 w-5" />,
+      description: t("editor.fieldTypesDescriptions.image"),
+      category: "input" as const,
+    },
+  ], [t, language])
+
   const handleSelect = (type: FieldType) => {
     onSelect(type)
     onOpenChange(false)
@@ -108,12 +112,12 @@ export function FieldTypeSelector({ open, onOpenChange, onSelect }: FieldTypeSel
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Выберите тип поля:</DialogTitle>
+          <DialogTitle>{t("editor.fieldTypeSelector.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           {/* Элементы оформления */}
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Элементы оформления</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("editor.fieldTypeSelector.layoutCategory")}</p>
             <div className="space-y-1">
               {layoutFields.map((fieldType) => (
                 <Button
@@ -135,7 +139,7 @@ export function FieldTypeSelector({ open, onOpenChange, onSelect }: FieldTypeSel
           
           {/* Поля ввода */}
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Поля ввода</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("editor.fieldTypeSelector.inputCategory")}</p>
             <div className="space-y-1">
               {inputFields.map((fieldType) => (
                 <Button
@@ -159,5 +163,3 @@ export function FieldTypeSelector({ open, onOpenChange, onSelect }: FieldTypeSel
     </Dialog>
   )
 }
-
-export { FIELD_TYPES }

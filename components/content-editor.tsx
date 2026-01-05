@@ -7,7 +7,7 @@
  */
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 import {
@@ -30,6 +30,7 @@ import {
   SettingsTab,
   DynamicFieldsTab,
 } from "@/components/editor"
+import { useTranslation } from "@/lib/i18n"
 
 interface ContentEditorProps {
   formId?: string
@@ -37,6 +38,8 @@ interface ContentEditorProps {
 }
 
 export function ContentEditor({ formId: propFormId, onBackToDashboard }: ContentEditorProps) {
+  const { t, language } = useTranslation()
+  
   // Проверяем загрузку пользователя сначала
   const { data: user, isLoading: userLoading } = useCurrentUser()
   
@@ -53,14 +56,18 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   const forms = formsData?.forms || []
   const firstFormId = forms.length > 0 ? forms[0].id : null
 
-  const tabs = [
-    { value: "data", label: "Данные формы" },
-    { value: "contacts", label: "Контакты" },
-    { value: "generation", label: "Генерация" },
-    { value: "result", label: "Результат" },
-    { value: "share", label: "Поделиться" },
-    { value: "settings", label: "Настройки" }
-  ]
+  // Мемоизируем вкладки с зависимостью от языка, чтобы они обновлялись при смене языка
+  const tabs = useMemo(
+    () => [
+      { value: "data", label: t("editor.tabs.data") },
+      { value: "contacts", label: t("editor.tabs.contacts") },
+      { value: "generation", label: t("editor.tabs.generation") },
+      { value: "result", label: t("editor.tabs.result") },
+      { value: "share", label: t("editor.tabs.share") },
+      { value: "settings", label: t("editor.tabs.settings") }
+    ],
+    [t, language]
+  )
 
   // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
   useEffect(() => {
@@ -99,12 +106,12 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
           formId: selectedFormId, 
           currentIsActive: false 
         })
-        toast.success("Форма опубликована!")
+        toast.success(t("editor.toast.published"))
       } else {
-        toast.info("Форма уже опубликована")
+        toast.info(t("editor.toast.alreadyPublished"))
       }
     } catch (err) {
-      toast.error("Ошибка публикации: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error(t("editor.toast.publishError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
@@ -136,7 +143,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
   // Показываем загрузку, если пользователь еще загружается или данные еще не загрузились
   if (userLoading || (isLoading && !contentData && !formsData)) {
-    return <div className="text-center py-8">Загрузка контента...</div>
+    return <div className="text-center py-8">{t("editor.loadingContent")}</div>
   }
 
   // Проверяем ошибки перед проверкой загрузки
@@ -145,7 +152,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg font-medium mb-2">Ошибка загрузки форм</p>
+          <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
           <p className="text-sm text-muted-foreground">{formsError.message}</p>
         </div>
       </div>
@@ -157,7 +164,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg font-medium mb-2">Ошибка загрузки контента</p>
+          <p className="text-lg font-medium mb-2">{t("editor.loadingContentError")}</p>
           <p className="text-sm text-muted-foreground">{contentError.message}</p>
         </div>
       </div>
@@ -170,8 +177,8 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium mb-2">Форма не найдена</p>
-          <p className="text-sm text-muted-foreground">Сначала создайте форму.</p>
+          <p className="text-lg font-medium mb-2">{t("editor.noForms")}</p>
+          <p className="text-sm text-muted-foreground">{t("editor.noFormsDescription")}</p>
         </div>
       </div>
     )
@@ -190,12 +197,12 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         {forms.length > 1 && (
           <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
             <SelectTrigger className="h-12 w-auto rounded-[18px] gap-2 px-0">
-              <SelectValue placeholder="Выберите форму" />
+              <SelectValue placeholder={t("editor.selectForm")} />
             </SelectTrigger>
             <SelectContent>
               {forms.map((form) => (
                 <SelectItem key={form.id} value={form.id} className="text-base">
-                  {form.isMain ? `${form.name} (Главная)` : form.name}
+                  {form.isMain ? `${form.name} (${t("editor.mainForm")})` : form.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -203,7 +210,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         )}
         {forms.length === 1 && (
           <div className="h-12 flex items-center rounded-[18px]">
-            <span className="text-sm">{selectedForm?.name || "Форма"}</span>
+            <span className="text-sm">{selectedForm?.name || t("editor.form")}</span>
           </div>
         )}
       </div>
@@ -264,7 +271,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
-                Продолжить
+                {t("editor.continue")}
               </Button>
               <Button
                 onClick={handleBack}
@@ -272,7 +279,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
-                Вернуться назад
+                {t("editor.goBack")}
               </Button>
             </>
           )}
@@ -285,7 +292,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
-                Продолжить
+                {t("editor.continue")}
               </Button>
               <Button
                 onClick={handleBack}
@@ -293,7 +300,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
-                Вернуться назад
+                {t("editor.goBack")}
               </Button>
             </>
           )}
@@ -306,7 +313,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={toggleActiveMutation.isPending || contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
-                {toggleActiveMutation.isPending ? "Публикация..." : "Сохранить и опубликовать"}
+                {toggleActiveMutation.isPending ? t("editor.publishing") : t("editor.saveAndPublish")}
               </Button>
               <Button
                 onClick={handleGoToShare}
@@ -314,7 +321,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
-                Поделиться
+                {t("editor.share")}
               </Button>
               <Button
                 onClick={handleBack}
@@ -322,7 +329,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
                 disabled={contentLoading}
                 className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
               >
-                Вернуться назад
+                {t("editor.goBack")}
               </Button>
             </>
           )}
@@ -335,7 +342,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               disabled={contentLoading}
               className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
             >
-              Вернуться назад
+              {t("editor.goBack")}
             </Button>
           )}
 
@@ -347,7 +354,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               disabled={contentLoading}
               className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
             >
-              Вернуться назад
+              {t("editor.goBack")}
             </Button>
           )}
         </div>

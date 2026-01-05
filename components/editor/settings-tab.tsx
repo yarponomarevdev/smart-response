@@ -19,6 +19,7 @@ import { useAutoSaveFormName } from "@/lib/hooks/use-autosave"
 import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 
 interface SettingsTabProps {
   formId: string | null
@@ -51,6 +52,7 @@ async function fetchFormData(formId: string): Promise<FormData> {
 }
 
 export function SettingsTab({ formId }: SettingsTabProps) {
+  const { t } = useTranslation()
   const [notifyOnNewLead, setNotifyOnNewLead] = useState(true)
   const [sendEmailToRespondent, setSendEmailToRespondent] = useState(true)
   const [theme, setTheme] = useState<"light" | "dark">("light")
@@ -87,7 +89,7 @@ export function SettingsTab({ formId }: SettingsTabProps) {
   if (!formId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Форма не выбрана
+        {t("editor.settingsTab.noForm")}
       </div>
     )
   }
@@ -95,7 +97,7 @@ export function SettingsTab({ formId }: SettingsTabProps) {
   if (isLoading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Загрузка настроек...
+        {t("editor.settingsTab.loadingSettings")}
       </div>
     )
   }
@@ -104,7 +106,7 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-        <p className="text-lg font-medium mb-2">Ошибка загрузки настроек</p>
+        <p className="text-lg font-medium mb-2">{t("editor.settingsTab.loadingError")}</p>
         <p className="text-sm text-muted-foreground">{error.message}</p>
       </div>
     )
@@ -116,9 +118,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     try {
       await updateNotificationMutation.mutateAsync({ formId, value: checked })
       setNotifyOnNewLead(checked)
-      toast.success(checked ? "Уведомления включены" : "Уведомления отключены")
+      toast.success(checked ? t("editor.settingsTab.notificationsEnabled") : t("editor.settingsTab.notificationsDisabled"))
     } catch (err) {
-      toast.error("Ошибка обновления настройки: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error(t("editor.settingsTab.updateError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
@@ -128,9 +130,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     try {
       await updateRespondentEmailMutation.mutateAsync({ formId, value: checked })
       setSendEmailToRespondent(checked)
-      toast.success(checked ? "Отправка писем респондентам включена" : "Отправка писем респондентам отключена")
+      toast.success(checked ? t("editor.settingsTab.respondentEmailEnabled") : t("editor.settingsTab.respondentEmailDisabled"))
     } catch (err) {
-      toast.error("Ошибка обновления настройки: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error(t("editor.settingsTab.updateError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
@@ -140,17 +142,17 @@ export function SettingsTab({ formId }: SettingsTabProps) {
     try {
       await updateThemeMutation.mutateAsync({ formId, value: newTheme })
       setTheme(newTheme)
-      const themeNames = { light: "Светлая", dark: "Тёмная" }
-      toast.success(`Тема изменена на "${themeNames[newTheme]}"`)
+      const themeNames = { light: t("editor.settingsTab.themeLight"), dark: t("editor.settingsTab.themeDark") }
+      toast.success(t("editor.settingsTab.themeChanged").replace("{theme}", themeNames[newTheme]))
     } catch (err) {
-      toast.error("Ошибка обновления темы: " + (err instanceof Error ? err.message : "Неизвестная ошибка"))
+      toast.error(t("editor.settingsTab.themeUpdateError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
       <AutoSaveFieldWrapper
-        label="Название формы"
+        label={t("editor.settingsTab.formName")}
         labelFor="formName"
         status={formName.status}
         counter={{ current: formName.value.length, max: 30 }}
@@ -160,7 +162,7 @@ export function SettingsTab({ formId }: SettingsTabProps) {
           value={formName.value}
           onChange={(e) => formName.onChange(e.target.value)}
           className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-          placeholder="Название формы"
+          placeholder={t("editor.settingsTab.formNamePlaceholder")}
           maxLength={30}
         />
       </AutoSaveFieldWrapper>
@@ -168,9 +170,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="notify" className="text-base sm:text-lg font-medium">Email уведомления</Label>
+            <Label htmlFor="notify" className="text-base sm:text-lg font-medium">{t("editor.settingsTab.notifications")}</Label>
             <p className="text-sm text-muted-foreground">
-              Получать письмо при новой заявке
+              {t("editor.settingsTab.notificationsDesc")}
             </p>
           </div>
           <Switch
@@ -185,9 +187,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="respondentEmail" className="text-base sm:text-lg font-medium">Email респонденту</Label>
+            <Label htmlFor="respondentEmail" className="text-base sm:text-lg font-medium">{t("editor.settingsTab.notifyRespondent")}</Label>
             <p className="text-sm text-muted-foreground">
-              Отправлять письмо с результатом заполнившему форму
+              {t("editor.settingsTab.notifyRespondentDesc")}
             </p>
           </div>
           <Switch
@@ -202,9 +204,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
         <div className="space-y-3">
           <div className="space-y-0.5">
-            <Label htmlFor="theme" className="text-base sm:text-lg font-medium">Тема формы</Label>
+            <Label htmlFor="theme" className="text-base sm:text-lg font-medium">{t("editor.settingsTab.theme")}</Label>
             <p className="text-sm text-muted-foreground">
-              Выберите тему отображения для вашей формы
+              {t("editor.settingsTab.themeDescription")}
             </p>
           </div>
           <Select
@@ -219,8 +221,8 @@ export function SettingsTab({ formId }: SettingsTabProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="light">Светлая</SelectItem>
-              <SelectItem value="dark">Тёмная</SelectItem>
+              <SelectItem value="light">{t("editor.settingsTab.themeLight")}</SelectItem>
+              <SelectItem value="dark">{t("editor.settingsTab.themeDark")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

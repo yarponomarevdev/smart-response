@@ -7,7 +7,7 @@
  */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -16,9 +16,11 @@ import { ContentEditor } from "./content-editor"
 import { FormsManager } from "./forms-manager"
 import { UsersTable } from "./users-table"
 import { SystemSettingsEditor } from "./system-settings-editor"
+import { UserSettingsEditor } from "./user-settings-editor"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 
 // ID главной формы для суперадмина
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
@@ -29,6 +31,7 @@ const ADMIN_UIDS = [
 ]
 
 export function AdminDashboard() {
+  const { t, language } = useTranslation()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,74 +69,84 @@ export function AdminDashboard() {
     fetchUserRole()
   }, [])
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Загрузка...</div>
-  }
-
+  // Вычисляем роли до условного возврата (нужно для useMemo)
   const isSuperAdmin = userRole === "superadmin"
   const isAdmin = userRole === "admin" || (userId && ADMIN_UIDS.includes(userId))
 
-  // Определяем заголовок панели
-  const getPanelTitle = () => {
-    if (isSuperAdmin) return "Панель супер-админа"
-    if (isAdmin) return "Панель администратора"
-    return "Панель управления"
-  }
+  // Мемоизируем заголовок и описание с зависимостью от языка
+  // ВАЖНО: все хуки должны быть до условного return
+  const panelTitle = useMemo(() => {
+    if (isSuperAdmin) return t("admin.panel.superadminTitle")
+    if (isAdmin) return t("admin.panel.adminTitle")
+    return t("admin.panel.userTitle")
+  }, [isSuperAdmin, isAdmin, t, language])
 
-  const getPanelDescription = () => {
-    if (isSuperAdmin) return "Управление главной формой, создание форм и просмотр всех пользователей"
-    if (isAdmin) return "Управление вашими формами и лидами (неограниченное количество форм)"
-    return "Управление вашей формой и лидами"
+  const panelDescription = useMemo(() => {
+    if (isSuperAdmin) return t("admin.panel.superadminDescription")
+    if (isAdmin) return t("admin.panel.adminDescription")
+    return t("admin.panel.userDescription")
+  }, [isSuperAdmin, isAdmin, t, language])
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center">{t("common.loading")}</div>
   }
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold">{getPanelTitle()}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
                 <LogOut className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-                <span className="sm:hidden">Выход</span>
+                <span>{t("common.logout")}</span>
               </Button>
             </div>
           </div>
-          <p className="text-sm sm:text-base text-muted-foreground">{getPanelDescription()}</p>
+          <p className="text-sm sm:text-base text-muted-foreground">{panelDescription}</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <TabsList className="flex-wrap h-auto border-b border-border p-0 gap-6">
             {isSuperAdmin ? (
               <>
-                <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
-                <TabsTrigger value="editor">Редактор</TabsTrigger>
-                <TabsTrigger value="leads">Ответы</TabsTrigger>
-                <TabsTrigger value="users">Пользователи</TabsTrigger>
+                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
+                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
+                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
+                <TabsTrigger value="users">{t("admin.tabs.users")}</TabsTrigger>
                 <TabsTrigger value="integrations" disabled className="relative">
-                  Интеграции
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                  {t("admin.tabs.integrations")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="balance" disabled className="relative">
-                  Баланс
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                  {t("admin.tabs.balance")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
                 </TabsTrigger>
-                <TabsTrigger value="system">Настройки</TabsTrigger>
+                <TabsTrigger value="system">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             ) : (
               <>
-                <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
-                <TabsTrigger value="editor">Редактор</TabsTrigger>
-                <TabsTrigger value="leads">Ответы</TabsTrigger>
+                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
+                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
+                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
                 <TabsTrigger value="integrations" disabled className="relative">
-                  Интеграции
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                  {t("admin.tabs.integrations")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="balance" disabled className="relative">
-                  Баланс
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">Скоро</span>
+                  {t("admin.tabs.balance")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
                 </TabsTrigger>
+                <TabsTrigger value="settings">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -184,6 +197,9 @@ export function AdminDashboard() {
               </TabsContent>
               <TabsContent value="balance" className="space-y-4">
                 {/* Скоро */}
+              </TabsContent>
+              <TabsContent value="settings" className="space-y-4">
+                <UserSettingsEditor />
               </TabsContent>
             </>
           )}

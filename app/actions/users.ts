@@ -182,4 +182,47 @@ export async function updateUserQuotas(
   return { success: true }
 }
 
+/**
+ * Получает язык пользователя
+ */
+export async function getUserLanguage(userId: string): Promise<{ language: string | null; error?: string }> {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("language")
+    .eq("id", userId)
+    .single()
+
+  if (error) {
+    console.error("Error fetching user language:", error)
+    return { language: null, error: error.message }
+  }
+
+  return { language: data?.language || "ru" }
+}
+
+/**
+ * Обновляет язык пользователя
+ */
+export async function updateUserLanguage(
+  userId: string,
+  language: string
+): Promise<{ success: boolean; error?: string }> {
+  // Валидация языка
+  if (!["ru", "en"].includes(language)) {
+    return { success: false, error: "Недопустимое значение языка" }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ language })
+    .eq("id", userId)
+
+  if (error) {
+    console.error("Error updating user language:", error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
 

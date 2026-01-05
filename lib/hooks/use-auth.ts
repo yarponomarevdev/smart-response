@@ -12,6 +12,7 @@ interface UserWithRole {
   id: string
   email: string
   role: "user" | "admin" | "superadmin"
+  language?: "ru" | "en"
 }
 
 /**
@@ -25,7 +26,7 @@ async function fetchCurrentUser(): Promise<UserWithRole | null> {
 
   const { data } = await supabase
     .from("users")
-    .select("role")
+    .select("role, language")
     .eq("id", user.id)
     .single()
 
@@ -39,6 +40,7 @@ async function fetchCurrentUser(): Promise<UserWithRole | null> {
     id: user.id,
     email: user.email || "",
     role,
+    language: data?.language as "ru" | "en" | undefined,
   }
 }
 

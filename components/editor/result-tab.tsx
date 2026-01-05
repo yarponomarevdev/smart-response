@@ -8,6 +8,7 @@
 import { Input } from "@/components/ui/input"
 import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { useAutoSaveField } from "@/lib/hooks/use-autosave"
+import { useTranslation } from "@/lib/i18n"
 
 interface ResultTabProps {
   formId: string | null
@@ -15,6 +16,8 @@ interface ResultTabProps {
 }
 
 export function ResultTab({ formId, content }: ResultTabProps) {
+  const { t } = useTranslation()
+  
   // Автосохранение полей CTA
   const ctaText = useAutoSaveField({
     formId,
@@ -38,13 +41,13 @@ export function ResultTab({ formId, content }: ResultTabProps) {
     <div className="space-y-8 sm:space-y-10">
       {/* CTA блок */}
       <div className="space-y-4 max-w-2xl">
-        <h3 className="text-2xl sm:text-3xl font-bold">CTA-блок</h3>
+        <h3 className="text-2xl sm:text-3xl font-bold">{t("editor.resultTab.ctaBlock")}</h3>
         <p className="text-sm sm:text-base text-muted-foreground italic">
-          *отображается на экране результата под контентом
+          {t("editor.resultTab.ctaHint")}
         </p>
 
         <AutoSaveFieldWrapper
-          label="СТА-текст"
+          label={t("editor.resultTab.ctaText")}
           labelFor="result_cta_text"
           status={ctaText.status}
         >
@@ -52,13 +55,13 @@ export function ResultTab({ formId, content }: ResultTabProps) {
             id="result_cta_text"
             value={ctaText.value}
             onChange={(e) => ctaText.onChange(e.target.value)}
-            placeholder="Подписывайтесь на нас в инстаграм!"
+            placeholder={t("editor.resultTab.ctaTextPlaceholder")}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
         </AutoSaveFieldWrapper>
 
         <AutoSaveFieldWrapper
-          label="Название кнопки"
+          label={t("editor.resultTab.buttonName")}
           labelFor="result_button_text"
           status={buttonText.status}
         >
@@ -66,13 +69,13 @@ export function ResultTab({ formId, content }: ResultTabProps) {
             id="result_button_text"
             value={buttonText.value}
             onChange={(e) => buttonText.onChange(e.target.value)}
-            placeholder="Перейти в Instagram"
+            placeholder={t("editor.resultTab.buttonNamePlaceholder")}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
         </AutoSaveFieldWrapper>
 
         <AutoSaveFieldWrapper
-          label="Ссылка кнопки"
+          label={t("editor.resultTab.buttonLink")}
           labelFor="result_button_url"
           status={buttonUrl.status}
         >
@@ -80,7 +83,7 @@ export function ResultTab({ formId, content }: ResultTabProps) {
             id="result_button_url"
             value={buttonUrl.value}
             onChange={(e) => buttonUrl.onChange(e.target.value)}
-            placeholder="https://instagram.com/username"
+            placeholder={t("editor.resultTab.buttonLinkPlaceholder")}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
         </AutoSaveFieldWrapper>

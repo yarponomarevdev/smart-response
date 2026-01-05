@@ -11,19 +11,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Copy, Check } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslation } from "@/lib/i18n"
 
 interface ShareTabProps {
   formId: string | null
 }
 
 export function ShareTab({ formId }: ShareTabProps) {
+  const { t } = useTranslation()
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedEmbed, setCopiedEmbed] = useState(false)
 
   if (!formId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Форма не выбрана
+        {t("editor.shareTab.noForm")}
       </div>
     )
   }
@@ -44,16 +46,16 @@ export function ShareTab({ formId }: ShareTabProps) {
         setCopiedEmbed(true)
         setTimeout(() => setCopiedEmbed(false), 2000)
       }
-      toast.success("Скопировано в буфер обмена")
+      toast.success(t("editor.shareTab.copiedToClipboard"))
     } catch (err) {
-      toast.error("Не удалось скопировать")
+      toast.error(t("editor.shareTab.copyFailed"))
     }
   }
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-2xl">
       <div className="space-y-2">
-        <Label htmlFor="form_url" className="text-base sm:text-lg">Ссылка на форму</Label>
+        <Label htmlFor="form_url" className="text-base sm:text-lg">{t("editor.shareTab.formLink")}</Label>
         <div className="flex gap-2">
           <Input
             id="form_url"
@@ -78,7 +80,7 @@ export function ShareTab({ formId }: ShareTabProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="embed_code" className="text-base sm:text-lg">Код для сайта</Label>
+        <Label htmlFor="embed_code" className="text-base sm:text-lg">{t("editor.shareTab.embedCode")}</Label>
         <div className="flex flex-col gap-3">
           <Textarea
             id="embed_code"
@@ -96,12 +98,12 @@ export function ShareTab({ formId }: ShareTabProps) {
             {copiedEmbed ? (
               <>
                 <Check className="h-5 w-5 mr-2 text-green-600" />
-                Скопировано
+                {t("editor.shareTab.copied")}
               </>
             ) : (
               <>
                 <Copy className="h-5 w-5 mr-2" />
-                Скопировать код
+                {t("editor.shareTab.copy")}
               </>
             )}
           </Button>
