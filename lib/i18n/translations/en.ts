@@ -197,6 +197,15 @@ export const en: Translations = {
     upgradeButton: "Upgrade Plan",
     upgradeTitle: "Need more forms or responses?",
     upgradeDescription: "Contact us to upgrade your plan",
+    // New metrics
+    storage: "Storage",
+    storageUsage: "Knowledge Base",
+    uploadLimit: "File Upload",
+    maxFileSize: "Maximum file size",
+    testing: "Testing",
+    testsToday: "Tests today",
+    dailyReset: "Resets daily",
+    mb: "MB",
   },
 
   // Content Editor

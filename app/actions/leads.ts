@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { isFormOwner } from "@/app/actions/forms"
+import { incrementDailyTestCount } from "@/app/actions/storage"
 import { marked } from "marked"
 
 // Use service role to bypass RLS for server-side operations
@@ -294,6 +295,22 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
       if (!canCreate) {
         const limitText = limit !== null ? `${currentCount}/${limit}` : currentCount.toString()
         return { error: `Достигнут лимит лидов для аккаунта (${limitText}). Владельцу необходимо связаться с администратором.` }
+      }
+    }
+  }
+
+  // Проверяем лимит ежедневных тестирований для владельца формы
+  if (isOwner) {
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const { canTest, currentCount, limit } = await incrementDailyTestCount(user.id)
+      if (!canTest) {
+        const limitText = limit !== null ? `${currentCount}/${limit}` : currentCount.toString()
+        return { 
+          error: `Достигнут дневной лимит тестирования (${limitText}). Лимит обновится завтра.` 
+        }
       }
     }
   }

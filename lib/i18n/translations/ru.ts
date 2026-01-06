@@ -195,6 +195,15 @@ export const ru = {
     upgradeButton: "Обновить тариф",
     upgradeTitle: "Нужно больше форм или ответов?",
     upgradeDescription: "Свяжитесь с нами для обновления тарифа",
+    // Новые метрики
+    storage: "Хранилище",
+    storageUsage: "База знаний",
+    uploadLimit: "Загрузка файла",
+    maxFileSize: "Максимальный размер файла",
+    testing: "Тестирование",
+    testsToday: "Тестов сегодня",
+    dailyReset: "Обновляется ежедневно",
+    mb: "МБ",
   },
 
   // Редактор контента

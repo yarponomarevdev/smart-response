@@ -1,19 +1,21 @@
 /**
  * BalanceTab - Вкладка для отображения баланса пользователя
- * Показывает счетчики по формам и ответам, кнопку обновления тарифа
+ * Показывает счетчики по формам, ответам, хранилищу и тестированию
  * Доступна только для обычных пользователей (role: user)
  */
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, FileText, MessageSquare } from "lucide-react"
-import { useUserForms } from "@/lib/hooks"
+import { AlertCircle, FileText, MessageSquare, HardDrive, Upload, FlaskConical } from "lucide-react"
+import { useUserForms, useStorageUsage, useDailyTestInfo } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 
 export function BalanceTab() {
   const { t } = useTranslation()
   const { data, isLoading, error } = useUserForms()
+  const { data: storageData, isLoading: storageLoading } = useStorageUsage()
+  const { data: testingData, isLoading: testingLoading } = useDailyTestInfo()
 
   if (error) {
     return (
@@ -34,6 +36,17 @@ export function BalanceTab() {
   const { totalLeads, limitInfo } = data
   const isUnlimited = limitInfo?.limit === null
 
+  // Форматирование хранилища
+  const formatMB = (bytes: number) => Math.round(bytes / 1024 / 1024 * 10) / 10
+  const storageCurrentMB = storageData ? formatMB(storageData.currentUsage) : 0
+  const storageLimitMB = storageData?.limit ? formatMB(storageData.limit) : null
+  const isStorageUnlimited = storageData?.limit === null
+
+  // Данные тестирования
+  const testingCurrent = testingData?.currentCount || 0
+  const testingLimit = testingData?.limit
+  const isTestingUnlimited = testingLimit === null
+
   const handleUpgrade = () => {
     window.open("https://t.me/vasilkovdigital", "_blank")
   }
@@ -47,7 +60,7 @@ export function BalanceTab() {
         </p>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* Карточка форм */}
         <Card>
           <CardHeader className="pb-3">
@@ -85,6 +98,91 @@ export function BalanceTab() {
             <div className="space-y-2">
               <div className="text-3xl sm:text-4xl font-bold">{totalLeads}</div>
               <CardDescription>{t("balance.totalResponses")}</CardDescription>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Карточка хранилища */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">{t("balance.storage")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {storageLoading ? (
+                <div className="text-3xl sm:text-4xl font-bold text-muted-foreground">...</div>
+              ) : (
+                <div className="text-3xl sm:text-4xl font-bold">
+                  {storageCurrentMB}
+                  {!isStorageUnlimited && storageLimitMB !== null && (
+                    <span className="text-lg sm:text-xl text-muted-foreground">
+                      {" "}/ {storageLimitMB} {t("balance.mb")}
+                    </span>
+                  )}
+                  {isStorageUnlimited && (
+                    <span className="text-lg sm:text-xl text-muted-foreground"> {t("balance.mb")}</span>
+                  )}
+                </div>
+              )}
+              <CardDescription>
+                {isStorageUnlimited ? t("balance.unlimited") : t("balance.storageUsage")}
+              </CardDescription>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Карточка лимита загрузки */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">{t("balance.uploadLimit")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-3xl sm:text-4xl font-bold">
+                1 <span className="text-lg sm:text-xl text-muted-foreground">{t("balance.mb")}</span>
+              </div>
+              <CardDescription>{t("balance.maxFileSize")}</CardDescription>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Карточка тестирования */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">{t("balance.testing")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {testingLoading ? (
+                <div className="text-3xl sm:text-4xl font-bold text-muted-foreground">...</div>
+              ) : (
+                <div className="text-3xl sm:text-4xl font-bold">
+                  {testingCurrent}
+                  {!isTestingUnlimited && testingLimit !== null && (
+                    <span className="text-lg sm:text-xl text-muted-foreground">
+                      {" "}/ {testingLimit}
+                    </span>
+                  )}
+                </div>
+              )}
+              <CardDescription>
+                {isTestingUnlimited ? (
+                  t("balance.unlimited")
+                ) : (
+                  <>
+                    {t("balance.testsToday")} ({t("balance.dailyReset")})
+                  </>
+                )}
+              </CardDescription>
             </div>
           </CardContent>
         </Card>

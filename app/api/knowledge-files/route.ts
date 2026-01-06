@@ -7,9 +7,8 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { isSupportedFileType } from "@/lib/file-parser"
-
-// Максимальный размер файла (10MB)
-const MAX_FILE_SIZE = 10 * 1024 * 1024
+import { checkStorageLimit } from "@/app/actions/storage"
+import { MAX_FILE_SIZE } from "@/lib/constants/storage"
 
 // Максимальное количество файлов на форму
 const MAX_FILES_PER_FORM = 10
@@ -119,10 +118,21 @@ export async function POST(req: Request) {
       )
     }
 
-    // Проверяем размер файла
+    // Проверяем размер файла (1 МБ)
     if (file.size > MAX_FILE_SIZE) {
       return Response.json(
-        { error: `Файл слишком большой. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { error: `Файл слишком большой. Максимальный размер: 1 МБ` },
+        { status: 400 }
+      )
+    }
+
+    // Проверяем лимит хранилища пользователя
+    const { canUpload, currentUsage, limit } = await checkStorageLimit(user.id, file.size)
+    if (!canUpload && limit !== null) {
+      const currentMB = Math.round(currentUsage / 1024 / 1024 * 10) / 10
+      const limitMB = Math.round(limit / 1024 / 1024)
+      return Response.json(
+        { error: `Превышен лимит хранилища (${currentMB}/${limitMB} МБ). Удалите ненужные файлы или обратитесь к администратору.` },
         { status: 400 }
       )
     }
