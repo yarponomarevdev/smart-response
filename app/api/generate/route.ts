@@ -199,6 +199,45 @@ export async function POST(req: Request) {
       )
     }
 
+    // Fetch form fields to identify URL fields
+    const { data: fieldsData } = await supabase
+      .from("form_fields")
+      .select("field_key, field_type, field_label")
+      .eq("form_id", formId)
+
+    const urlFields = fieldsData?.filter(f => f.field_type === 'url') || []
+    
+    // Process additional URL fields
+    let additionalUrlsContext = ""
+    if (customFields && typeof customFields === "object" && urlFields.length > 0) {
+      const urlsToFetch: { key: string, label: string, url: string }[] = []
+
+      for (const field of urlFields) {
+        // Skip if this field's value is the same as the main URL (already fetched)
+        const fieldValue = customFields[field.field_key]
+        if (typeof fieldValue === 'string' && fieldValue && fieldValue !== url) {
+           // Ensure it's a valid URL string
+           if (fieldValue.startsWith('http')) {
+             urlsToFetch.push({
+               key: field.field_key,
+               label: field.field_label,
+               url: fieldValue
+             })
+           }
+        }
+      }
+
+      if (urlsToFetch.length > 0) {
+        const results = await Promise.all(
+          urlsToFetch.map(async (item) => {
+            const content = await fetchUrlContent(item.url)
+            return `--- Контент из поля "${item.label}" (${item.url}) ---\n${content}`
+          })
+        )
+        additionalUrlsContext = "\n" + results.join("\n\n") + "\n"
+      }
+    }
+
     const getContent = (key: string, defaultValue: string) => {
       return contentData?.find((c) => c.key === key)?.value || defaultValue
     }
@@ -284,7 +323,7 @@ export async function POST(req: Request) {
 
       // Формируем финальный промпт для генерации изображения
       // Для изображений база знаний добавляется как часть промпта (ограничение API)
-      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${customFieldsContext}${knowledgeBaseContext.slice(0, 2000)}`
+      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${additionalUrlsContext.slice(0, 1500)}${customFieldsContext}${knowledgeBaseContext.slice(0, 2000)}`
 
       console.log("[v0] Using image model:", imageModel)
       console.log("[v0] Image prompt preview:", imagePrompt.slice(0, 100) + "...")
@@ -403,6 +442,7 @@ export async function POST(req: Request) {
 
 --- Контент страницы ---
 ${urlContent}
+${additionalUrlsContext}
 ${customFieldsContext}${knowledgeBaseContext}
 
 Please provide your analysis and recommendations.`

@@ -228,24 +228,37 @@ export function GenerationStep({
 
   // Отображение ошибки генерации
   if (error) {
+    const isLimitError = error.includes("лимита использований")
+    
     return (
       <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 animate-in fade-in duration-500 p-4 sm:p-6">
         <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-destructive/10">
           <AlertCircle className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
         </div>
         <div className="text-center space-y-2">
-          <h3 className="text-base sm:text-lg font-semibold text-destructive">Произошла ошибка</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-destructive">
+            {isLimitError ? "Достигнут лимит использований" : "Произошла ошибка"}
+          </h3>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-md px-4">{error}</p>
         </div>
-        <Button 
-          onClick={handleRetry} 
-          disabled={isRetrying}
-          variant="outline"
-          className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-          {isRetrying ? 'Повторяем...' : 'Попробовать снова'}
-        </Button>
+        {isLimitError ? (
+          <Button 
+            onClick={() => window.location.href = '/auth/register'}
+            className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
+          >
+            Зарегистрироваться
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleRetry} 
+            disabled={isRetrying}
+            variant="outline"
+            className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+            {isRetrying ? 'Повторяем...' : 'Попробовать снова'}
+          </Button>
+        )}
       </div>
     )
   }

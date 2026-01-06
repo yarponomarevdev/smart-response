@@ -94,6 +94,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
         <SuccessStep
           result={result}
           formId={effectiveFormId}
+          email={contactData.email}
           onRestart={() => {
             setUrl("")
             setCustomFields({})

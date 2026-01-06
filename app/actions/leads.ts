@@ -303,16 +303,19 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     // Владелец может тестировать свою форму сколько угодно раз
     await supabaseAdmin.from("leads").delete().eq("form_id", formId).eq("email", email)
   } else {
-    // Для обычных пользователей проверяем дубликаты email
-    const { data: existing } = await supabaseAdmin
+    // Для обычных пользователей проверяем лимит использований (5 раз)
+    const { count } = await supabaseAdmin
       .from("leads")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("form_id", formId)
       .eq("email", email)
-      .single()
 
-    if (existing) {
-      return { error: "Вы уже отправляли заявку с этого email" }
+    const usageCount = count || 0
+
+    if (usageCount >= 5) {
+      return { 
+        error: "Вы достигли лимита использований формы (5 раз). Зарегистрируйтесь для создания своих форм с расширенным количеством генераций."
+      }
     }
   }
 

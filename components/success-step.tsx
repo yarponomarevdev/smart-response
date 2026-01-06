@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client"
 interface SuccessStepProps {
   result: { type: string; text: string; imageUrl?: string }
   formId?: string
+  email?: string
   onRestart: () => void
 }
 
@@ -32,10 +33,18 @@ interface FormContent {
   button_url?: string
 }
 
-export function SuccessStep({ result, formId, onRestart }: SuccessStepProps) {
+interface UsageInfo {
+  usageCount: number
+  remainingCount: number
+  maxCount: number
+  hasReachedLimit: boolean
+}
+
+export function SuccessStep({ result, formId, email, onRestart }: SuccessStepProps) {
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [content, setContent] = useState<FormContent>({})
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null)
 
   // Загрузка контента формы
   useEffect(() => {
@@ -69,6 +78,28 @@ export function SuccessStep({ result, formId, onRestart }: SuccessStepProps) {
 
     fetchContent()
   }, [formId])
+
+  // Загрузка информации об использованиях
+  useEffect(() => {
+    const fetchUsageInfo = async () => {
+      if (!formId || !email) return
+
+      try {
+        const response = await fetch(
+          `/api/check-usage?formId=${encodeURIComponent(formId)}&email=${encodeURIComponent(email)}`
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          setUsageInfo(data)
+        }
+      } catch (error) {
+        console.error("Error fetching usage info:", error)
+      }
+    }
+
+    fetchUsageInfo()
+  }, [formId, email])
 
   // Извлекаем настройки из content
   const resultTitle = content.result_title || "Ваша персональная рекламная кампания готова!"
@@ -381,6 +412,35 @@ export function SuccessStep({ result, formId, onRestart }: SuccessStepProps) {
           )}
         </div>
       </div>
+
+      {/* Дисклеймер об использованиях */}
+      {usageInfo && usageInfo.usageCount > 0 && !usageInfo.hasReachedLimit && (
+        <div className="w-full max-w-md p-4 bg-muted rounded-lg text-center">
+          <p className="text-sm text-muted-foreground">
+            Вы использовали форму {usageInfo.usageCount} из {usageInfo.maxCount} раз
+            {usageInfo.remainingCount > 0 && (
+              <span> (осталось {usageInfo.remainingCount})</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Финальное сообщение при достижении лимита */}
+      {usageInfo?.hasReachedLimit && (
+        <div className="w-full max-w-md p-6 bg-primary/10 rounded-lg text-center space-y-4">
+          <p className="text-sm font-medium">
+            Вы воспользовались формой предельное количество раз. 
+            Зарегистрируйтесь, создавайте свои формы и пользуйтесь ими 
+            с расширенным количеством генераций — бесплатно.
+          </p>
+          <Button
+            onClick={() => window.location.href = '/auth/register'}
+            className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
+          >
+            Зарегистрироваться
+          </Button>
+        </div>
+      )}
 
       {/* CTA блок */}
       {ctaText && (
