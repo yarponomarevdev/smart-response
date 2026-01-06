@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -50,6 +51,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   // Локальное состояние
   const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
   const [activeTab, setActiveTab] = useState("data")
+  const [maxVisitedTabIndex, setMaxVisitedTabIndex] = useState(0)
   const propFormIdRef = useRef<string | undefined>(propFormId)
   const userHasSelectedRef = useRef<boolean>(false)
 
@@ -86,6 +88,14 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
       setSelectedFormId(firstFormId)
     }
   }, [firstFormId, selectedFormId])
+
+  // Отслеживаем прогресс вкладок - обновляем максимальный индекс только при движении вперед
+  useEffect(() => {
+    const currentTabIndex = tabs.findIndex(tab => tab.value === activeTab)
+    if (currentTabIndex !== -1 && currentTabIndex > maxVisitedTabIndex) {
+      setMaxVisitedTabIndex(currentTabIndex)
+    }
+  }, [activeTab, tabs, maxVisitedTabIndex])
 
   // Загружаем контент выбранной формы
   const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
@@ -217,17 +227,33 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
       {/* Вкладки редактора */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-6">
-            {tabs.map((tab, index) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 py-2"
-              >
-                {index + 1}. {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="relative w-fit">
+            <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0 gap-6 pb-2">
+              {tabs.map((tab, index) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:bg-transparent px-0 py-0"
+                >
+                  <span className={cn(
+                    "transition-opacity duration-300",
+                    activeTab === tab.value ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  )}>
+                    {index + 1}. {tab.label}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {/* Линия прогресса */}
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-muted">
+              <div 
+                className="h-full bg-primary transition-all duration-500 ease-in-out"
+                style={{
+                  width: `${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length) * 100}%`
+                }}
+              />
+            </div>
+          </div>
 
           <div className="pt-6">
             <TabsContent value="data" className="mt-0">
