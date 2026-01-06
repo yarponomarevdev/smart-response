@@ -26,10 +26,8 @@ export const en: Translations = {
   admin: {
     panel: {
       superadminTitle: "Super Admin Panel",
-      adminTitle: "Admin Panel",
       userTitle: "Control Panel",
       superadminDescription: "Manage main form, create forms and view all users",
-      adminDescription: "Manage your forms and leads (unlimited forms)",
       userDescription: "Manage your form and leads",
     },
     tabs: {
@@ -150,7 +148,6 @@ export const en: Translations = {
     },
     roles: {
       superadmin: "Super Admin",
-      admin: "Admin",
       user: "User",
     },
   },
@@ -187,6 +184,19 @@ export const en: Translations = {
       deleted: "Lead successfully deleted",
       deleteError: "Failed to delete lead",
     },
+  },
+
+  // Balance
+  balance: {
+    title: "Your Balance",
+    forms: "Forms",
+    responses: "Responses",
+    totalForms: "Total forms",
+    totalResponses: "Total responses",
+    unlimited: "Unlimited",
+    upgradeButton: "Upgrade Plan",
+    upgradeTitle: "Need more forms or responses?",
+    upgradeDescription: "Contact us to upgrade your plan",
   },
 
   // Content Editor

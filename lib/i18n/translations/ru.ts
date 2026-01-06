@@ -24,10 +24,8 @@ export const ru = {
   admin: {
     panel: {
       superadminTitle: "Панель супер-админа",
-      adminTitle: "Панель администратора",
       userTitle: "Панель управления",
       superadminDescription: "Управление главной формой, создание форм и просмотр всех пользователей",
-      adminDescription: "Управление вашими формами и лидами (неограниченное количество форм)",
       userDescription: "Управление вашей формой и лидами",
     },
     tabs: {
@@ -148,7 +146,6 @@ export const ru = {
     },
     roles: {
       superadmin: "Суперадмин",
-      admin: "Админ",
       user: "Пользователь",
     },
   },
@@ -185,6 +182,19 @@ export const ru = {
       deleted: "Лид успешно удалён",
       deleteError: "Не удалось удалить лид",
     },
+  },
+
+  // Баланс
+  balance: {
+    title: "Ваш баланс",
+    forms: "Формы",
+    responses: "Ответы",
+    totalForms: "Всего форм",
+    totalResponses: "Всего ответов",
+    unlimited: "Неограничено",
+    upgradeButton: "Обновить тариф",
+    upgradeTitle: "Нужно больше форм или ответов?",
+    upgradeDescription: "Свяжитесь с нами для обновления тарифа",
   },
 
   // Редактор контента

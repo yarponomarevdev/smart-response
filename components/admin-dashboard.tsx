@@ -17,6 +17,7 @@ import { FormsManager } from "./forms-manager"
 import { UsersTable } from "./users-table"
 import { SystemSettingsEditor } from "./system-settings-editor"
 import { UserSettingsEditor } from "./user-settings-editor"
+import { BalanceTab } from "./editor"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
@@ -24,11 +25,6 @@ import { useTranslation } from "@/lib/i18n"
 
 // ID главной формы для суперадмина
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
-
-// UID админов с расширенными правами
-const ADMIN_UIDS = [
-  "6cb16c09-6a85-4079-9579-118168e95b06",
-]
 
 export function AdminDashboard() {
   const { t, language } = useTranslation()
@@ -55,13 +51,7 @@ export function AdminDashboard() {
       if (user) {
         setUserId(user.id)
         const { data } = await supabase.from("users").select("role").eq("id", user.id).single()
-        
-        // Проверяем роль в БД или хардкод для админов
-        let role = data?.role || "user"
-        if (ADMIN_UIDS.includes(user.id) && role === "user") {
-          role = "admin"
-        }
-        setUserRole(role)
+        setUserRole(data?.role || "user")
       }
       setLoading(false)
     }
@@ -71,21 +61,18 @@ export function AdminDashboard() {
 
   // Вычисляем роли до условного возврата (нужно для useMemo)
   const isSuperAdmin = userRole === "superadmin"
-  const isAdmin = userRole === "admin" || (userId && ADMIN_UIDS.includes(userId))
 
   // Мемоизируем заголовок и описание с зависимостью от языка
   // ВАЖНО: все хуки должны быть до условного return
   const panelTitle = useMemo(() => {
     if (isSuperAdmin) return t("admin.panel.superadminTitle")
-    if (isAdmin) return t("admin.panel.adminTitle")
     return t("admin.panel.userTitle")
-  }, [isSuperAdmin, isAdmin, t, language])
+  }, [isSuperAdmin, t, language])
 
   const panelDescription = useMemo(() => {
     if (isSuperAdmin) return t("admin.panel.superadminDescription")
-    if (isAdmin) return t("admin.panel.adminDescription")
     return t("admin.panel.userDescription")
-  }, [isSuperAdmin, isAdmin, t, language])
+  }, [isSuperAdmin, t, language])
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">{t("common.loading")}</div>
@@ -121,12 +108,6 @@ export function AdminDashboard() {
                     {t("admin.tabs.comingSoon")}
                   </span>
                 </TabsTrigger>
-                <TabsTrigger value="balance" disabled className="relative">
-                  {t("admin.tabs.balance")}
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                    {t("admin.tabs.comingSoon")}
-                  </span>
-                </TabsTrigger>
                 <TabsTrigger value="system">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             ) : (
@@ -140,12 +121,7 @@ export function AdminDashboard() {
                     {t("admin.tabs.comingSoon")}
                   </span>
                 </TabsTrigger>
-                <TabsTrigger value="balance" disabled className="relative">
-                  {t("admin.tabs.balance")}
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                    {t("admin.tabs.comingSoon")}
-                  </span>
-                </TabsTrigger>
+                <TabsTrigger value="balance">{t("admin.tabs.balance")}</TabsTrigger>
                 <TabsTrigger value="settings">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             )}
@@ -171,9 +147,6 @@ export function AdminDashboard() {
               <TabsContent value="integrations" className="space-y-4">
                 {/* Скоро */}
               </TabsContent>
-              <TabsContent value="balance" className="space-y-4">
-                {/* Скоро */}
-              </TabsContent>
               <TabsContent value="system" className="space-y-4">
                 <SystemSettingsEditor />
               </TabsContent>
@@ -196,7 +169,7 @@ export function AdminDashboard() {
                 {/* Скоро */}
               </TabsContent>
               <TabsContent value="balance" className="space-y-4">
-                {/* Скоро */}
+                <BalanceTab />
               </TabsContent>
               <TabsContent value="settings" className="space-y-4">
                 <UserSettingsEditor />

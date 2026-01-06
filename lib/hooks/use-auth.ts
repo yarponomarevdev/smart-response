@@ -3,15 +3,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
 
-// ID админов с расширенными правами (хардкод для обратной совместимости)
-const ADMIN_UIDS = [
-  "6cb16c09-6a85-4079-9579-118168e95b06",
-]
-
 interface UserWithRole {
   id: string
   email: string
-  role: "user" | "admin" | "superadmin"
+  role: "user" | "superadmin"
   language?: "ru" | "en"
 }
 
@@ -30,16 +25,10 @@ async function fetchCurrentUser(): Promise<UserWithRole | null> {
     .eq("id", user.id)
     .single()
 
-  // Проверяем роль в БД или хардкод для админов
-  let role: "user" | "admin" | "superadmin" = data?.role || "user"
-  if (ADMIN_UIDS.includes(user.id) && role === "user") {
-    role = "admin"
-  }
-
   return {
     id: user.id,
     email: user.email || "",
-    role,
+    role: (data?.role as "user" | "superadmin") || "user",
     language: data?.language as "ru" | "en" | undefined,
   }
 }

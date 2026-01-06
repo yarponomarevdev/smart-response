@@ -157,7 +157,7 @@ export async function deleteUserForm(userId: string, formId: string) {
     .eq("id", userId)
     .single()
 
-  const isAdmin = user?.role === "admin" || user?.role === "superadmin"
+  const isSuperAdmin = user?.role === "superadmin"
 
   const { data: form } = await supabaseAdmin
     .from("forms")
@@ -169,7 +169,7 @@ export async function deleteUserForm(userId: string, formId: string) {
     return { error: "Форма не найдена" }
   }
 
-  if (form.owner_id !== userId && !isAdmin) {
+  if (form.owner_id !== userId && !isSuperAdmin) {
     return { error: "Нет прав на удаление этой формы" }
   }
 

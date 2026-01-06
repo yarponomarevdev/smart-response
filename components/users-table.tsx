@@ -102,10 +102,10 @@ export function UsersTable() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={user.role === "superadmin" ? "default" : user.role === "admin" ? "secondary" : "outline"} 
+                          variant={user.role === "superadmin" ? "default" : "outline"} 
                           className="text-xs"
                         >
-                          {user.role === "superadmin" ? t("users.roles.superadmin") : user.role === "admin" ? t("users.roles.admin") : t("users.roles.user")}
+                          {user.role === "superadmin" ? t("users.roles.superadmin") : t("users.roles.user")}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm text-center tabular-nums">
