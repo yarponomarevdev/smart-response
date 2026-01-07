@@ -13,9 +13,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertCircle, CheckCircle2, AlertTriangle, Languages, MessageSquareText, Image as ImageIcon } from "lucide-react"
 import { useUpdateUserLanguage } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 // Доступные модели OpenAI
 const TEXT_MODELS = [
@@ -119,107 +121,120 @@ export function SystemSettingsEditor() {
   }
 
   return (
-    <div className="py-4">
-      <div className="space-y-6 sm:space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold">
-              {t("settings.system.title")}
-            </h2>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              {t("settings.system.description")}
-            </p>
-          </div>
-          <Button 
-            onClick={handleSave} 
-            disabled={saveSettingsMutation.isPending} 
-            className="h-12 w-full sm:w-[200px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {saveSettingsMutation.isPending ? t("common.saving") : t("common.save")}
-          </Button>
+    <div className="py-4 space-y-6 max-w-5xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+            {t("settings.system.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("settings.system.description")}
+          </p>
         </div>
+        <Button 
+          onClick={handleSave} 
+          disabled={saveSettingsMutation.isPending} 
+          className="h-10 sm:h-12 w-full sm:w-auto min-w-[140px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {saveSettingsMutation.isPending ? t("common.saving") : t("common.save")}
+        </Button>
+      </div>
 
-        {/* Статус сохранения */}
-        {saveStatus === "success" && (
-          <Alert className="border-green-500/50 bg-green-500/10">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertTitle className="text-green-500">{t("notifications.saved")}</AlertTitle>
-            <AlertDescription className="text-green-500/80">
-              {t("notifications.settingsSaved")}
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Статус сохранения */}
+      {saveStatus === "success" && (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <AlertTitle className="text-green-500">{t("notifications.saved")}</AlertTitle>
+          <AlertDescription className="text-green-500/80">
+            {t("notifications.settingsSaved")}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {(saveStatus === "error" || saveSettingsMutation.error) && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t("common.error")}</AlertTitle>
-            <AlertDescription>
-              {saveSettingsMutation.error?.message || t("errors.savingFailed")}
-            </AlertDescription>
-          </Alert>
-        )}
+      {(saveStatus === "error" || saveSettingsMutation.error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t("common.error")}</AlertTitle>
+          <AlertDescription>
+            {saveSettingsMutation.error?.message || t("errors.savingFailed")}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <div className="space-y-4 sm:space-y-6">
-          {/* Личные настройки суперадмина */}
-          <div className="p-3 sm:p-4 border border-blue-500/20 rounded-lg space-y-3 sm:space-y-4 bg-blue-500/5">
-            <h3 className="text-base sm:text-lg font-semibold text-blue-500">
-              Личные настройки
-            </h3>
-
-            {/* Статус сохранения языка */}
-            {languageSaveStatus === "success" && (
-              <Alert className="border-green-500/50 bg-green-500/10">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <AlertTitle className="text-green-500">{t("notifications.saved")}</AlertTitle>
-                <AlertDescription className="text-green-500/80">
-                  {t("notifications.languageChanged")}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {(languageSaveStatus === "error" || updateLanguageMutation.error) && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("common.error")}</AlertTitle>
-                <AlertDescription>
-                  {updateLanguageMutation.error?.message || t("errors.savingFailed")}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Выбор языка */}
-            <div className="space-y-2">
-              <Label htmlFor="superadmin_language" className="text-sm">
-                {t("settings.user.language.label")}
-              </Label>
-              <Select value={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger id="superadmin_language" className="w-full sm:w-[300px]">
-                  <SelectValue placeholder={t("settings.user.language.description")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ru">{t("settings.user.language.russian")}</SelectItem>
-                  <SelectItem value="en">{t("settings.user.language.english")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {t("settings.user.language.description")}
-              </p>
+      <div className="grid gap-4 lg:gap-6">
+        {/* Карточка Языка */}
+        <Card className="py-4 sm:py-5 gap-4 sm:gap-5">
+          <CardHeader className="pb-0">
+            <div className="flex items-center gap-2">
+              <Languages className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-base sm:text-lg">{t("settings.user.language.label")}</CardTitle>
             </div>
-          </div>
-          {/* Настройки генерации текста */}
-          <div className="p-3 sm:p-4 border border-accent/20 rounded-lg space-y-3 sm:space-y-4 bg-accent/5">
-            <h3 className="text-base sm:text-lg font-semibold text-accent">
-              {t("settings.system.textGeneration")}
-            </h3>
+            <CardDescription className="text-xs sm:text-sm">{t("settings.user.language.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <button
+                onClick={() => handleLanguageChange("ru")}
+                disabled={updateLanguageMutation.isPending}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all hover:scale-[1.02]",
+                  language === "ru" 
+                    ? "border-primary bg-primary/10 shadow-sm" 
+                    : "border-border bg-muted/30 hover:bg-muted/50"
+                )}
+              >
+                <span className="text-2xl">🇷🇺</span>
+                <span className={cn("text-sm sm:text-base", language === "ru" && "font-semibold")}>
+                  {t("settings.user.language.russian")}
+                </span>
+              </button>
+              <button
+                onClick={() => handleLanguageChange("en")}
+                disabled={updateLanguageMutation.isPending}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all hover:scale-[1.02]",
+                  language === "en" 
+                    ? "border-primary bg-primary/10 shadow-sm" 
+                    : "border-border bg-muted/30 hover:bg-muted/50"
+                )}
+              >
+                <span className="text-2xl">🇬🇧</span>
+                <span className={cn("text-sm sm:text-base", language === "en" && "font-semibold")}>
+                  {t("settings.user.language.english")}
+                </span>
+              </button>
+            </div>
 
+            {languageSaveStatus === "success" && (
+              <p className="text-xs sm:text-sm text-green-600 mt-3 flex items-center">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                {t("notifications.languageChanged")}
+              </p>
+            )}
+            {(languageSaveStatus === "error" || updateLanguageMutation.error) && (
+              <p className="text-xs sm:text-sm text-destructive mt-3">
+                {updateLanguageMutation.error?.message || t("errors.savingFailed")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Карточка генерации текста */}
+        <Card className="py-4 sm:py-5 gap-4 sm:gap-5">
+          <CardHeader className="pb-0">
+            <div className="flex items-center gap-2">
+              <MessageSquareText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-base sm:text-lg">{t("settings.system.textGeneration")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Выбор модели для текста */}
             <div className="space-y-2">
-              <Label htmlFor="text_model" className="text-sm">
+              <Label htmlFor="text_model" className="text-sm font-medium">
                 {t("settings.system.textModel")}
               </Label>
               <Select value={textModel} onValueChange={setTextModel}>
-                <SelectTrigger id="text_model" className="w-full sm:w-[300px]">
+                <SelectTrigger id="text_model" className="w-full sm:w-[300px] h-9 sm:h-10 text-sm">
                   <SelectValue placeholder="Выберите модель..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,7 +246,7 @@ export function SystemSettingsEditor() {
                 </SelectContent>
               </Select>
               {!textModel && (
-                <div className="flex items-center gap-2 text-amber-500 text-xs">
+                <div className="flex items-center gap-2 text-amber-500 text-xs mt-1.5">
                   <AlertTriangle className="h-3 w-3" />
                   <span>{t("settings.system.modelNotSelected")}</span>
                 </div>
@@ -240,36 +255,45 @@ export function SystemSettingsEditor() {
 
             {/* Промпт для текста */}
             <div className="space-y-2">
-              <Label htmlFor="global_text_prompt" className="text-sm">
-                {t("settings.system.systemPrompt")}
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="global_text_prompt" className="text-sm font-medium">
+                  {t("settings.system.systemPrompt")}
+                </Label>
+                <span className="text-xs text-muted-foreground hidden sm:inline-block">
+                  {t("settings.system.textPromptDescription")}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground sm:hidden mb-2">
+                {t("settings.system.textPromptDescription")}
+              </p>
               <Textarea
                 id="global_text_prompt"
                 value={globalTextPrompt}
                 onChange={(e) => setGlobalTextPrompt(e.target.value)}
                 placeholder="Введите системный промпт для текстового формата..."
                 rows={12}
-                className="font-mono text-xs sm:text-sm"
+                className="font-mono text-xs sm:text-sm resize-y min-h-[200px]"
               />
-              <p className="text-xs text-muted-foreground">
-                {t("settings.system.textPromptDescription")}
-              </p>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Настройки генерации изображений */}
-          <div className="p-3 sm:p-4 border border-purple-500/20 rounded-lg space-y-3 sm:space-y-4 bg-purple-500/5">
-            <h3 className="text-base sm:text-lg font-semibold text-purple-500">
-              {t("settings.system.imageGeneration")}
-            </h3>
-
+        {/* Карточка генерации изображений */}
+        <Card className="py-4 sm:py-5 gap-4 sm:gap-5">
+          <CardHeader className="pb-0">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-base sm:text-lg">{t("settings.system.imageGeneration")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Выбор модели для изображений */}
             <div className="space-y-2">
-              <Label htmlFor="image_model" className="text-sm">
+              <Label htmlFor="image_model" className="text-sm font-medium">
                 {t("settings.system.imageModel")}
               </Label>
               <Select value={imageModel} onValueChange={setImageModel}>
-                <SelectTrigger id="image_model" className="w-full sm:w-[300px]">
+                <SelectTrigger id="image_model" className="w-full sm:w-[300px] h-9 sm:h-10 text-sm">
                   <SelectValue placeholder="Выберите модель..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,7 +305,7 @@ export function SystemSettingsEditor() {
                 </SelectContent>
               </Select>
               {!imageModel && (
-                <div className="flex items-center gap-2 text-amber-500 text-xs">
+                <div className="flex items-center gap-2 text-amber-500 text-xs mt-1.5">
                   <AlertTriangle className="h-3 w-3" />
                   <span>{t("settings.system.modelNotSelected")}</span>
                 </div>
@@ -290,23 +314,28 @@ export function SystemSettingsEditor() {
 
             {/* Промпт для изображений */}
             <div className="space-y-2">
-              <Label htmlFor="global_image_prompt" className="text-sm">
-                {t("settings.system.systemPrompt")}
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="global_image_prompt" className="text-sm font-medium">
+                  {t("settings.system.systemPrompt")}
+                </Label>
+                <span className="text-xs text-muted-foreground hidden sm:inline-block">
+                  {t("settings.system.imagePromptDescription")}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground sm:hidden mb-2">
+                {t("settings.system.imagePromptDescription")}
+              </p>
               <Textarea
                 id="global_image_prompt"
                 value={globalImagePrompt}
                 onChange={(e) => setGlobalImagePrompt(e.target.value)}
                 placeholder="Введите системный промпт для генерации изображений..."
                 rows={10}
-                className="font-mono text-xs sm:text-sm"
+                className="font-mono text-xs sm:text-sm resize-y min-h-[150px]"
               />
-              <p className="text-xs text-muted-foreground">
-                {t("settings.system.imagePromptDescription")}
-              </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

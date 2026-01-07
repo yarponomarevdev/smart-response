@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
+import { Label } from "@/components/ui/label"
 import { useKnowledgeFiles, useUploadKnowledgeFile, useDeleteKnowledgeFile, formatFileSize } from "@/lib/hooks/use-knowledge-files"
 import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
@@ -69,6 +70,13 @@ export function GenerationTab({
     formId,
     fieldKey: "knowledge_url",
     initialValue: content.knowledge_url || "",
+  })
+
+  // Автосохранение формата результата
+  const resultFormat = useAutoSaveField({
+    formId,
+    fieldKey: "ai_result_format",
+    initialValue: content.ai_result_format || "text",
   })
 
   // Автосохранение чекбокса базы знаний
@@ -273,6 +281,52 @@ export function GenerationTab({
             style={{ height: "auto" }}
           />
         </AutoSaveFieldWrapper>
+
+        {/* Формат результата */}
+        <div className="space-y-3 pt-2">
+          <Label className="text-base sm:text-lg">{t("editor.generationTab.resultFormat")}</Label>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="format_text"
+                checked={resultFormat.value === "text"}
+                onCheckedChange={(checked) => {
+                  if (checked) resultFormat.onChange("text")
+                }}
+                className="h-6 w-6 rounded-[5px]"
+              />
+              <label htmlFor="format_text" className="text-base sm:text-lg cursor-pointer">
+                {t("editor.generationTab.formatText")}
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="format_image"
+                checked={resultFormat.value === "image"}
+                onCheckedChange={(checked) => {
+                  if (checked) resultFormat.onChange("image")
+                }}
+                className="h-6 w-6 rounded-[5px]"
+              />
+              <label htmlFor="format_image" className="text-base sm:text-lg cursor-pointer">
+                {t("editor.generationTab.formatImage")}
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="format_image_with_text"
+                checked={resultFormat.value === "image_with_text"}
+                onCheckedChange={(checked) => {
+                  if (checked) resultFormat.onChange("image_with_text")
+                }}
+                className="h-6 w-6 rounded-[5px]"
+              />
+              <label htmlFor="format_image_with_text" className="text-base sm:text-lg cursor-pointer">
+                {t("editor.generationTab.formatImageWithText")}
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Процесс генерации */}

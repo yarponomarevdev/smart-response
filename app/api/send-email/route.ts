@@ -102,7 +102,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 </tr>
                 
                 ${
-                  resultType === "image" && resultImageUrl
+                  (resultType === "image" || resultType === "image_with_text") && resultImageUrl
                     ? `
                 <tr>
                   <td style="padding: 40px 40px 20px 40px;">
@@ -114,7 +114,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 }
                 
                 ${
-                  resultText
+                  resultText && (resultType === "text" || resultType === "image_with_text")
                     ? `
                 <tr>
                   <td style="padding: 40px 40px 20px 40px;">

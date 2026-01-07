@@ -318,6 +318,10 @@ export const ru = {
       linkPlaceholder: "https://example.com/data",
       fileLimit: "Достигнут лимит файлов ({max})",
       unsupportedFormat: "Файл \"{name}\" имеет неподдерживаемый формат. Разрешены: {formats}",
+      resultFormat: "Формат результата:",
+      formatText: "Текст",
+      formatImage: "Изображение",
+      formatImageWithText: "Изображение с поясняющим текстом",
     },
     dynamicFieldsTab: {
       title: "Поля формы",

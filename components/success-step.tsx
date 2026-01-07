@@ -180,6 +180,65 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
         }
 
         img.src = result.imageUrl
+      } else if (result.type === "image_with_text" && result.imageUrl) {
+        // Создаём PDF с изображением и текстом
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        })
+
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const margin = 20
+        const maxWidth = pageWidth - margin * 2
+
+        // Загружаем изображение
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+
+        img.onload = async () => {
+          const canvas = document.createElement("canvas")
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          const ctx = canvas.getContext("2d")
+          ctx?.drawImage(img, 0, 0)
+
+          const imgData = canvas.toDataURL("image/png")
+          
+          // Рассчитываем размеры изображения для PDF
+          const imgAspectRatio = img.naturalWidth / img.naturalHeight
+          const imgWidthMm = Math.min(maxWidth, 120)
+          const imgHeightMm = imgWidthMm / imgAspectRatio
+
+          // Добавляем изображение
+          pdf.addImage(imgData, "PNG", margin, margin, imgWidthMm, imgHeightMm)
+
+          // Добавляем текст под изображением
+          if (result.text) {
+            const textStartY = margin + imgHeightMm + 15
+            const fontSize = 11
+            const lineHeight = fontSize * 0.5
+            
+            pdf.setFontSize(fontSize)
+            pdf.setTextColor(0, 0, 0)
+
+            // Простая обработка текста
+            const plainText = result.text.replace(/[#*_`]/g, "").trim()
+            const lines = pdf.splitTextToSize(plainText, maxWidth)
+            
+            pdf.text(lines, margin, textStartY)
+          }
+
+          pdf.save("result.pdf")
+          setDownloading(false)
+        }
+
+        img.onerror = () => {
+          window.open(result.imageUrl, "_blank")
+          setDownloading(false)
+        }
+
+        img.src = result.imageUrl
       } else {
         // Download text as PDF с поддержкой кириллицы через canvas
         const pdf = new jsPDF({
@@ -407,6 +466,15 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
         <div className="max-w-none text-left">
           {result.type === "image" && result.imageUrl ? (
             <img src={result.imageUrl || "/placeholder.svg"} alt="Generated result" className="w-full rounded" />
+          ) : result.type === "image_with_text" && result.imageUrl ? (
+            <div className="space-y-4">
+              <img src={result.imageUrl || "/placeholder.svg"} alt="Generated result" className="w-full rounded" />
+              {result.text && (
+                <div className="pt-4 border-t border-border">
+                  <MarkdownRenderer content={result.text} className="text-xs sm:text-sm" />
+                </div>
+              )}
+            </div>
           ) : (
             <MarkdownRenderer content={result.text} className="text-xs sm:text-sm" />
           )}

@@ -320,6 +320,10 @@ export const en: Translations = {
       linkPlaceholder: "https://example.com/data",
       fileLimit: "File limit reached ({max})",
       unsupportedFormat: "File \"{name}\" has an unsupported format. Allowed: {formats}",
+      resultFormat: "Result format:",
+      formatText: "Text",
+      formatImage: "Image",
+      formatImageWithText: "Image with explanatory text",
     },
     dynamicFieldsTab: {
       title: "Form Fields",

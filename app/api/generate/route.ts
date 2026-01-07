@@ -284,7 +284,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (resultFormat === "image") {
+    if (resultFormat === "image" || resultFormat === "image_with_text") {
       // Получаем модель для генерации изображений
       const imageModel = await getImageModel()
       
@@ -383,6 +383,110 @@ export async function POST(req: Request) {
             details: "API не вернул ссылку на изображение. Попробуйте другие настройки промптов.",
           },
           { status: 500, headers: corsHeaders },
+        )
+      }
+
+      // Для формата image_with_text генерируем также текстовое описание
+      if (resultFormat === "image_with_text") {
+        const textModel = await getTextModel()
+        
+        if (!textModel) {
+          // Если текстовая модель не настроена, возвращаем только изображение
+          return Response.json(
+            {
+              success: true,
+              result: {
+                type: "image_with_text",
+                imageUrl: imageUrl,
+                text: "Создано на основе ваших предпочтений",
+              },
+            },
+            { headers: corsHeaders },
+          )
+        }
+
+        // Получаем глобальный промпт для текста
+        const globalTextPrompt = await getGlobalTextPrompt()
+
+        // Комбинируем глобальный и индивидуальный промпты для текста
+        let textSystemPrompt: string | null = null
+        if (globalTextPrompt && formPrompt) {
+          textSystemPrompt = `${globalTextPrompt}\n\n---\n\n${formPrompt}`
+        } else if (globalTextPrompt) {
+          textSystemPrompt = globalTextPrompt
+        } else if (formPrompt) {
+          textSystemPrompt = formPrompt
+        }
+
+        if (textSystemPrompt) {
+          // Формируем user message с контекстом для генерации текста
+          const userMessage = `URL: ${url}
+
+--- Контент страницы ---
+${urlContent}
+${additionalUrlsContext}
+${customFieldsContext}${knowledgeBaseContext}
+
+Provide a brief explanatory text to accompany the generated image. Keep it concise and relevant.`
+
+          try {
+            const textResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: textModel,
+                messages: [
+                  {
+                    role: "system",
+                    content: textSystemPrompt,
+                  },
+                  {
+                    role: "user",
+                    content: userMessage,
+                  },
+                ],
+                max_completion_tokens: 800,
+                temperature: 0.7,
+              }),
+            })
+
+            if (textResponse.ok) {
+              const textCompletion = await textResponse.json()
+              const generatedText = textCompletion.choices[0]?.message?.content || ""
+
+              if (generatedText) {
+                return Response.json(
+                  {
+                    success: true,
+                    result: {
+                      type: "image_with_text",
+                      imageUrl: imageUrl,
+                      text: generatedText,
+                    },
+                  },
+                  { headers: corsHeaders },
+                )
+              }
+            }
+          } catch (textError) {
+            console.error("[v0] Text generation error for image_with_text:", textError)
+          }
+        }
+
+        // Fallback: возвращаем изображение с дефолтным текстом
+        return Response.json(
+          {
+            success: true,
+            result: {
+              type: "image_with_text",
+              imageUrl: imageUrl,
+              text: "Создано на основе ваших предпочтений",
+            },
+          },
+          { headers: corsHeaders },
         )
       }
 
