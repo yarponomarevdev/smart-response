@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getAllUsers, updateUserQuotas } from "@/app/actions/users"
+import { getAllUsers, updateUserQuotas, updateUserEmail, updateUserPassword, deleteUserAccount } from "@/app/actions/users"
 
 interface UserWithStats {
   id: string
@@ -91,3 +91,41 @@ export function useUpdateUserQuotas() {
   })
 }
 
+/**
+ * Хук для обновления email пользователя
+ */
+export function useUpdateEmail() {
+  return useMutation({
+    mutationFn: async (newEmail: string) => {
+      const result = await updateUserEmail(newEmail)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+  })
+}
+
+/**
+ * Хук для обновления пароля пользователя
+ */
+export function useUpdatePassword() {
+  return useMutation({
+    mutationFn: async (newPassword: string) => {
+      const result = await updateUserPassword(newPassword)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+  })
+}
+
+/**
+ * Хук для удаления аккаунта пользователя
+ */
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async () => {
+      const result = await deleteUserAccount()
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+  })
+}

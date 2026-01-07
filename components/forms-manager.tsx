@@ -67,6 +67,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   const forms = data?.forms || []
   const totalLeads = data?.totalLeads || 0
   const limitInfo = data?.limitInfo || null
+  const maxLeads = data?.maxLeads ?? null
 
   // Проверяем ошибку перед проверкой загрузки
   if (queryError) {
@@ -192,7 +193,10 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
             }
           </p>
           <p className="text-sm sm:text-base text-muted-foreground">
-            {t("forms.totalResponses")}: {totalLeads}
+            {t("forms.totalResponses")}: {maxLeads === null 
+              ? totalLeads 
+              : `${totalLeads} / ${maxLeads}`
+            }
           </p>
         </div>
         {(limitInfo?.canCreate || isUnlimited) && (

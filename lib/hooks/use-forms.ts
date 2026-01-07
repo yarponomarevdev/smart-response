@@ -28,6 +28,7 @@ interface UserFormsData {
   forms: Form[]
   totalLeads: number
   limitInfo: FormLimitInfo | null
+  maxLeads: number | null // Лимит лидов пользователя
 }
 
 /**
@@ -45,7 +46,14 @@ async function fetchUserForms(userId: string): Promise<UserFormsData> {
 
   if (!userForms || userForms.length === 0) {
     const limitInfo = await canCreateMoreForms(userId)
-    return { forms: [], totalLeads: 0, limitInfo }
+    // Получаем лимит лидов пользователя
+    const { data: user } = await supabase
+      .from("users")
+      .select("max_leads")
+      .eq("id", userId)
+      .single()
+    const maxLeads = user?.max_leads ?? null
+    return { forms: [], totalLeads: 0, limitInfo, maxLeads }
   }
 
   // Для каждой формы получаем реальное количество лидов
@@ -73,10 +81,20 @@ async function fetchUserForms(userId: string): Promise<UserFormsData> {
   // Проверяем лимит форм
   const limitInfo = await canCreateMoreForms(userId)
 
+  // Получаем лимит лидов пользователя
+  const { data: user } = await supabase
+    .from("users")
+    .select("max_leads")
+    .eq("id", userId)
+    .single()
+
+  const maxLeads = user?.max_leads ?? null
+
   return {
     forms: formsWithLeadCount,
     totalLeads: totalCount || 0,
     limitInfo,
+    maxLeads,
   }
 }
 

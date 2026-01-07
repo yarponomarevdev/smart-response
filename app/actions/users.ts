@@ -225,4 +225,171 @@ export async function updateUserLanguage(
   return { success: true }
 }
 
+/**
+ * Обновляет email пользователя
+ * Supabase отправит письмо с подтверждением на новый email
+ */
+export async function updateUserEmail(
+  newEmail: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
+  if (!user) {
+    return { success: false, error: "Не авторизован" }
+  }
+
+  // Валидация email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail)) {
+    return { success: false, error: "Некорректный формат email" }
+  }
+
+  // Обновляем email через Auth API (отправляет письмо с подтверждением)
+  const { error } = await supabase.auth.updateUser({ email: newEmail })
+
+  if (error) {
+    console.error("Error updating user email:", error)
+    // Обрабатываем специфичные ошибки Supabase
+    if (error.message.includes("already registered")) {
+      return { success: false, error: "Этот email уже используется" }
+    }
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+/**
+ * Обновляет пароль пользователя
+ */
+export async function updateUserPassword(
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: "Не авторизован" }
+  }
+
+  // Валидация пароля
+  if (newPassword.length < 6) {
+    return { success: false, error: "Пароль должен быть не менее 6 символов" }
+  }
+
+  // Обновляем пароль через Auth API
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+
+  if (error) {
+    console.error("Error updating user password:", error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+/**
+ * Удаляет аккаунт пользователя и все связанные данные
+ * Каскадно удаляет: формы, лиды, файлы из storage
+ */
+export async function deleteUserAccount(): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: "Не авторизован" }
+  }
+
+  const userId = user.id
+
+  // Проверяем, не является ли пользователь суперадмином
+  const { data: userData } = await supabaseAdmin
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single()
+
+  if (userData?.role === "superadmin") {
+    return { success: false, error: "Суперадмин не может удалить свой аккаунт" }
+  }
+
+  try {
+    // 1. Получаем все формы пользователя
+    const { data: forms } = await supabaseAdmin
+      .from("forms")
+      .select("id")
+      .eq("owner_id", userId)
+
+    const formIds = forms?.map((f) => f.id) || []
+
+    // 2. Удаляем файлы из storage (knowledge_files)
+    if (formIds.length > 0) {
+      const { data: knowledgeFiles } = await supabaseAdmin
+        .from("knowledge_files")
+        .select("storage_path")
+        .in("form_id", formIds)
+
+      if (knowledgeFiles && knowledgeFiles.length > 0) {
+        const storagePaths = knowledgeFiles
+          .map((f) => f.storage_path)
+          .filter(Boolean) as string[]
+        
+        if (storagePaths.length > 0) {
+          await supabaseAdmin.storage
+            .from("knowledge-files")
+            .remove(storagePaths)
+        }
+      }
+
+      // 3. Удаляем записи knowledge_files из БД
+      await supabaseAdmin
+        .from("knowledge_files")
+        .delete()
+        .in("form_id", formIds)
+
+      // 4. Удаляем лиды
+      await supabaseAdmin
+        .from("leads")
+        .delete()
+        .in("form_id", formIds)
+
+      // 5. Удаляем поля форм
+      await supabaseAdmin
+        .from("form_fields")
+        .delete()
+        .in("form_id", formIds)
+
+      // 6. Удаляем формы
+      await supabaseAdmin
+        .from("forms")
+        .delete()
+        .eq("owner_id", userId)
+    }
+
+    // 7. Удаляем запись пользователя из таблицы users
+    await supabaseAdmin
+      .from("users")
+      .delete()
+      .eq("id", userId)
+
+    // 8. Удаляем пользователя из Supabase Auth
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+    if (authError) {
+      console.error("Error deleting user from auth:", authError)
+      return { success: false, error: "Ошибка удаления аккаунта из системы авторизации" }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting user account:", error)
+    return { success: false, error: "Ошибка удаления аккаунта" }
+  }
+}

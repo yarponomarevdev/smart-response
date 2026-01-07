@@ -18,10 +18,18 @@ import { UsersTable } from "./users-table"
 import { SystemSettingsEditor } from "./system-settings-editor"
 import { UserSettingsEditor } from "./user-settings-editor"
 import { BalanceTab } from "./editor"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { LogOut } from "lucide-react"
+import { LogOut, Menu } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 // ID главной формы для суперадмина
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
@@ -33,6 +41,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("dashboard")
   const [editorFormId, setEditorFormId] = useState<string | undefined>(undefined)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -74,6 +83,67 @@ export function AdminDashboard() {
     return t("admin.panel.userDescription")
   }, [isSuperAdmin, t, language])
 
+  // Функция для переключения вкладки
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    setMobileMenuOpen(false)
+  }
+
+  // Рендерим элементы меню
+  const renderMenuItems = () => {
+    const superAdminTabs = [
+      { value: "dashboard", label: t("admin.tabs.dashboard") },
+      { value: "editor", label: t("admin.tabs.editor") },
+      { value: "leads", label: t("admin.tabs.leads") },
+      { value: "users", label: t("admin.tabs.users") },
+      { 
+        value: "integrations", 
+        label: t("admin.tabs.integrations"), 
+        disabled: true,
+        badge: t("admin.tabs.comingSoon")
+      },
+      { value: "system", label: t("admin.tabs.settings") },
+    ]
+
+    const userTabs = [
+      { value: "dashboard", label: t("admin.tabs.dashboard") },
+      { value: "editor", label: t("admin.tabs.editor") },
+      { value: "leads", label: t("admin.tabs.leads") },
+      { 
+        value: "integrations", 
+        label: t("admin.tabs.integrations"), 
+        disabled: true,
+        badge: t("admin.tabs.comingSoon")
+      },
+      { value: "balance", label: t("admin.tabs.balance") },
+      { value: "settings", label: t("admin.tabs.settings") },
+    ]
+
+    const tabs = isSuperAdmin ? superAdminTabs : userTabs
+
+    return tabs.map((tab) => (
+      <button
+        key={tab.value}
+        onClick={() => !tab.disabled && handleTabChange(tab.value)}
+        disabled={tab.disabled}
+        className={cn(
+          "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors",
+          activeTab === tab.value
+            ? "bg-primary text-primary-foreground font-medium"
+            : "hover:bg-accent",
+          tab.disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span>{tab.label}</span>
+        {tab.badge && (
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+            {tab.badge}
+          </span>
+        )}
+      </button>
+    ))
+  }
+
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">{t("common.loading")}</div>
   }
@@ -82,7 +152,25 @@ export function AdminDashboard() {
     <div className="space-y-6 sm:space-y-8">
       <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
+            <div className="flex items-center gap-3">
+              {/* Бургер-меню для мобильных */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+                  <SheetHeader>
+                    <SheetTitle>{t("admin.panel.menu")}</SheetTitle>
+                  </SheetHeader>
+                  <nav className="mt-6 flex flex-col gap-2">
+                    {renderMenuItems()}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+              <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
+            </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
@@ -95,7 +183,8 @@ export function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="flex-wrap h-auto border-b border-border p-0 gap-6">
+          {/* Десктоп меню */}
+          <TabsList className="hidden md:flex flex-wrap h-auto border-b border-border p-0 gap-6">
             {isSuperAdmin ? (
               <>
                 <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>

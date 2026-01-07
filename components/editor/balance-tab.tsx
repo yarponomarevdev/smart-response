@@ -33,8 +33,9 @@ export function BalanceTab() {
     return <div className="text-center py-12">{t("common.loading")}</div>
   }
 
-  const { totalLeads, limitInfo } = data
+  const { totalLeads, limitInfo, maxLeads } = data
   const isUnlimited = limitInfo?.limit === null
+  const isLeadsUnlimited = maxLeads === null
 
   // Форматирование хранилища
   const formatMB = (bytes: number) => Math.round(bytes / 1024 / 1024 * 10) / 10
@@ -96,8 +97,17 @@ export function BalanceTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="text-3xl sm:text-4xl font-bold">{totalLeads}</div>
-              <CardDescription>{t("balance.totalResponses")}</CardDescription>
+              <div className="text-3xl sm:text-4xl font-bold">
+                {totalLeads}
+                {!isLeadsUnlimited && maxLeads !== null && (
+                  <span className="text-lg sm:text-xl text-muted-foreground">
+                    {" "}/ {maxLeads}
+                  </span>
+                )}
+              </div>
+              <CardDescription>
+                {isLeadsUnlimited ? t("balance.unlimited") : t("balance.totalResponses")}
+              </CardDescription>
             </div>
           </CardContent>
         </Card>

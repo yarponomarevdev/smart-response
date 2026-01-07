@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Select,
@@ -19,6 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { useEditorForms, useFormContent, useCurrentUser } from "@/lib/hooks"
 import { useToggleFormActive } from "@/lib/hooks/use-forms"
@@ -227,7 +235,8 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
       {/* Вкладки редактора */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="relative w-fit">
+          {/* Десктопная навигация */}
+          <div className="relative w-fit hidden md:block">
             <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0 gap-6 pb-2">
               {tabs.map((tab, index) => (
                 <TabsTrigger
@@ -255,7 +264,57 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </div>
           </div>
 
-          <div className="pt-6">
+          {/* Мобильная навигация */}
+          <div className="md:hidden flex items-center justify-between mb-6 bg-muted/30 p-4 rounded-xl border">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                {t("editor.step")} {tabs.findIndex(t => t.value === activeTab) + 1} / {tabs.length}
+              </span>
+              <span className="font-semibold text-lg leading-none">
+                {tabs.find(t => t.value === activeTab)?.label}
+              </span>
+            </div>
+            
+            <Sheet>
+              <SheetTrigger asChild>
+                 <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+                   <Menu className="h-5 w-5" />
+                 </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-[20px] max-h-[80vh] overflow-y-auto">
+                <SheetHeader className="mb-4 text-left">
+                  <SheetTitle>{t("editor.steps")}</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-2">
+                  {tabs.map((tab, index) => {
+                    const isActive = activeTab === tab.value
+                    return (
+                      <SheetClose asChild key={tab.value}>
+                        <Button
+                          variant={isActive ? "secondary" : "ghost"}
+                          className={cn(
+                            "justify-start h-14 text-base font-normal",
+                            isActive && "bg-secondary/50 font-medium"
+                          )}
+                          onClick={() => setActiveTab(tab.value)}
+                        >
+                          <span className={cn(
+                            "mr-3 flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors",
+                            isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}>
+                            {index + 1}
+                          </span>
+                          {tab.label}
+                        </Button>
+                      </SheetClose>
+                    )
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <div className="pt-0 md:pt-6">
             <TabsContent value="data" className="mt-0">
               <DynamicFieldsTab formId={selectedFormId} />
             </TabsContent>
