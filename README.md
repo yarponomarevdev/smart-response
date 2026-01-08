@@ -1,160 +1,185 @@
-# Lead Hero - Lead Generation App
+# Smart Response
 
-A minimalistic lead-generation web application built with Next.js 16, Supabase, and Tailwind CSS.
+Платформа для создания интеллектуальных форм с AI-генерацией контента. Позволяет создавать формы, которые анализируют данные пользователей (URL, файлы, кастомные поля) и генерируют персонализированные ответы с помощью искусственного интеллекта.
 
-## Features
+## 🚀 Основные возможности
 
-### User Flow
-- **URL Submission**: Clean input for website URL entry with validation
-- **Loading Animation**: Dynamic loading messages with smooth transitions
-- **Score Reveal**: Circular progress indicator showing lead score (1-100)
-- **Email Capture**: Collects user email for detailed insights
-- **Success Screen**: Confirmation with social sharing options
+- **Создание форм** с настраиваемыми полями (текст, email, телефон, выбор, чекбоксы и др.)
+- **AI-генерация контента** на основе данных пользователя (текст, изображения, комбинированный формат)
+- **База знаний** - загрузка файлов (PDF, DOCX, TXT) для контекста генерации
+- **Управление лидами** - сбор, просмотр и управление заявками
+- **Система ролей** - superadmin, admin, user с разными правами доступа
+- **Квоты** - ограничения на количество форм, генераций и хранилище
+- **Многоязычность** - поддержка русского и английского языков
+- **Темы форм** - настройка внешнего вида каждой формы
+- **Email-уведомления** - отправка результатов на email пользователя
 
-### Admin Dashboard
-- **Authentication**: Secure login with Supabase Auth
-- **Leads Management**: View, filter, and delete leads
-- **CSV Export**: Download all leads data
-- **Content Editor**: Customize all user-facing text dynamically
-- **Real-time Updates**: Changes reflect immediately
+## 🛠 Технологический стек
 
-### Technical Features
-- **Database**: Supabase PostgreSQL with Row Level Security (RLS)
-- **Email Integration**: API route ready for email service integration
-- **Responsive Design**: Mobile-first, works on all devices
-- **Dark Theme**: Modern dark UI with custom color scheme
-- **Type Safe**: Full TypeScript implementation
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **UI**: Tailwind CSS, Radix UI, shadcn/ui
+- **Backend**: Next.js API Routes
+- **База данных**: Supabase (PostgreSQL)
+- **AI**: OpenAI API (GPT-4, DALL-E)
+- **Email**: Resend
+- **Хранилище**: Supabase Storage
+- **Аутентификация**: Supabase Auth
 
-## Getting Started
+## 📋 Требования
 
-### Prerequisites
-- Node.js 18+ installed
-- Supabase account (free tier works)
+- Node.js 18+ 
+- pnpm (рекомендуется) или npm/yarn
+- Аккаунт Supabase
+- OpenAI API ключ
+- Resend API ключ (для отправки email)
 
-### Installation
+## 🔧 Установка
 
-1. Clone the repository and install dependencies:
-\`\`\`bash
-npm install
-\`\`\`
+1. Клонируйте репозиторий:
+```bash
+git clone <repository-url>
+cd smart-response
+```
 
-2. The database is already configured with Supabase integration. Run the SQL script to create tables:
-   - Go to the Scripts section in your v0 workspace
-   - Execute `001_create_tables.sql`
+2. Установите зависимости:
+```bash
+pnpm install
+```
 
-3. Create an admin user in Supabase:
-   - Go to your Supabase dashboard
-   - Navigate to Authentication > Users
-   - Click "Add user" and create an account
-   - This will be your admin login
+3. Настройте переменные окружения. Создайте файл `.env.local`:
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-4. Run the development server:
-\`\`\`bash
-npm run dev
-\`\`\`
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+# Resend (для email)
+RESEND_API_KEY=your_resend_api_key
+```
 
-## Email Integration
+4. Примените миграции базы данных:
+```bash
+# Выполните SQL файлы из папки supabase/ в порядке их нумерации
+# через Supabase Dashboard или CLI
+```
 
-The app includes a placeholder email API route at `/app/api/send-email/route.ts`. To enable email sending:
+5. Запустите проект:
+```bash
+pnpm dev
+```
 
-### Option 1: Resend (Recommended)
-\`\`\`bash
-npm install resend
-\`\`\`
+Приложение будет доступно по адресу `http://localhost:3000`
 
-Add to your environment variables:
-\`\`\`
-RESEND_API_KEY=your_api_key
-\`\`\`
+## 📁 Структура проекта
 
-Uncomment the Resend code in the API route.
+```
+smart-response/
+├── app/                    # Next.js App Router
+│   ├── actions/           # Server actions
+│   ├── api/               # API routes
+│   ├── auth/              # Страницы аутентификации
+│   ├── admin/             # Админ-панель
+│   └── form/              # Публичные страницы форм
+├── components/            # React компоненты
+│   ├── editor/           # Компоненты редактора форм
+│   └── ui/                # UI компоненты (shadcn/ui)
+├── lib/                   # Утилиты и хелперы
+│   ├── hooks/            # React хуки
+│   ├── i18n/             # Интернационализация
+│   └── supabase/         # Supabase клиенты
+├── supabase/              # SQL миграции
+└── public/                # Статические файлы
+```
 
-### Option 2: SendGrid
-\`\`\`bash
-npm install @sendgrid/mail
-\`\`\`
+## 🎯 Основные функции
 
-### Option 3: Other Services
-The email route can be adapted for any email service (Mailgun, AWS SES, etc.)
+### Создание форм
 
-## Project Structure
+Формы создаются через админ-панель. Каждая форма может содержать:
+- Настраиваемые поля (текст, email, телефон, выбор, чекбоксы)
+- Кастомный контент (заголовки, описания, кнопки)
+- AI-промпты для генерации ответов
+- Базу знаний (загруженные файлы)
+- Настройки темы
 
-\`\`\`
-├── app/
-│   ├── api/send-email/          # Email sending endpoint
-│   ├── admin/                   # Admin dashboard (protected)
-│   ├── auth/login/              # Admin login page
-│   └── page.tsx                 # Main user flow
-├── components/
-│   ├── lead-flow.tsx            # Main flow orchestration
-│   ├── url-submission-step.tsx  # Step 1: URL input
-│   ├── loading-step.tsx         # Step 2: Loading animation
-│   ├── result-step.tsx          # Step 3: Score display
-│   ├── email-capture-step.tsx   # Step 4: Email collection
-│   ├── success-step.tsx         # Step 5: Confirmation
-│   ├── admin-dashboard.tsx      # Admin UI
-│   ├── leads-table.tsx          # Leads management
-│   └── content-editor.tsx       # Content customization
-├── lib/supabase/
-│   ├── client.ts                # Browser Supabase client
-│   ├── server.ts                # Server Supabase client
-│   └── proxy.ts                 # Auth proxy
-└── scripts/
-    └── 001_create_tables.sql    # Database schema
-\`\`\`
+### AI-генерация
 
-## Database Schema
+Система поддерживает три формата результата:
+- **text** - текстовый ответ
+- **image** - генерация изображения
+- **image_with_text** - комбинация изображения и текста
 
-### Tables
-- **leads**: Stores submitted URLs, emails, scores, and status
-- **content**: Dynamic content for all user-facing text
+Генерация использует:
+- Контент с URL (если указан)
+- Кастомные поля формы
+- Файлы из базы знаний
+- Системные промпты (глобальные и для формы)
 
-### Security
-- Row Level Security (RLS) enabled on all tables
-- Public can submit leads (anonymous)
-- Only authenticated users can access admin features
+### Управление лидами
 
-## Customization
+Все заполненные формы сохраняются как лиды с:
+- Данными пользователя
+- Сгенерированным контентом
+- Статусом (новый, в работе, завершен)
+- Заметками
+- Email-уведомлениями
 
-### Colors
-Edit `app/globals.css` to change the color scheme:
-- Background: `--color-background`
-- Primary accent: `--color-primary`
-- Card background: `--color-card`
+### Система ролей
 
-### Content
-Login to `/auth/login` and use the Content tab to customize:
-- Hero title and subtitle
-- Loading messages
-- Result screen text
-- Email CTA copy
-- Success messages
-- Social share text
+- **superadmin**: полный доступ ко всем формам и пользователям
+- **admin**: неограниченное создание форм, управление своими формами
+- **user**: ограниченное количество форм (по квоте)
 
-### Scoring Algorithm
-Edit `components/loading-step.tsx` to customize the score generation logic (currently random 70-100 for demo).
+## 🔐 Безопасность
 
-## Deployment
+- Row Level Security (RLS) в Supabase
+- Проверка прав доступа на уровне сервера
+- Валидация входных данных
+- CORS настройки для API endpoints
 
-### Deploy to Vercel
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Environment variables are automatically synced from Supabase
-4. Deploy
+## 📝 Миграции базы данных
 
-### Environment Variables
-All required environment variables are provided by the Supabase integration. Optional:
-- `NEXT_PUBLIC_SITE_URL`: Your production domain
-- `RESEND_API_KEY`: For email integration
+Все миграции находятся в папке `supabase/` и должны применяться последовательно:
+- `011_*` - роли и права доступа
+- `014_*` - системные настройки
+- `016_*` - квоты пользователей
+- `023_*` - поля форм
+- `029_*` - база знаний
+- И другие...
 
-## Support
+## 🌐 Интернационализация
 
-For issues or questions, refer to the documentation:
-- [Next.js Docs](https://nextjs.org/docs)
-- [Supabase Docs](https://supabase.com/docs)
-- [Tailwind CSS Docs](https://tailwindcss.com/docs)
+Поддержка языков:
+- Русский (ru)
+- Английский (en)
 
+Переключение языка доступно в настройках пользователя.
 
-Test
+## 📦 Скрипты
+
+```bash
+pnpm dev          # Запуск dev сервера
+pnpm build        # Сборка для production
+pnpm start         # Запуск production сервера
+pnpm lint          # Проверка кода линтером
+```
+
+## 🤝 Разработка
+
+Проект следует принципам:
+- **KISS** - простые решения
+- **YAGNI** - только необходимый функционал
+- **DRY** - переиспользование кода
+- **Single Responsibility** - одна ответственность на компонент
+
+## 📄 Лицензия
+
+[Укажите лицензию]
+
+## 👥 Авторы
+
+https://github.com/vasilkovdigital
+https://github.com/yarponomarevdev
