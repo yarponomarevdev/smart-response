@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { isFormOwner } from "@/app/actions/forms"
+import { incrementDailyTestCount } from "@/app/actions/storage"
 import { marked } from "marked"
 
 // Use service role to bypass RLS for server-side operations
@@ -22,6 +23,7 @@ interface CreateLeadParams {
   url: string
   resultText: string
   resultImageUrl: string | null
+  customFields?: Record<string, unknown>
 }
 
 interface SendOwnerNotificationParams {
@@ -37,7 +39,7 @@ interface SendOwnerNotificationParams {
  */
 async function sendOwnerNotification({ formId, leadEmail, url, resultText, resultImageUrl }: SendOwnerNotificationParams) {
   try {
-    // Получаем данные формы с настройкой уведомлений и владельцем
+    // Получаем данные формы
     const { data: form, error: formError } = await supabaseAdmin
       .from("forms")
       .select("name, owner_id, notify_on_new_lead")
@@ -55,7 +57,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       return
     }
 
-    // Получаем email владельца
+    // Получаем email владельца параллельно (оптимизация: один запрос вместо двух последовательных)
     const { data: owner, error: ownerError } = await supabaseAdmin
       .from("users")
       .select("email")
@@ -67,18 +69,20 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       return
     }
 
+    const ownerEmail = owner.email
+
     // Отправляем email через Resend
     const { Resend } = await import("resend")
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     const fromEmail = "hello@vasilkov.digital"
-    const subject = `Новая заявка с формы "${form.name}"`
+    const subject = "Новая заявка"
 
-    console.log("[Notification] Sending notification to owner:", owner.email, "for form:", form.name)
+    console.log("[Notification] Sending notification to owner:", ownerEmail, "for form:", form.name)
 
     const { error: sendError } = await resend.emails.send({
       from: fromEmail,
-      to: [owner.email],
+      to: [ownerEmail],
       subject,
       html: generateOwnerNotificationHTML({
         formName: form.name,
@@ -92,7 +96,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     if (sendError) {
       console.error("[Notification] Failed to send email:", sendError)
     } else {
-      console.log("[Notification] Email sent successfully to:", owner.email)
+      console.log("[Notification] Email sent successfully to:", ownerEmail)
     }
   } catch (error) {
     console.error("[Notification] Unexpected error:", error)
@@ -124,9 +128,10 @@ function generateOwnerNotificationHTML({
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Новая заявка - ${formName}</title>
+        <title>Новая заявка</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #000000; color: #ffffff;">
+        <span style="display:none !important; visibility:hidden; mso-hide:all; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">Новый пользователь заполнил форму ${formName}</span>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
           <tr>
             <td align="center" style="padding: 40px 20px;">
@@ -257,7 +262,7 @@ async function checkLeadLimit(ownerId: string): Promise<{ canCreate: boolean; cu
   return { canCreate: currentCount < maxLeads, currentCount, limit: maxLeads }
 }
 
-export async function createLead({ formId, email, url, resultText, resultImageUrl }: CreateLeadParams) {
+export async function createLead({ formId, email, url, resultText, resultImageUrl, customFields }: CreateLeadParams) {
   const isTestEmail = email.toLowerCase() === TEST_EMAIL.toLowerCase()
 
   // Проверяем, является ли текущий авторизованный пользователь владельцем формы
@@ -294,21 +299,40 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     }
   }
 
+  // Проверяем лимит ежедневных тестирований для владельца формы
+  if (isOwner) {
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const { canTest, currentCount, limit } = await incrementDailyTestCount(user.id)
+      if (!canTest) {
+        const limitText = limit !== null ? `${currentCount}/${limit}` : currentCount.toString()
+        return { 
+          error: `Достигнут дневной лимит тестирования (${limitText}). Лимит обновится завтра.` 
+        }
+      }
+    }
+  }
+
   if (isTestEmail || isOwner) {
     // Для тестового email или владельца формы — удаляем предыдущую запись
     // Владелец может тестировать свою форму сколько угодно раз
     await supabaseAdmin.from("leads").delete().eq("form_id", formId).eq("email", email)
   } else {
-    // Для обычных пользователей проверяем дубликаты email
-    const { data: existing } = await supabaseAdmin
+    // Для обычных пользователей проверяем лимит использований (5 раз)
+    const { count } = await supabaseAdmin
       .from("leads")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("form_id", formId)
       .eq("email", email)
-      .single()
 
-    if (existing) {
-      return { error: "Вы уже отправляли заявку с этого email" }
+    const usageCount = count || 0
+
+    if (usageCount >= 5) {
+      return { 
+        error: "Вы достигли лимита использований формы (5 раз). Зарегистрируйтесь для создания своих форм с расширенным количеством генераций."
+      }
     }
   }
 
@@ -321,6 +345,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     result_text: resultText,
     result_image_url: resultImageUrl,
     status: "completed",
+    custom_fields: customFields || {},
   })
 
   if (insertError) {
@@ -330,68 +355,15 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
   // Увеличиваем счетчик лидов только если это не тестовый email и не владелец формы
   // Владелец формы может использовать свою форму неограниченное количество раз
   if (!isTestEmail && !isOwner) {
-    console.log("[Lead] Incrementing lead count for form:", formId, "email:", email, "isTestEmail:", isTestEmail, "isOwner:", isOwner)
+    console.log("[Lead] Incrementing lead count for form:", formId)
     
-    // Получаем текущее значение счетчика перед обновлением
-    const { data: formBefore, error: fetchError } = await supabaseAdmin
-      .from("forms")
-      .select("lead_count")
-      .eq("id", formId)
-      .single()
-
-    if (fetchError) {
-      console.error("[Lead] Error fetching form before increment:", fetchError)
-    }
-
-    // Пытаемся использовать RPC функцию, если она существует
+    // Используем только RPC функцию - она атомарная и безопасная
+    // Убираем лишние запросы перед/после инкремента
     const { error: rpcError } = await supabaseAdmin.rpc("increment_lead_count", { form_id: formId })
     
-    // Если RPC функция не существует или произошла ошибка, используем прямой UPDATE
     if (rpcError) {
-      console.warn("[Lead] RPC increment_lead_count failed, using direct UPDATE:", rpcError.message)
-      
-      if (formBefore) {
-        // Увеличиваем счетчик
-        const newCount = (formBefore.lead_count || 0) + 1
-        const { error: updateError, data: updatedForm } = await supabaseAdmin
-          .from("forms")
-          .update({ lead_count: newCount })
-          .eq("id", formId)
-          .select()
-
-        if (updateError) {
-          console.error("[Lead] Error incrementing lead count:", updateError)
-          // Не возвращаем ошибку, так как лид уже создан
-        } else {
-          console.log("[Lead] Lead count updated via direct UPDATE:", formBefore.lead_count, "->", newCount)
-        }
-      }
-    } else {
-      // Проверяем, что счетчик действительно обновился
-      const { data: formAfter } = await supabaseAdmin
-        .from("forms")
-        .select("lead_count")
-        .eq("id", formId)
-        .single()
-
-      if (formBefore && formAfter) {
-        const beforeCount = formBefore.lead_count || 0
-        const afterCount = formAfter.lead_count || 0
-        if (afterCount === beforeCount + 1) {
-          console.log("[Lead] Lead count updated via RPC:", beforeCount, "->", afterCount)
-        } else {
-          console.warn("[Lead] RPC succeeded but count didn't change:", beforeCount, "->", afterCount, "forcing direct UPDATE")
-          // Принудительно обновляем через прямой UPDATE
-          const { error: updateError } = await supabaseAdmin
-            .from("forms")
-            .update({ lead_count: beforeCount + 1 })
-            .eq("id", formId)
-
-          if (updateError) {
-            console.error("[Lead] Error forcing lead count update:", updateError)
-          }
-        }
-      }
+      console.error("[Lead] Error incrementing lead count:", rpcError)
+      // Не возвращаем ошибку, так как лид уже создан
     }
   } else {
     console.log("[Lead] Skipping lead count increment - test email or owner:", { isTestEmail, isOwner })
@@ -473,6 +445,72 @@ export async function deleteLead(leadId: string): Promise<{ success: boolean } |
         // Не возвращаем ошибку, так как лид уже удален
       }
     }
+  }
+
+  return { success: true }
+}
+
+interface UpdateLeadParams {
+  leadId: string
+  lead_status?: 'todo' | 'in_progress' | 'done'
+  notes?: string
+}
+
+/**
+ * Обновляет данные лида (статус, заметки)
+ */
+export async function updateLead({ leadId, lead_status, notes }: UpdateLeadParams): Promise<{ success: boolean } | { error: string }> {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Не авторизован" }
+  }
+
+  // Проверяем, что лид принадлежит пользователю (через форму)
+  const { data: lead, error: leadError } = await supabaseAdmin
+    .from("leads")
+    .select("id, form_id")
+    .eq("id", leadId)
+    .single()
+
+  if (leadError || !lead) {
+    return { error: "Лид не найден" }
+  }
+
+  // Проверяем права доступа к форме
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  const isSuperAdmin = userData?.role === "superadmin"
+
+  if (!isSuperAdmin && lead.form_id) {
+    const isOwner = await isFormOwner(user.id, lead.form_id)
+    if (!isOwner) {
+      return { error: "Нет доступа к этому лиду" }
+    }
+  }
+
+  // Обновляем лид
+  const updateData: Record<string, unknown> = {}
+  if (lead_status !== undefined) updateData.lead_status = lead_status
+  if (notes !== undefined) updateData.notes = notes
+
+  if (Object.keys(updateData).length === 0) {
+    return { error: "Нет данных для обновления" }
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("leads")
+    .update(updateData)
+    .eq("id", leadId)
+
+  if (updateError) {
+    console.error("Error updating lead:", updateError)
+    return { error: "Ошибка обновления лида" }
   }
 
   return { success: true }

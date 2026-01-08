@@ -50,23 +50,21 @@ export function EmailCaptureStep({ url, formId, result, onSuccess }: EmailCaptur
       return
     }
 
-    // Send email
-    try {
-      const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
-      await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          resultText: result.text,
-          resultImageUrl: result.imageUrl || null,
-          resultType: result.type,
-          url,
-        }),
-      })
-    } catch (error) {
+    // Отправляем email асинхронно, не блокируя UI
+    const apiUrl = typeof window !== "undefined" ? `${window.location.origin}/api/send-email` : "/api/send-email"
+    fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        resultText: result.text,
+        resultImageUrl: result.imageUrl || null,
+        resultType: result.type,
+        url,
+      }),
+    }).catch((error) => {
       console.error("[v0] Error sending email:", error)
-    }
+    })
 
     onSuccess()
   }

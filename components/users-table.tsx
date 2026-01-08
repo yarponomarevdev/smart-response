@@ -1,146 +1,98 @@
+/**
+ * UsersTable - Компонент для управления пользователями
+ * Только для superadmin. Показывает статистику и позволяет управлять квотами.
+ * 
+ * Использует React Query для кэширования данных
+ */
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { getAllUsers, updateUserQuotas } from "@/app/actions/users"
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { QuotaCounter } from "@/components/quota-counter"
 import { cn } from "@/lib/utils"
-
-interface UserWithStats {
-  id: string
-  email: string
-  role: string
-  created_at: string
-  form_count: number
-  lead_count: number
-  max_forms: number | null
-  max_leads: number | null
-  can_publish_forms: boolean
-}
+import { useUsers, useUpdateUserQuotas } from "@/lib/hooks"
+import { AlertCircle } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 
 export function UsersTable() {
-  const [users, setUsers] = useState<UserWithStats[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set())
+  const { t } = useTranslation()
+  
+  // React Query хуки
+  const { data: users, isLoading, error } = useUsers()
+  const updateQuotasMutation = useUpdateUserQuotas()
+  
+  // Отслеживаем, какой пользователь сейчас обновляется
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const result = await getAllUsers()
-
-      if ("error" in result) {
-        setError(result.error)
-        setLoading(false)
-        return
-      }
-
-      setUsers(result.users)
-      setLoading(false)
-    }
-
-    fetchUsers()
-  }, [])
-
-  const handleQuotaUpdate = useCallback(async (
+  const handleQuotaUpdate = async (
     userId: string,
     field: "max_forms" | "max_leads" | "can_publish_forms",
     value: number | null | boolean
   ) => {
-    // Добавляем пользователя в список обновляемых
-    setUpdatingUsers(prev => new Set(prev).add(userId))
-
-    // Оптимистичное обновление UI
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, [field]: value } : user
-    ))
-
+    setUpdatingUserId(userId)
     try {
-      const result = await updateUserQuotas({
-        userId,
-        [field]: value,
-      })
-
-      if ("error" in result) {
-        // Откатываем изменения при ошибке
-        const refreshResult = await getAllUsers()
-        if (!("error" in refreshResult)) {
-          setUsers(refreshResult.users)
-        }
-        console.error("Ошибка обновления:", result.error)
-      } else {
-        // Перезагружаем данные после успешного обновления для синхронизации
-        const refreshResult = await getAllUsers()
-        if (!("error" in refreshResult)) {
-          setUsers(refreshResult.users)
-        }
-      }
+      await updateQuotasMutation.mutateAsync({ userId, field, value })
     } catch (err) {
       console.error("Ошибка обновления квот:", err)
-      // Перезагружаем данные при ошибке
-      const refreshResult = await getAllUsers()
-      if (!("error" in refreshResult)) {
-        setUsers(refreshResult.users)
-      }
     } finally {
-      setUpdatingUsers(prev => {
-        const next = new Set(prev)
-        next.delete(userId)
-        return next
-      })
+      setUpdatingUserId(null)
     }
-  }, [])
+  }
 
-  if (loading) {
-    return <div className="text-center py-8">Загрузка пользователей...</div>
+  if (isLoading) {
+    return <div className="text-center py-8">{t("users.loading")}</div>
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Пользователи</CardTitle>
-          <CardDescription>Все зарегистрированные пользователи и их статистика</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-destructive">{error}</div>
-        </CardContent>
-      </Card>
+      <div className="py-4 space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("users.description")}</p>
+        </div>
+        <div>
+          <div className="flex flex-col items-center justify-center py-8">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <p className="text-lg font-medium mb-2">{t("errors.loadingFailed")}</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="text-xl sm:text-2xl">Пользователи</CardTitle>
-        <CardDescription className="text-sm">Управление квотами и статистика пользователей</CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
+    <div className="py-4 space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("users.description")}</p>
+      </div>
+      <div>
         <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[150px]">Email</TableHead>
-                <TableHead className="min-w-[100px]">Роль</TableHead>
-                <TableHead className="min-w-[80px] text-center">Формы</TableHead>
-                <TableHead className="min-w-[150px] text-center">Лимит форм</TableHead>
-                <TableHead className="min-w-[180px] text-center">Использование лидов</TableHead>
-                <TableHead className="min-w-[100px] text-center">Публикация</TableHead>
-                <TableHead className="min-w-[120px]">Регистрация</TableHead>
+                <TableHead className="min-w-[150px]">{t("users.table.email")}</TableHead>
+                <TableHead className="min-w-[100px]">{t("users.table.role")}</TableHead>
+                <TableHead className="min-w-[80px] text-center">{t("users.table.forms")}</TableHead>
+                <TableHead className="min-w-[150px] text-center">{t("users.table.formsLimit")}</TableHead>
+                <TableHead className="min-w-[180px] text-center">{t("users.table.leadsUsage")}</TableHead>
+                <TableHead className="min-w-[100px] text-center">{t("users.table.publication")}</TableHead>
+                <TableHead className="min-w-[120px]">{t("users.table.registration")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.length === 0 ? (
+              {!users || users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Пользователей пока нет
+                    {t("users.noUsers")}
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => {
-                  const isUpdating = updatingUsers.has(user.id)
+                  const isUpdating = updatingUserId === user.id && updateQuotasMutation.isPending
                   const isSuperAdmin = user.role === "superadmin"
                   
                   return (
@@ -150,10 +102,10 @@ export function UsersTable() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={user.role === "superadmin" ? "default" : user.role === "admin" ? "secondary" : "outline"} 
+                          variant={user.role === "superadmin" ? "default" : "outline"} 
                           className="text-xs"
                         >
-                          {user.role === "superadmin" ? "Суперадмин" : user.role === "admin" ? "Админ" : "Пользователь"}
+                          {user.role === "superadmin" ? t("users.roles.superadmin") : t("users.roles.user")}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm text-center tabular-nums">
@@ -219,7 +171,7 @@ export function UsersTable() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm">
-                        {new Date(user.created_at).toLocaleDateString("ru-RU")}
+                        {new Date(user.created_at).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
                   )
@@ -228,7 +180,7 @@ export function UsersTable() {
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

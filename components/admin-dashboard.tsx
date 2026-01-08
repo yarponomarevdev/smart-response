@@ -7,31 +7,41 @@
  */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LeadsTable } from "./leads-table"
+import { LeadsView } from "./leads-view"
 import { ContentEditor } from "./content-editor"
 import { FormsManager } from "./forms-manager"
 import { UsersTable } from "./users-table"
 import { SystemSettingsEditor } from "./system-settings-editor"
+import { UserSettingsEditor } from "./user-settings-editor"
+import { BalanceTab } from "./editor"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { LogOut } from "lucide-react"
+import { LogOut, Menu } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 // ID главной формы для суперадмина
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
-// UID админов с расширенными правами
-const ADMIN_UIDS = [
-  "6cb16c09-6a85-4079-9579-118168e95b06",
-]
-
 export function AdminDashboard() {
+  const { t, language } = useTranslation()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const [editorFormId, setEditorFormId] = useState<string | undefined>(undefined)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -50,13 +60,7 @@ export function AdminDashboard() {
       if (user) {
         setUserId(user.id)
         const { data } = await supabase.from("users").select("role").eq("id", user.id).single()
-        
-        // Проверяем роль в БД или хардкод для админов
-        let role = data?.role || "user"
-        if (ADMIN_UIDS.includes(user.id) && role === "user") {
-          role = "admin"
-        }
-        setUserRole(role)
+        setUserRole(data?.role || "user")
       }
       setLoading(false)
     }
@@ -64,80 +68,173 @@ export function AdminDashboard() {
     fetchUserRole()
   }, [])
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Загрузка...</div>
-  }
-
+  // Вычисляем роли до условного возврата (нужно для useMemo)
   const isSuperAdmin = userRole === "superadmin"
-  const isAdmin = userRole === "admin" || (userId && ADMIN_UIDS.includes(userId))
 
-  // Определяем заголовок панели
-  const getPanelTitle = () => {
-    if (isSuperAdmin) return "Панель супер-админа"
-    if (isAdmin) return "Панель администратора"
-    return "Панель управления"
+  // Мемоизируем заголовок и описание с зависимостью от языка
+  // ВАЖНО: все хуки должны быть до условного return
+  const panelTitle = useMemo(() => {
+    if (isSuperAdmin) return t("admin.panel.superadminTitle")
+    return t("admin.panel.userTitle")
+  }, [isSuperAdmin, t, language])
+
+  const panelDescription = useMemo(() => {
+    if (isSuperAdmin) return t("admin.panel.superadminDescription")
+    return t("admin.panel.userDescription")
+  }, [isSuperAdmin, t, language])
+
+  // Функция для переключения вкладки
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    setMobileMenuOpen(false)
   }
 
-  const getPanelDescription = () => {
-    if (isSuperAdmin) return "Управление главной формой, создание форм и просмотр всех пользователей"
-    if (isAdmin) return "Управление вашими формами и лидами (неограниченное количество форм)"
-    return "Управление вашей формой и лидами"
+  // Рендерим элементы меню
+  const renderMenuItems = () => {
+    const superAdminTabs = [
+      { value: "dashboard", label: t("admin.tabs.dashboard") },
+      { value: "editor", label: t("admin.tabs.editor") },
+      { value: "leads", label: t("admin.tabs.leads") },
+      { value: "users", label: t("admin.tabs.users") },
+      { 
+        value: "integrations", 
+        label: t("admin.tabs.integrations"), 
+        disabled: true,
+        badge: t("admin.tabs.comingSoon")
+      },
+      { value: "system", label: t("admin.tabs.settings") },
+    ]
+
+    const userTabs = [
+      { value: "dashboard", label: t("admin.tabs.dashboard") },
+      { value: "editor", label: t("admin.tabs.editor") },
+      { value: "leads", label: t("admin.tabs.leads") },
+      { 
+        value: "integrations", 
+        label: t("admin.tabs.integrations"), 
+        disabled: true,
+        badge: t("admin.tabs.comingSoon")
+      },
+      { value: "balance", label: t("admin.tabs.balance") },
+      { value: "settings", label: t("admin.tabs.settings") },
+    ]
+
+    const tabs = isSuperAdmin ? superAdminTabs : userTabs
+
+    return tabs.map((tab) => (
+      <button
+        key={tab.value}
+        onClick={() => !tab.disabled && handleTabChange(tab.value)}
+        disabled={tab.disabled}
+        className={cn(
+          "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors",
+          activeTab === tab.value
+            ? "bg-primary text-primary-foreground font-medium"
+            : "hover:bg-accent",
+          tab.disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span>{tab.label}</span>
+        {tab.badge && (
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+            {tab.badge}
+          </span>
+        )}
+      </button>
+    ))
+  }
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center">{t("common.loading")}</div>
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
-        <div className="space-y-2">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold">{getPanelTitle()}</h1>
+            <div className="flex items-center gap-3">
+              {/* Бургер-меню для мобильных */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+                  <SheetHeader>
+                    <SheetTitle>{t("admin.panel.menu")}</SheetTitle>
+                  </SheetHeader>
+                  <nav className="mt-6 flex flex-col gap-2">
+                    {renderMenuItems()}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+              <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
+            </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button onClick={handleLogout} variant="outline" size="sm" className="h-9 sm:h-10 text-xs sm:text-sm">
-                <LogOut className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Logout</span>
-                <span className="sm:hidden">Выход</span>
+              <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
+                <LogOut className="mr-1 sm:mr-2 h-4 w-4" />
+                <span>{t("common.logout")}</span>
               </Button>
             </div>
           </div>
-          <p className="text-sm sm:text-base text-muted-foreground">{getPanelDescription()}</p>
+          <p className="text-sm sm:text-base text-muted-foreground">{panelDescription}</p>
         </div>
 
-        <Tabs defaultValue={isSuperAdmin ? "content" : "form"} className="space-y-4 sm:space-y-6">
-          <TabsList className="flex-wrap h-auto p-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          {/* Десктоп меню */}
+          <TabsList className="hidden md:flex flex-wrap h-auto border-b border-border p-0 gap-6">
             {isSuperAdmin ? (
               <>
-                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Главная форма</TabsTrigger>
-                <TabsTrigger value="forms" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
-                <TabsTrigger value="form-content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
-                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
-                <TabsTrigger value="users" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Пользователи</TabsTrigger>
-                <TabsTrigger value="system" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Система</TabsTrigger>
+                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
+                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
+                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
+                <TabsTrigger value="users">{t("admin.tabs.users")}</TabsTrigger>
+                <TabsTrigger value="integrations" disabled className="relative">
+                  {t("admin.tabs.integrations")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="system">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             ) : (
               <>
-                <TabsTrigger value="form" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Мои формы</TabsTrigger>
-                <TabsTrigger value="leads" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Лиды</TabsTrigger>
-                <TabsTrigger value="content" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Контент</TabsTrigger>
+                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
+                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
+                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
+                <TabsTrigger value="integrations" disabled className="relative">
+                  {t("admin.tabs.integrations")}
+                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                    {t("admin.tabs.comingSoon")}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="balance">{t("admin.tabs.balance")}</TabsTrigger>
+                <TabsTrigger value="settings">{t("admin.tabs.settings")}</TabsTrigger>
               </>
             )}
           </TabsList>
 
           {isSuperAdmin ? (
             <>
-              <TabsContent value="content" className="space-y-4">
-                <ContentEditor formId={MAIN_FORM_ID} />
+              <TabsContent value="dashboard" className="space-y-4">
+                <FormsManager onOpenEditor={(formId) => {
+                  setEditorFormId(formId)
+                  setActiveTab("editor")
+                }} />
               </TabsContent>
-              <TabsContent value="forms" className="space-y-4">
-                <FormsManager />
-              </TabsContent>
-              <TabsContent value="form-content" className="space-y-4">
-                <ContentEditor />
+              <TabsContent value="editor" className="space-y-4">
+                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
-                <LeadsTable />
+                <LeadsView />
               </TabsContent>
               <TabsContent value="users" className="space-y-4">
                 <UsersTable />
+              </TabsContent>
+              <TabsContent value="integrations" className="space-y-4">
+                {/* Скоро */}
               </TabsContent>
               <TabsContent value="system" className="space-y-4">
                 <SystemSettingsEditor />
@@ -145,19 +242,30 @@ export function AdminDashboard() {
             </>
           ) : (
             <>
-              <TabsContent value="form" className="space-y-4">
-                <FormsManager />
+              <TabsContent value="dashboard" className="space-y-4">
+                <FormsManager onOpenEditor={(formId) => {
+                  setEditorFormId(formId)
+                  setActiveTab("editor")
+                }} />
+              </TabsContent>
+              <TabsContent value="editor" className="space-y-4">
+                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
-                <LeadsTable />
+                <LeadsView />
               </TabsContent>
-              <TabsContent value="content" className="space-y-4">
-                <ContentEditor />
+              <TabsContent value="integrations" className="space-y-4">
+                {/* Скоро */}
+              </TabsContent>
+              <TabsContent value="balance" className="space-y-4">
+                <BalanceTab />
+              </TabsContent>
+              <TabsContent value="settings" className="space-y-4">
+                <UserSettingsEditor />
               </TabsContent>
             </>
           )}
         </Tabs>
-      </div>
     </div>
   )
 }

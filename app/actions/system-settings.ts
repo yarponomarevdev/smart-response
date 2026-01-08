@@ -64,6 +64,24 @@ export async function getGlobalImagePrompt(): Promise<string | null> {
 }
 
 /**
+ * Получает выбранную модель для генерации текста
+ * Возвращает null если модель не выбрана (без fallback)
+ */
+export async function getTextModel(): Promise<string | null> {
+  const { value } = await getSystemSetting("text_model")
+  return value || null
+}
+
+/**
+ * Получает выбранную модель для генерации изображений
+ * Возвращает null если модель не выбрана (без fallback)
+ */
+export async function getImageModel(): Promise<string | null> {
+  const { value } = await getSystemSetting("image_model")
+  return value || null
+}
+
+/**
  * Обновляет системную настройку (только для суперадминов)
  */
 export async function updateSystemSetting(

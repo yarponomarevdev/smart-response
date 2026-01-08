@@ -22,6 +22,16 @@ export async function OPTIONS() {
   })
 }
 
+// Извлекает домен из URL для использования в пре-хедере
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url)
+    return urlObj.hostname
+  } catch {
+    return "нашем сайте"
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, resultText, resultImageUrl, resultType, url } = await request.json()
@@ -43,7 +53,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: [email],
-      subject: "Your Personalized Recommendations - Lead Hero",
+      subject: "Ваш результат",
       html: generateEmailHTML(resultText, resultImageUrl, resultType, url),
     })
 
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
 function generateEmailHTML(resultText: string, resultImageUrl: string | null, resultType: string, url: string) {
   // Конвертируем markdown в HTML для email (используем глобальные настройки marked)
   const htmlContent = resultText ? marked(resultText) : ""
+  const domain = extractDomain(url)
   
   return `
     <!DOCTYPE html>
@@ -76,9 +87,10 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Your Recommendations - Lead Hero</title>
+        <title>Ваш результат</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #000000; color: #ffffff;">
+        <span style="display:none !important; visibility:hidden; mso-hide:all; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">Вы заполнили форму на сайте ${domain}</span>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
           <tr>
             <td align="center" style="padding: 40px 20px;">
@@ -90,7 +102,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 </tr>
                 
                 ${
-                  resultType === "image" && resultImageUrl
+                  (resultType === "image" || resultType === "image_with_text") && resultImageUrl
                     ? `
                 <tr>
                   <td style="padding: 40px 40px 20px 40px;">
@@ -102,7 +114,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 }
                 
                 ${
-                  resultText
+                  resultText && (resultType === "text" || resultType === "image_with_text")
                     ? `
                 <tr>
                   <td style="padding: 40px 40px 20px 40px;">

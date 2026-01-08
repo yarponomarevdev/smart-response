@@ -1,18 +1,16 @@
 /**
  * ContentEditor - Редактор контента формы
  * Позволяет настраивать тексты, AI-промпты и другие параметры формы
- * Поддерживает выбор формы для редактирования если у пользователя несколько форм
+ * Разделён на вкладки: Данные формы, Контакты, Генерация, Результат, Поделиться
+ * 
+ * Все поля автосохраняются при изменении
  */
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Save, Settings } from "lucide-react"
+import { AlertCircle, Menu } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -20,391 +18,431 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-interface ContentItem {
-  id: string
-  key: string
-  value: string
-}
-
-interface Form {
-  id: string
-  name: string
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet"
+import { toast } from "sonner"
+import { useEditorForms, useFormContent, useCurrentUser } from "@/lib/hooks"
+import { useToggleFormActive } from "@/lib/hooks/use-forms"
+import {
+  FormDataTab,
+  ContactsTab,
+  GenerationTab,
+  ResultTab,
+  ShareTab,
+  SettingsTab,
+  DynamicFieldsTab,
+} from "@/components/editor"
+import { useTranslation } from "@/lib/i18n"
 
 interface ContentEditorProps {
   formId?: string
+  onBackToDashboard?: () => void
 }
 
-export function ContentEditor({ formId: propFormId }: ContentEditorProps) {
-  const [forms, setForms] = useState<Form[]>([])
+export function ContentEditor({ formId: propFormId, onBackToDashboard }: ContentEditorProps) {
+  const { t, language } = useTranslation()
+  
+  // Проверяем загрузку пользователя сначала
+  const { data: user, isLoading: userLoading } = useCurrentUser()
+  
+  // React Query хуки
+  const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
+  const toggleActiveMutation = useToggleFormActive()
+
+  // Локальное состояние
   const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
-  const [content, setContent] = useState<Record<string, string>>({})
-  const [loadingMessages, setLoadingMessages] = useState<string[]>([])
-  const [systemPrompt, setSystemPrompt] = useState<string>("")
-  const [resultFormat, setResultFormat] = useState<string>("text")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState("data")
+  const [maxVisitedTabIndex, setMaxVisitedTabIndex] = useState(0)
+  const propFormIdRef = useRef<string | undefined>(propFormId)
+  const userHasSelectedRef = useRef<boolean>(false)
 
-  const fetchForms = useCallback(async () => {
-    if (propFormId) {
-      setSelectedFormId(propFormId)
-      await fetchContent(propFormId)
-      setIsLoading(false)
-      return
+  const forms = formsData?.forms || []
+  const firstFormId = forms.length > 0 ? forms[0].id : null
+
+  // Мемоизируем вкладки с зависимостью от языка, чтобы они обновлялись при смене языка
+  const tabs = useMemo(
+    () => [
+      { value: "data", label: t("editor.tabs.data") },
+      { value: "contacts", label: t("editor.tabs.contacts") },
+      { value: "generation", label: t("editor.tabs.generation") },
+      { value: "result", label: t("editor.tabs.result") },
+      { value: "share", label: t("editor.tabs.share") },
+      { value: "settings", label: t("editor.tabs.settings") }
+    ],
+    [t, language]
+  )
+
+  // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
+  useEffect(() => {
+    if (propFormId !== propFormIdRef.current) {
+      propFormIdRef.current = propFormId
+      userHasSelectedRef.current = false
+      if (propFormId) {
+        setSelectedFormId(propFormId)
+      }
     }
-
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) return
-
-    // Загружаем все формы пользователя
-    const { data: userForms } = await supabase
-      .from("forms")
-      .select("id, name")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false })
-
-    if (userForms && userForms.length > 0) {
-      setForms(userForms)
-      // Выбираем первую форму по умолчанию
-      setSelectedFormId(userForms[0].id)
-      await fetchContent(userForms[0].id)
-    }
-    
-    setIsLoading(false)
   }, [propFormId])
 
+  // Устанавливаем первую форму по умолчанию, если нет выбранной формы
   useEffect(() => {
-    fetchForms()
-  }, [fetchForms])
-
-  const fetchContent = async (fId: string) => {
-    const supabase = createClient()
-    const { data, error } = await supabase.from("form_content").select("*").eq("form_id", fId)
-
-    if (!error && data) {
-      const contentMap: Record<string, string> = {}
-      const messages: string[] = []
-      let prompt = ""
-      let format = "text"
-
-      data.forEach((item: ContentItem) => {
-        if (item.key.startsWith("loading_message_")) {
-          messages.push(item.value)
-        } else if (item.key === "ai_system_prompt") {
-          prompt = item.value
-        } else if (item.key === "ai_result_format") {
-          format = item.value
-        } else {
-          contentMap[item.key] = item.value
-        }
-      })
-
-      setContent(contentMap)
-      setLoadingMessages(messages.length > 0 ? messages : ["Analyzing...", "Processing...", "Almost done..."])
-      setSystemPrompt(prompt || "") // Индивидуальный промпт формы (глобальный добавляется автоматически)
-      setResultFormat(format)
+    if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
+      setSelectedFormId(firstFormId)
     }
-  }
+  }, [firstFormId, selectedFormId])
 
-  const handleFormChange = async (formId: string) => {
+  // Отслеживаем прогресс вкладок - обновляем максимальный индекс только при движении вперед
+  useEffect(() => {
+    const currentTabIndex = tabs.findIndex(tab => tab.value === activeTab)
+    if (currentTabIndex !== -1 && currentTabIndex > maxVisitedTabIndex) {
+      setMaxVisitedTabIndex(currentTabIndex)
+    }
+  }, [activeTab, tabs, maxVisitedTabIndex])
+
+  // Загружаем контент выбранной формы
+  const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
+
+  const handleFormChange = (formId: string) => {
+    userHasSelectedRef.current = true
     setSelectedFormId(formId)
-    setIsLoading(true)
-    await fetchContent(formId)
-    setIsLoading(false)
   }
 
-  const handleSave = async () => {
+  const handlePublish = async () => {
     if (!selectedFormId) return
 
-    setIsSaving(true)
-    const supabase = createClient()
-
-    for (const [key, value] of Object.entries(content)) {
-      await supabase.from("form_content").upsert({ form_id: selectedFormId, key, value }, { onConflict: "form_id,key" })
+    try {
+      // Проверяем и активируем форму, если она не активна
+      const selectedForm = forms.find(f => f.id === selectedFormId)
+      if (selectedForm && !selectedForm.is_active) {
+        await toggleActiveMutation.mutateAsync({ 
+          formId: selectedFormId, 
+          currentIsActive: false 
+        })
+        toast.success(t("editor.toast.published"))
+      } else {
+        toast.info(t("editor.toast.alreadyPublished"))
+      }
+    } catch (err) {
+      toast.error(t("editor.toast.publishError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
+  }
 
-    for (let i = 0; i < loadingMessages.length; i++) {
-      await supabase
-        .from("form_content")
-        .upsert(
-          { form_id: selectedFormId, key: `loading_message_${i + 1}`, value: loadingMessages[i] },
-          { onConflict: "form_id,key" },
-        )
+  const handleContinue = () => {
+    const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
+    
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].value)
     }
-
-    await supabase
-      .from("form_content")
-      .upsert({ form_id: selectedFormId, key: "ai_system_prompt", value: systemPrompt }, { onConflict: "form_id,key" })
-
-    await supabase
-      .from("form_content")
-      .upsert({ form_id: selectedFormId, key: "ai_result_format", value: resultFormat }, { onConflict: "form_id,key" })
-
-    setIsSaving(false)
-    alert("Контент сохранён!")
   }
 
-  const handleLoadingMessageChange = (index: number, value: string) => {
-    const newMessages = [...loadingMessages]
-    newMessages[index] = value
-    setLoadingMessages(newMessages)
+  const handleBack = () => {
+    const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
+    
+    if (currentIndex === 0) {
+      // На первой вкладке возвращаемся на дашборд
+      onBackToDashboard?.()
+    } else if (currentIndex > 0) {
+      // На остальных переходим на предыдущую вкладку
+      setActiveTab(tabs[currentIndex - 1].value)
+    }
   }
 
-  if (isLoading) {
-    return <div className="text-center py-8">Загрузка контента...</div>
+  const handleGoToShare = () => {
+    setActiveTab("share")
   }
 
-  if (!selectedFormId) {
-    return <div className="text-center py-8">Форма не найдена. Сначала создайте форму.</div>
+  const isLoading = userLoading || formsLoading || contentLoading
+
+  // Показываем загрузку, если пользователь еще загружается или данные еще не загрузились
+  if (userLoading || (isLoading && !contentData && !formsData)) {
+    return <div className="text-center py-8">{t("editor.loadingContent")}</div>
   }
 
-  return (
-    <Card className="p-4 sm:p-6">
-      <div className="space-y-6 sm:space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold">Редактор контента</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">Настройка текстов и AI параметров</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            {/* Выбор формы (если несколько) */}
-            {forms.length > 1 && !propFormId && (
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Settings className="h-4 w-4 text-muted-foreground shrink-0" />
-                <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-                  <SelectTrigger className="!h-9 w-full sm:w-[200px]">
-                    <SelectValue placeholder="Выберите форму" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {forms.map((form) => (
-                      <SelectItem key={form.id} value={form.id}>
-                        {form.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <Button onClick={handleSave} disabled={isSaving} className="min-w-[140px] w-full sm:w-auto h-10 sm:h-11">
-              <Save className="mr-2 h-4 w-4" />
-              {isSaving ? "Сохранение..." : "Сохранить"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-4 sm:space-y-6">
-          {/* AI Настройки */}
-          <div className="p-3 sm:p-4 border border-accent/20 rounded-lg space-y-3 sm:space-y-4 bg-accent/5">
-            <h3 className="text-base sm:text-lg font-semibold text-accent">Настройки AI</h3>
-
-            <div className="space-y-2">
-              <Label htmlFor="system_prompt" className="text-sm">Индивидуальный промпт формы</Label>
-              <Textarea
-                id="system_prompt"
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="Введите индивидуальный промпт для этой формы (необязательно)..."
-                rows={6}
-                className="font-mono text-xs sm:text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Индивидуальный промпт для этой формы (необязательно). Добавляется к глобальному промпту
-                для выбранного формата результата (текст или изображение).
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="result_format" className="text-sm">Формат результата</Label>
-              <Select value={resultFormat} onValueChange={setResultFormat}>
-                <SelectTrigger id="result_format" className="w-full h-10">
-                  <SelectValue placeholder="Выберите формат" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Текст</SelectItem>
-                  <SelectItem value="image">Изображение (DALL-E)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Выберите формат результата: текст или сгенерированное изображение через DALL-E 3.
-              </p>
-            </div>
-          </div>
-
-          {/* Основные тексты */}
-          <div className="space-y-2">
-            <Label htmlFor="page_title" className="text-sm">Заголовок страницы</Label>
-            <Input
-              id="page_title"
-              value={content.page_title || ""}
-              onChange={(e) => setContent({ ...content, page_title: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="page_subtitle" className="text-sm">Подзаголовок страницы</Label>
-            <Textarea
-              id="page_subtitle"
-              value={content.page_subtitle || ""}
-              onChange={(e) => setContent({ ...content, page_subtitle: e.target.value })}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="url_placeholder" className="text-sm">Плейсхолдер для URL</Label>
-            <Input
-              id="url_placeholder"
-              value={content.url_placeholder || ""}
-              onChange={(e) => setContent({ ...content, url_placeholder: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="submit_button" className="text-sm">Текст кнопки отправки</Label>
-            <Input
-              id="submit_button"
-              value={content.submit_button || ""}
-              onChange={(e) => setContent({ ...content, submit_button: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="disclaimer" className="text-sm">Дисклеймер</Label>
-            <Input
-              id="disclaimer"
-              value={content.disclaimer || ""}
-              onChange={(e) => setContent({ ...content, disclaimer: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          {/* Сообщения загрузки */}
-          <div className="space-y-2">
-            <Label className="text-sm">Сообщения загрузки</Label>
-            <p className="text-xs text-muted-foreground mb-2">Показываются пока AI генерирует результат</p>
-            {[0, 1, 2].map((index) => (
-              <Input
-                key={index}
-                value={loadingMessages[index] || ""}
-                onChange={(e) => handleLoadingMessageChange(index, e.target.value)}
-                placeholder={`Сообщение ${index + 1}`}
-                className="h-10 sm:h-11"
-              />
-            ))}
-          </div>
-
-          {/* Результат */}
-          <div className="space-y-2">
-            <Label htmlFor="result_title" className="text-sm">Заголовок результата</Label>
-            <Input
-              id="result_title"
-              value={content.result_title || ""}
-              onChange={(e) => setContent({ ...content, result_title: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="result_blur_text" className="text-sm">Текст блюра результата (до ввода email)</Label>
-            <Input
-              id="result_blur_text"
-              value={content.result_blur_text || ""}
-              onChange={(e) => setContent({ ...content, result_blur_text: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          {/* Email форма */}
-          <div className="space-y-2">
-            <Label htmlFor="email_title" className="text-sm">Заголовок email формы</Label>
-            <Input
-              id="email_title"
-              value={content.email_title || ""}
-              onChange={(e) => setContent({ ...content, email_title: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email_subtitle" className="text-sm">Подзаголовок email формы</Label>
-            <Textarea
-              id="email_subtitle"
-              value={content.email_subtitle || ""}
-              onChange={(e) => setContent({ ...content, email_subtitle: e.target.value })}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email_placeholder" className="text-sm">Плейсхолдер email</Label>
-            <Input
-              id="email_placeholder"
-              value={content.email_placeholder || ""}
-              onChange={(e) => setContent({ ...content, email_placeholder: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email_button" className="text-sm">Текст кнопки email</Label>
-            <Input
-              id="email_button"
-              value={content.email_button || ""}
-              onChange={(e) => setContent({ ...content, email_button: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          {/* Успех */}
-          <div className="space-y-2">
-            <Label htmlFor="success_title" className="text-sm">Заголовок успеха</Label>
-            <Input
-              id="success_title"
-              value={content.success_title || ""}
-              onChange={(e) => setContent({ ...content, success_title: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="success_message" className="text-sm">Сообщение успеха</Label>
-            <Textarea
-              id="success_message"
-              value={content.success_message || ""}
-              onChange={(e) => setContent({ ...content, success_message: e.target.value })}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="share_button" className="text-sm">Текст кнопки "Поделиться"</Label>
-            <Input
-              id="share_button"
-              value={content.share_button || ""}
-              onChange={(e) => setContent({ ...content, share_button: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="download_button" className="text-sm">Текст кнопки "Скачать"</Label>
-            <Input
-              id="download_button"
-              value={content.download_button || ""}
-              onChange={(e) => setContent({ ...content, download_button: e.target.value })}
-              className="h-10 sm:h-11"
-            />
-          </div>
+  // Проверяем ошибки перед проверкой загрузки
+  if (formsError) {
+    return (
+      <div className="py-4">
+        <div className="flex flex-col items-center justify-center py-8">
+          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+          <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
+          <p className="text-sm text-muted-foreground">{formsError.message}</p>
         </div>
       </div>
-    </Card>
+    )
+  }
+
+  if (contentError) {
+    return (
+      <div className="py-4">
+        <div className="flex flex-col items-center justify-center py-8">
+          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+          <p className="text-lg font-medium mb-2">{t("editor.loadingContentError")}</p>
+          <p className="text-sm text-muted-foreground">{contentError.message}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Показываем "форма не найдена" только если пользователь загружен и данных нет
+  if (!userLoading && !formsLoading && !selectedFormId && forms.length === 0) {
+    return (
+      <div className="py-4">
+        <div className="flex flex-col items-center justify-center py-8">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium mb-2">{t("editor.noForms")}</p>
+          <p className="text-sm text-muted-foreground">{t("editor.noFormsDescription")}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const selectedForm = forms.find(f => f.id === selectedFormId)
+  const content = contentData?.content || {}
+  const loadingMessages = contentData?.loadingMessages || ["", "", ""]
+  const systemPrompt = contentData?.systemPrompt || ""
+
+  return (
+    <div className="space-y-6 sm:space-y-8">
+      {/* Выбор формы */}
+      <div>
+        {/* Выбор формы (если несколько) */}
+        {forms.length > 1 && (
+          <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
+            <SelectTrigger className="h-12 w-auto rounded-[18px] gap-2 px-0">
+              <SelectValue placeholder={t("editor.selectForm")} />
+            </SelectTrigger>
+            <SelectContent>
+              {forms.map((form) => (
+                <SelectItem key={form.id} value={form.id} className="text-base">
+                  {form.isMain ? `${form.name} (${t("editor.mainForm")})` : form.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {forms.length === 1 && (
+          <div className="h-12 flex items-center rounded-[18px]">
+            <span className="text-sm">{selectedForm?.name || t("editor.form")}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Вкладки редактора */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Десктопная навигация */}
+          <div className="relative w-fit hidden md:block">
+            <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0 gap-6 pb-2">
+              {tabs.map((tab, index) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:bg-transparent px-0 py-0"
+                >
+                  <span className={cn(
+                    "transition-opacity duration-300",
+                    activeTab === tab.value ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  )}>
+                    {index + 1}. {tab.label}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {/* Линия прогресса */}
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-muted">
+              <div 
+                className="h-full bg-primary transition-all duration-500 ease-in-out"
+                style={{
+                  width: `${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length) * 100}%`
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Мобильная навигация */}
+          <div className="md:hidden flex items-center justify-between mb-6 bg-muted/30 p-4 rounded-xl border">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                {t("editor.step")} {tabs.findIndex(t => t.value === activeTab) + 1} / {tabs.length}
+              </span>
+              <span className="font-semibold text-lg leading-none">
+                {tabs.find(t => t.value === activeTab)?.label}
+              </span>
+            </div>
+            
+            <Sheet>
+              <SheetTrigger asChild>
+                 <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+                   <Menu className="h-5 w-5" />
+                 </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-[20px] max-h-[80vh] overflow-y-auto">
+                <SheetHeader className="mb-4 text-left">
+                  <SheetTitle>{t("editor.steps")}</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-2">
+                  {tabs.map((tab, index) => {
+                    const isActive = activeTab === tab.value
+                    return (
+                      <SheetClose asChild key={tab.value}>
+                        <Button
+                          variant={isActive ? "secondary" : "ghost"}
+                          className={cn(
+                            "justify-start h-14 text-base font-normal",
+                            isActive && "bg-secondary/50 font-medium"
+                          )}
+                          onClick={() => setActiveTab(tab.value)}
+                        >
+                          <span className={cn(
+                            "mr-3 flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors",
+                            isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}>
+                            {index + 1}
+                          </span>
+                          {tab.label}
+                        </Button>
+                      </SheetClose>
+                    )
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <div className="pt-0 md:pt-6">
+            <TabsContent value="data" className="mt-0">
+              <DynamicFieldsTab formId={selectedFormId} />
+            </TabsContent>
+
+            <TabsContent value="contacts" className="mt-0">
+              <ContactsTab formId={selectedFormId} content={content} />
+            </TabsContent>
+
+            <TabsContent value="generation" className="mt-0">
+              <GenerationTab
+                formId={selectedFormId}
+                systemPrompt={systemPrompt}
+                loadingMessages={loadingMessages}
+                content={content}
+              />
+            </TabsContent>
+
+            <TabsContent value="result" className="mt-0">
+              <ResultTab formId={selectedFormId} content={content} />
+            </TabsContent>
+
+            <TabsContent value="share" className="mt-0">
+              <ShareTab formId={selectedFormId} />
+            </TabsContent>
+
+            <TabsContent value="settings" className="mt-0">
+              <SettingsTab formId={selectedFormId} />
+            </TabsContent>
+          </div>
+        </Tabs>
+
+        {/* Кнопки действий */}
+        <div className="flex flex-col gap-3">
+          {/* Вкладка "Данные формы" */}
+          {activeTab === "data" && (
+            <>
+              <Button
+                onClick={handleContinue}
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
+              >
+                {t("editor.continue")}
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+              >
+                {t("editor.goBack")}
+              </Button>
+            </>
+          )}
+
+          {/* Вкладки "Контакты" и "Генерация" */}
+          {(activeTab === "contacts" || activeTab === "generation") && (
+            <>
+              <Button
+                onClick={handleContinue}
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
+              >
+                {t("editor.continue")}
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+              >
+                {t("editor.goBack")}
+              </Button>
+            </>
+          )}
+
+          {/* Вкладка "Результат" */}
+          {activeTab === "result" && (
+            <>
+              <Button
+                onClick={handlePublish}
+                disabled={toggleActiveMutation.isPending || contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
+              >
+                {toggleActiveMutation.isPending ? t("editor.publishing") : t("editor.saveAndPublish")}
+              </Button>
+              <Button
+                onClick={handleGoToShare}
+                variant="outline"
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+              >
+                {t("editor.share")}
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+              >
+                {t("editor.goBack")}
+              </Button>
+            </>
+          )}
+
+          {/* Вкладка "Поделиться" */}
+          {activeTab === "share" && (
+            <Button
+              onClick={handleBack}
+              variant="outline"
+              disabled={contentLoading}
+              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+            >
+              {t("editor.goBack")}
+            </Button>
+          )}
+
+          {/* Вкладка "Настройки" */}
+          {activeTab === "settings" && (
+            <Button
+              onClick={handleBack}
+              variant="outline"
+              disabled={contentLoading}
+              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+            >
+              {t("editor.goBack")}
+            </Button>
+          )}
+        </div>
+    </div>
   )
 }
