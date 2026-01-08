@@ -449,3 +449,69 @@ export async function deleteLead(leadId: string): Promise<{ success: boolean } |
 
   return { success: true }
 }
+
+interface UpdateLeadParams {
+  leadId: string
+  lead_status?: 'todo' | 'in_progress' | 'done'
+  notes?: string
+}
+
+/**
+ * Обновляет данные лида (статус, заметки)
+ */
+export async function updateLead({ leadId, lead_status, notes }: UpdateLeadParams): Promise<{ success: boolean } | { error: string }> {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Не авторизован" }
+  }
+
+  // Проверяем, что лид принадлежит пользователю (через форму)
+  const { data: lead, error: leadError } = await supabaseAdmin
+    .from("leads")
+    .select("id, form_id")
+    .eq("id", leadId)
+    .single()
+
+  if (leadError || !lead) {
+    return { error: "Лид не найден" }
+  }
+
+  // Проверяем права доступа к форме
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  const isSuperAdmin = userData?.role === "superadmin"
+
+  if (!isSuperAdmin && lead.form_id) {
+    const isOwner = await isFormOwner(user.id, lead.form_id)
+    if (!isOwner) {
+      return { error: "Нет доступа к этому лиду" }
+    }
+  }
+
+  // Обновляем лид
+  const updateData: Record<string, unknown> = {}
+  if (lead_status !== undefined) updateData.lead_status = lead_status
+  if (notes !== undefined) updateData.notes = notes
+
+  if (Object.keys(updateData).length === 0) {
+    return { error: "Нет данных для обновления" }
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("leads")
+    .update(updateData)
+    .eq("id", leadId)
+
+  if (updateError) {
+    console.error("Error updating lead:", updateError)
+    return { error: "Ошибка обновления лида" }
+  }
+
+  return { success: true }
+}

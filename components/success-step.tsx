@@ -23,7 +23,6 @@ interface SuccessStepProps {
 
 interface FormContent {
   result_title?: string
-  result_subtitle?: string
   result_download_text?: string
   result_share_text?: string
   result_restart_text?: string
@@ -58,7 +57,6 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
         .eq("form_id", formId)
         .in("key", [
           "result_title",
-          "result_subtitle",
           "result_download_text",
           "result_share_text",
           "result_restart_text",
@@ -103,7 +101,6 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
 
   // Извлекаем настройки из content
   const resultTitle = content.result_title || "Ваша персональная рекламная кампания готова!"
-  const resultSubtitle = content.result_subtitle || "А также отправлена на вашу почту"
   const downloadText = content.result_download_text || "Скачать"
   const shareText = content.result_share_text || "Поделиться"
   const restartText = content.result_restart_text || "Проверить другой URL"
@@ -458,7 +455,6 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
       {/* Заголовок */}
       <div className="space-y-3 sm:space-y-4">
         <h2 className="text-2xl sm:text-3xl font-bold">{resultTitle}</h2>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-md">{resultSubtitle}</p>
       </div>
 
       {/* Результат */}

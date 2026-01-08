@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LeadsTable } from "./leads-table"
+import { LeadsView } from "./leads-view"
 import { ContentEditor } from "./content-editor"
 import { FormsManager } from "./forms-manager"
 import { UsersTable } from "./users-table"
@@ -228,7 +228,7 @@ export function AdminDashboard() {
                 <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
-                <LeadsTable />
+                <LeadsView />
               </TabsContent>
               <TabsContent value="users" className="space-y-4">
                 <UsersTable />
@@ -252,7 +252,7 @@ export function AdminDashboard() {
                 <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
               </TabsContent>
               <TabsContent value="leads" className="space-y-4">
-                <LeadsTable />
+                <LeadsView />
               </TabsContent>
               <TabsContent value="integrations" className="space-y-4">
                 {/* Скоро */}

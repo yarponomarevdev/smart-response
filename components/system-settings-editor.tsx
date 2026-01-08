@@ -183,7 +183,6 @@ export function SystemSettingsEditor() {
                     : "border-border bg-muted/30 hover:bg-muted/50"
                 )}
               >
-                <span className="text-2xl">🇷🇺</span>
                 <span className={cn("text-sm sm:text-base", language === "ru" && "font-semibold")}>
                   {t("settings.user.language.russian")}
                 </span>
@@ -198,7 +197,6 @@ export function SystemSettingsEditor() {
                     : "border-border bg-muted/30 hover:bg-muted/50"
                 )}
               >
-                <span className="text-2xl">🇬🇧</span>
                 <span className={cn("text-sm sm:text-base", language === "en" && "font-semibold")}>
                   {t("settings.user.language.english")}
                 </span>

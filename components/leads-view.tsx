@@ -1,16 +1,16 @@
 /**
- * LeadsTable - Компонент для отображения и управления лидами
- * Поддерживает просмотр лидов по всем формам пользователя с фильтрацией
+ * LeadsView - Компонент для отображения и управления лидами
+ * Поддерживает два режима отображения: таблица и карточки
  * 
  * Использует React Query для кэширования данных
  */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Download, Filter, AlertCircle } from "lucide-react"
+import { Trash2, Download, Filter, AlertCircle, LayoutGrid, List } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -20,16 +20,31 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { useLeads, useDeleteLead } from "@/lib/hooks"
+import { useLeads, useDeleteLead, type Lead, type LeadStatus } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
+import { LeadCard } from "./lead-card"
+import { LeadDetailModal } from "./lead-detail-modal"
 
-interface LeadsTableProps {
+interface LeadsViewProps {
   formId?: string
 }
 
-export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
+type ViewMode = "table" | "cards"
+
+const VIEW_MODE_KEY = "leads-view-mode"
+
+const statusColors: Record<LeadStatus, string> = {
+  todo: "bg-gray-500/10 text-gray-500",
+  in_progress: "bg-yellow-500/10 text-yellow-600",
+  done: "bg-green-500/10 text-green-600",
+}
+
+export function LeadsView({ formId: propFormId }: LeadsViewProps) {
   const { t } = useTranslation()
   const [selectedFormId, setSelectedFormId] = useState<string | "all">("all")
+  const [viewMode, setViewMode] = useState<ViewMode>("cards")
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const { confirm, ConfirmDialog } = useConfirm()
   
   // React Query хуки
@@ -39,6 +54,20 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
   const leads = data?.leads || []
   const forms = data?.forms || []
   const isSuperAdmin = data?.isSuperAdmin || false
+
+  // Загружаем сохранённый режим отображения
+  useEffect(() => {
+    const saved = localStorage.getItem(VIEW_MODE_KEY)
+    if (saved === "table" || saved === "cards") {
+      setViewMode(saved)
+    }
+  }, [])
+
+  // Сохраняем режим отображения
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem(VIEW_MODE_KEY, mode)
+  }
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirm({
@@ -67,7 +96,6 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
     const escapeCsvValue = (value: string): string => {
       if (value === null || value === undefined) return ""
       const str = String(value)
-      // Если содержит запятую, кавычки или перенос строки, оборачиваем в кавычки и удваиваем кавычки внутри
       if (str.includes(",") || str.includes('"') || str.includes("\n")) {
         return `"${str.replace(/"/g, '""')}"`
       }
@@ -75,14 +103,16 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
     }
     
     const csv = [
-      [t("leads.table.url"), t("leads.table.email"), t("leads.table.status"), t("leads.table.date"), t("leads.table.result"), t("leads.table.form")],
+      [t("leads.table.url"), t("leads.table.email"), t("leads.detail.phone"), t("leads.table.status"), t("leads.table.date"), t("leads.table.result"), t("leads.table.form"), t("leads.detail.notes")],
       ...dataToExport.map((lead) => [
         escapeCsvValue(lead.url),
         escapeCsvValue(lead.email || ""),
-        escapeCsvValue(lead.status),
+        escapeCsvValue((lead.custom_fields?.phone as string) || ""),
+        escapeCsvValue(getStatusLabel(lead.lead_status || 'todo')),
         escapeCsvValue(new Date(lead.created_at).toLocaleString()),
         escapeCsvValue(lead.result_text || lead.result_image_url || ""),
         escapeCsvValue(forms.find(f => f.id === lead.form_id)?.name || ""),
+        escapeCsvValue(lead.notes || ""),
       ]),
     ]
       .map((row) => row.join(","))
@@ -98,8 +128,12 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    // Очищаем URL после использования
     setTimeout(() => window.URL.revokeObjectURL(url), 100)
+  }
+
+  const handleLeadClick = (lead: Lead) => {
+    setSelectedLead(lead)
+    setModalOpen(true)
   }
 
   // Фильтрация лидов по выбранной форме
@@ -111,6 +145,14 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
   const getFormName = (formId: string | null) => {
     if (!formId) return "-"
     return forms.find(f => f.id === formId)?.name || formId.slice(0, 8)
+  }
+
+  const getStatusLabel = (status: LeadStatus) => {
+    switch (status) {
+      case "todo": return t("leads.leadStatus.todo")
+      case "in_progress": return t("leads.leadStatus.inProgress")
+      case "done": return t("leads.leadStatus.done")
+    }
   }
 
   if (isLoading) {
@@ -139,7 +181,27 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          {/* Фильтр по формам (если есть несколько форм или superadmin) */}
+          {/* Переключатель вида */}
+          <div className="flex items-center border rounded-lg overflow-hidden h-9">
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-full px-3"
+              onClick={() => handleViewModeChange("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-full px-3"
+              onClick={() => handleViewModeChange("table")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Фильтр по формам */}
           {(forms.length > 1 || isSuperAdmin) && !propFormId && (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -169,46 +231,55 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[150px]">{t("leads.table.url")}</TableHead>
-              <TableHead className="min-w-[120px]">{t("leads.table.email")}</TableHead>
-              <TableHead className="min-w-[100px]">{t("leads.table.status")}</TableHead>
-              <TableHead className="min-w-[150px]">{t("leads.table.result")}</TableHead>
-              {(forms.length > 1 || isSuperAdmin) && !propFormId && <TableHead className="min-w-[100px]">{t("leads.table.form")}</TableHead>}
-              <TableHead className="min-w-[100px]">{t("leads.table.date")}</TableHead>
-              <TableHead className="text-right min-w-[80px]">{t("leads.table.actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLeads.length === 0 ? (
+      {/* Контент */}
+      {filteredLeads.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          {t("leads.noLeads")}
+        </div>
+      ) : viewMode === "cards" ? (
+        /* Карточный вид */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredLeads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              formName={(forms.length > 1 || isSuperAdmin) && !propFormId ? getFormName(lead.form_id) : undefined}
+              onClick={() => handleLeadClick(lead)}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Табличный вид */
+        <div className="border rounded-lg overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={(forms.length > 1 || isSuperAdmin) && !propFormId ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                  {t("leads.noLeads")}
-                </TableCell>
+                <TableHead className="min-w-[150px]">{t("leads.table.url")}</TableHead>
+                <TableHead className="min-w-[120px]">{t("leads.table.email")}</TableHead>
+                <TableHead className="min-w-[100px]">{t("leads.table.status")}</TableHead>
+                <TableHead className="min-w-[150px]">{t("leads.table.result")}</TableHead>
+                {(forms.length > 1 || isSuperAdmin) && !propFormId && <TableHead className="min-w-[100px]">{t("leads.table.form")}</TableHead>}
+                <TableHead className="min-w-[100px]">{t("leads.table.date")}</TableHead>
+                <TableHead className="text-right min-w-[80px]">{t("leads.table.actions")}</TableHead>
               </TableRow>
-            ) : (
-              filteredLeads.map((lead) => (
-                <TableRow key={lead.id}>
+            </TableHeader>
+            <TableBody>
+              {filteredLeads.map((lead) => (
+                <TableRow 
+                  key={lead.id} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleLeadClick(lead)}
+                >
                   <TableCell className="font-medium max-w-[150px] truncate text-xs sm:text-sm">{lead.url}</TableCell>
                   <TableCell className="text-xs sm:text-sm">{lead.email || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant={lead.status === "completed" ? "default" : "outline"} className="text-xs">
-                      {lead.status === "completed" ? t("leads.status.completed") : t("leads.status.processing")}
+                    <Badge className={`text-xs ${statusColors[lead.lead_status || 'todo']}`}>
+                      {getStatusLabel(lead.lead_status || 'todo')}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-[150px] truncate text-xs sm:text-sm">
                     {lead.result_image_url ? (
-                      <a
-                        href={lead.result_image_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
-                      >
-                        {t("leads.image")}
-                      </a>
+                      <span className="text-blue-500">{t("leads.image")}</span>
                     ) : lead.result_text ? (
                       <span className="text-xs">{lead.result_text.substring(0, 50)}...</span>
                     ) : (
@@ -223,7 +294,10 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                   <TableCell className="text-xs sm:text-sm">{new Date(lead.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <Button 
-                      onClick={() => handleDelete(lead.id)} 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(lead.id)
+                      }} 
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0"
@@ -233,11 +307,20 @@ export function LeadsTable({ formId: propFormId }: LeadsTableProps) {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Модальное окно с деталями */}
+      <LeadDetailModal
+        lead={selectedLead}
+        formName={selectedLead ? getFormName(selectedLead.form_id) : undefined}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
+
       {ConfirmDialog}
     </div>
   )

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 import { extractTextFromFile } from "@/lib/file-parser"
+import { saveImageToStorage } from "@/lib/utils/image-storage"
 
 export const maxDuration = 60
 
@@ -373,9 +374,9 @@ export async function POST(req: Request) {
       }
 
       const imageData = await imageResponse.json()
-      const imageUrl = imageData.data[0]?.url || ""
+      const tempImageUrl = imageData.data[0]?.url || ""
 
-      if (!imageUrl) {
+      if (!tempImageUrl) {
         console.error("[v0] Empty image URL:", imageData)
         return Response.json(
           {
@@ -384,6 +385,17 @@ export async function POST(req: Request) {
           },
           { status: 500, headers: corsHeaders },
         )
+      }
+
+      // Сохраняем изображение в Supabase Storage для постоянного хранения
+      const leadId = crypto.randomUUID()
+      const imageUrl = await saveImageToStorage(tempImageUrl, leadId)
+      
+      // Если не удалось сохранить, используем временный URL
+      const finalImageUrl = imageUrl || tempImageUrl
+      
+      if (!imageUrl) {
+        console.warn("[v0] Failed to save image to storage, using temporary URL")
       }
 
       // Для формата image_with_text генерируем также текстовое описание
@@ -397,7 +409,7 @@ export async function POST(req: Request) {
               success: true,
               result: {
                 type: "image_with_text",
-                imageUrl: imageUrl,
+                imageUrl: finalImageUrl,
                 text: "Создано на основе ваших предпочтений",
               },
             },
@@ -463,7 +475,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
                     success: true,
                     result: {
                       type: "image_with_text",
-                      imageUrl: imageUrl,
+                      imageUrl: finalImageUrl,
                       text: generatedText,
                     },
                   },
@@ -482,7 +494,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
             success: true,
             result: {
               type: "image_with_text",
-              imageUrl: imageUrl,
+              imageUrl: finalImageUrl,
               text: "Создано на основе ваших предпочтений",
             },
           },
@@ -495,7 +507,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
           success: true,
           result: {
             type: "image",
-            imageUrl: imageUrl,
+            imageUrl: finalImageUrl,
             text: `Создано на основе ваших предпочтений`,
           },
         },

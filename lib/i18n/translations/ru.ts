@@ -191,6 +191,7 @@ export const ru = {
     inTotal: "всего",
     inSelectedForm: "в выбранной форме",
     noLeads: "Лидов пока нет",
+    noEmail: "Без email",
     loading: "Загрузка лидов...",
     exportCSV: "Экспорт CSV",
     allForms: "Все формы",
@@ -209,6 +210,23 @@ export const ru = {
       completed: "Завершен",
       processing: "В обработке",
     },
+    viewMode: {
+      table: "Таблица",
+      cards: "Карточки",
+    },
+    leadStatus: {
+      todo: "To-Do",
+      inProgress: "В работе",
+      done: "Готово",
+    },
+    detail: {
+      phone: "Телефон",
+      notes: "Заметка",
+      notesPlaceholder: "Добавьте заметку...",
+      imageError: "Ошибка загрузки изображения",
+      imageExpired: "URL изображения истек (временные ссылки от OpenAI действуют 1-2 часа)",
+      openInNewTab: "Открыть в новой вкладке",
+    },
     deleteDialog: {
       title: "Удалить этот лид?",
       description: "Это действие нельзя отменить.",
@@ -216,6 +234,8 @@ export const ru = {
     toast: {
       deleted: "Лид успешно удалён",
       deleteError: "Не удалось удалить лид",
+      statusUpdated: "Статус обновлён",
+      statusError: "Ошибка обновления статуса",
     },
   },
 

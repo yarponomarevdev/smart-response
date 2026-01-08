@@ -170,7 +170,6 @@ export function UserSettingsEditor() {
                     : "border-transparent bg-muted/50"
                 )}
               >
-                <span className="text-lg">🇷🇺</span>
                 <span>{t("settings.user.language.russian")}</span>
               </button>
               <button
@@ -182,7 +181,6 @@ export function UserSettingsEditor() {
                     : "border-transparent bg-muted/50"
                 )}
               >
-                <span className="text-lg">🇬🇧</span>
                 <span>{t("settings.user.language.english")}</span>
               </button>
             </div>

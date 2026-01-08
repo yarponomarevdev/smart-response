@@ -118,7 +118,6 @@ export async function createUserForm(userId: string, userEmail: string, formName
     { form_id: newForm.id, key: "email_button", value: "Получить результат" },
     { form_id: newForm.id, key: "email_placeholder", value: "your@email.com" },
     { form_id: newForm.id, key: "result_title", value: "Ваш результат" },
-    { form_id: newForm.id, key: "result_subtitle", value: "Подзаголовок результата" },
     { form_id: newForm.id, key: "result_form_text", value: "hello.smartresponse.com" },
     { form_id: newForm.id, key: "success_title", value: "Готово!" },
     { form_id: newForm.id, key: "success_message", value: "Ваш результат готов" },

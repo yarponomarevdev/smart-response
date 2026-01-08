@@ -1,0 +1,340 @@
+/**
+ * LeadDetailModal - Модальное окно с детальной информацией о лиде
+ * Позволяет просматривать все данные, менять статус и добавлять заметки
+ */
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Trash2, ExternalLink, Mail, Phone, Calendar, FileText, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react"
+import { toast } from "sonner"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import type { Lead, LeadStatus } from "@/lib/hooks/use-leads"
+import { useUpdateLead, useDeleteLead } from "@/lib/hooks"
+import { useTranslation } from "@/lib/i18n"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
+
+interface LeadDetailModalProps {
+  lead: Lead | null
+  formName?: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+const statusColors: Record<LeadStatus, string> = {
+  todo: "bg-gray-500/10 text-gray-500",
+  in_progress: "bg-yellow-500/10 text-yellow-600",
+  done: "bg-green-500/10 text-green-600",
+}
+
+export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDetailModalProps) {
+  const { t } = useTranslation()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const updateLeadMutation = useUpdateLead()
+  const deleteLeadMutation = useDeleteLead()
+  
+  const [notes, setNotes] = useState(lead?.notes || "")
+  const [status, setStatus] = useState<LeadStatus>(lead?.lead_status || "todo")
+  const [isNoteSaving, setIsNoteSaving] = useState(false)
+  const [isResultExpanded, setIsResultExpanded] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previousNotesRef = useRef<string>("")
+
+  // Обновляем локальное состояние при изменении lead
+  useEffect(() => {
+    if (lead) {
+      setNotes(lead.notes || "")
+      setStatus(lead.lead_status || "todo")
+      previousNotesRef.current = lead.notes || ""
+      setImageError(false) // Сбрасываем ошибку изображения при смене лида
+    }
+  }, [lead])
+
+  // Автосохранение заметок с debounce
+  useEffect(() => {
+    // Очищаем предыдущий таймаут
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current)
+    }
+
+    // Если заметки не изменились, не сохраняем
+    if (notes === previousNotesRef.current || !lead) {
+      return
+    }
+
+    // Устанавливаем таймаут для автосохранения
+    notesTimeoutRef.current = setTimeout(async () => {
+      setIsNoteSaving(true)
+      try {
+        await updateLeadMutation.mutateAsync({ leadId: lead.id, notes })
+        previousNotesRef.current = notes
+      } catch (err) {
+        console.error("Ошибка сохранения заметки:", err)
+      } finally {
+        setIsNoteSaving(false)
+      }
+    }, 1000) // 1 секунда debounce
+
+    // Очистка при размонтировании
+    return () => {
+      if (notesTimeoutRef.current) {
+        clearTimeout(notesTimeoutRef.current)
+      }
+    }
+  }, [notes, lead, updateLeadMutation])
+
+  const handleStatusChange = async (newStatus: LeadStatus) => {
+    if (!lead) return
+    setStatus(newStatus)
+    try {
+      await updateLeadMutation.mutateAsync({ leadId: lead.id, lead_status: newStatus })
+      toast.success(t("leads.toast.statusUpdated"))
+    } catch (err) {
+      toast.error(t("leads.toast.statusError"))
+      setStatus(lead.lead_status || "todo")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!lead) return
+    
+    const confirmed = await confirm({
+      title: t("leads.deleteDialog.title"),
+      description: t("leads.deleteDialog.description"),
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      variant: "destructive"
+    })
+
+    if (!confirmed) return
+
+    try {
+      await deleteLeadMutation.mutateAsync(lead.id)
+      toast.success(t("leads.toast.deleted"))
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(t("leads.toast.deleteError"))
+    }
+  }
+
+  const getStatusLabel = (s: LeadStatus) => {
+    switch (s) {
+      case "todo": return t("leads.leadStatus.todo")
+      case "in_progress": return t("leads.leadStatus.inProgress")
+      case "done": return t("leads.leadStatus.done")
+    }
+  }
+
+  // Извлекаем телефон из custom_fields
+  const phone = lead?.custom_fields?.phone as string | undefined
+
+  if (!lead) return null
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto subtle-scrollbar">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-4 pr-8">
+              <span className="truncate">{lead.email || t("leads.noEmail")}</span>
+              <Badge className={`shrink-0 ${statusColors[status]}`}>
+                {getStatusLabel(status)}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4">
+            {/* Первая строка: Статус, Дата, Форма */}
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+              {/* Статус */}
+              <div className="space-y-1">
+                <Label className="text-xs">{t("leads.table.status")}</Label>
+                <Select value={status} onValueChange={(v) => handleStatusChange(v as LeadStatus)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">{t("leads.leadStatus.todo")}</SelectItem>
+                    <SelectItem value="in_progress">{t("leads.leadStatus.inProgress")}</SelectItem>
+                    <SelectItem value="done">{t("leads.leadStatus.done")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Дата */}
+              <div className="space-y-1">
+                <Label className="text-xs">{t("leads.table.date")}</Label>
+                <div className="flex items-center gap-1.5 text-xs h-8 px-2.5 border rounded-md bg-muted/50">
+                  <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="truncate">{new Date(lead.created_at).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Форма */}
+              {formName && (
+                <div className="space-y-1">
+                  <Label className="text-xs">{t("leads.table.form")}</Label>
+                  <div className="flex items-center gap-1.5 text-xs h-8 px-2.5 border rounded-md bg-muted/50">
+                    <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{formName}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Вторая строка: Email, Телефон (если есть), URL */}
+            <div className={`grid gap-2 grid-cols-1 ${phone ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+              {/* Email */}
+              <div className="space-y-1">
+                <Label className="text-xs">Email</Label>
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                >
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{lead.email || "-"}</span>
+                </a>
+              </div>
+
+              {/* Телефон (только если есть) */}
+              {phone && (
+                <div className="space-y-1">
+                  <Label className="text-xs">{t("leads.detail.phone")}</Label>
+                  <a
+                    href={`tel:${phone}`}
+                    className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                  >
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{phone}</span>
+                  </a>
+                </div>
+              )}
+
+              {/* URL */}
+              <div className="space-y-1">
+                <Label className="text-xs">{t("leads.table.url")}</Label>
+                {lead.url ? (
+                  <a
+                    href={lead.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{lead.url}</span>
+                  </a>
+                ) : (
+                  <div className="text-xs text-muted-foreground h-8 px-2.5 border rounded-md bg-muted/50 flex items-center">-</div>
+                )}
+              </div>
+            </div>
+
+            {/* Третья строка: Заметка */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{t("leads.detail.notes")}</Label>
+                {isNoteSaving && (
+                  <span className="text-xs text-muted-foreground">{t("common.saving")}</span>
+                )}
+              </div>
+              <Textarea
+                placeholder={t("leads.detail.notesPlaceholder")}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[60px] text-xs resize-none"
+              />
+            </div>
+
+            {/* Результат (сворачиваемый) */}
+            <div className="space-y-1.5 pt-2 border-t">
+              <button
+                onClick={() => setIsResultExpanded(!isResultExpanded)}
+                className="flex items-center justify-between w-full text-left hover:opacity-70 transition-opacity"
+              >
+                <Label className="text-xs cursor-pointer flex items-center gap-2 font-medium">
+                  {t("leads.table.result")}
+                  {lead.result_image_url && <ImageIcon className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                {isResultExpanded ? (
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </button>
+              {isResultExpanded && (
+                <div className="rounded-lg border bg-muted/30 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {lead.result_image_url && !imageError && (
+                    <div className="mb-3">
+                      <img
+                        src={lead.result_image_url}
+                        alt="Result"
+                        className="rounded-lg max-h-[300px] w-full object-contain bg-background"
+                        onError={() => setImageError(true)}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {lead.result_image_url && imageError && (
+                    <div className="mb-3 p-4 border-2 border-dashed rounded-lg text-center bg-muted/50">
+                      <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-xs font-medium text-foreground mb-1">{t("leads.detail.imageError")}</p>
+                      <p className="text-xs text-muted-foreground mb-3">{t("leads.detail.imageExpired")}</p>
+                      <a
+                        href={lead.result_image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {t("leads.detail.openInNewTab")}
+                      </a>
+                    </div>
+                  )}
+                  {lead.result_text ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <MarkdownRenderer content={lead.result_text} />
+                    </div>
+                  ) : !lead.result_image_url ? (
+                    <span className="text-sm text-muted-foreground">-</span>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            {/* Действия */}
+            <div className="flex justify-end pt-2 border-t">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleteLeadMutation.isPending}
+                className="h-7 text-xs"
+              >
+                <Trash2 className="h-3 w-3 mr-1.5" />
+                {t("common.delete")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {ConfirmDialog}
+    </>
+  )
+}

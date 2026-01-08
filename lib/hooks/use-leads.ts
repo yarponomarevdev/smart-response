@@ -2,16 +2,21 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { deleteLead } from "@/app/actions/leads"
+import { deleteLead, updateLead } from "@/app/actions/leads"
 import { useCurrentUser } from "./use-auth"
 
-interface Lead {
+export type LeadStatus = 'todo' | 'in_progress' | 'done'
+
+export interface Lead {
   id: string
   url: string
   email: string
   result_text: string | null
   result_image_url: string | null
   status: string
+  lead_status: LeadStatus
+  notes: string | null
+  custom_fields: Record<string, unknown>
   created_at: string
   form_id: string | null
 }
@@ -134,6 +139,30 @@ export function useDeleteLead() {
       // Используем exact: false для инвалидации всех запросов с этими ключами
       queryClient.invalidateQueries({ queryKey: ["leads"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
+    },
+  })
+}
+
+interface UpdateLeadParams {
+  leadId: string
+  lead_status?: LeadStatus
+  notes?: string
+}
+
+/**
+ * Хук для обновления лида (статус, заметки)
+ */
+export function useUpdateLead() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: UpdateLeadParams) => {
+      const result = await updateLead(params)
+      if ("error" in result) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"], exact: false })
     },
   })
 }

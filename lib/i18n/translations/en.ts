@@ -193,6 +193,7 @@ export const en: Translations = {
     inTotal: "in total",
     inSelectedForm: "in selected form",
     noLeads: "No leads yet",
+    noEmail: "No email",
     loading: "Loading leads...",
     exportCSV: "Export CSV",
     allForms: "All forms",
@@ -211,6 +212,23 @@ export const en: Translations = {
       completed: "Completed",
       processing: "Processing",
     },
+    viewMode: {
+      table: "Table",
+      cards: "Cards",
+    },
+    leadStatus: {
+      todo: "To-Do",
+      inProgress: "In Progress",
+      done: "Done",
+    },
+    detail: {
+      phone: "Phone",
+      notes: "Notes",
+      notesPlaceholder: "Add a note...",
+      imageError: "Image loading error",
+      imageExpired: "Image URL expired (temporary OpenAI links last 1-2 hours)",
+      openInNewTab: "Open in new tab",
+    },
     deleteDialog: {
       title: "Delete this lead?",
       description: "This action cannot be undone.",
@@ -218,6 +236,8 @@ export const en: Translations = {
     toast: {
       deleted: "Lead successfully deleted",
       deleteError: "Failed to delete lead",
+      statusUpdated: "Status updated",
+      statusError: "Error updating status",
     },
   },
 

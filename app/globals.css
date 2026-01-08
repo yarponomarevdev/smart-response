@@ -187,3 +187,66 @@
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+/* Кастомный ультра-минималистичный скролл */
+/* Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Скрытие скроллбара */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Невидимый скролл - появляется только при hover на контейнере */
+.subtle-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.subtle-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 100px;
+}
+
+.subtle-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+.subtle-scrollbar {
+  scrollbar-color: transparent transparent;
+}
+
+.subtle-scrollbar:hover {
+  scrollbar-color: var(--border) transparent;
+}
