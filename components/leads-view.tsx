@@ -93,8 +93,11 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
     const dataToExport = filteredLeads
     
     // Экранирование значений для CSV
-    const escapeCsvValue = (value: string): string => {
+    const escapeCsvValue = (value: unknown): string => {
       if (value === null || value === undefined) return ""
+      if (typeof value === 'boolean') return value ? 'Да' : 'Нет'
+      if (Array.isArray(value)) return value.join(', ')
+      if (typeof value === 'object') return JSON.stringify(value)
       const str = String(value)
       if (str.includes(",") || str.includes('"') || str.includes("\n")) {
         return `"${str.replace(/"/g, '""')}"`
@@ -102,18 +105,75 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
       return str
     }
     
+    // Собираем все уникальные ключи custom_fields (кроме phone и requestFeedback)
+    const customFieldKeys = new Set<string>()
+    dataToExport.forEach(lead => {
+      if (lead.custom_fields) {
+        Object.keys(lead.custom_fields).forEach(key => {
+          if (key !== 'phone' && key !== 'requestFeedback') {
+            customFieldKeys.add(key)
+          }
+        })
+      }
+    })
+    const customKeys = Array.from(customFieldKeys)
+    
+    // Форматирование ключа для заголовка
+    const formatKey = (key: string): string => {
+      return key
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .trim()
+        .replace(/^\w/, c => c.toUpperCase())
+    }
+    
+    // Базовые заголовки
+    const baseHeaders = [
+      t("leads.table.email"), 
+      t("leads.detail.phone"), 
+      t("leads.table.url")
+    ]
+    
+    // Динамические заголовки
+    const dynamicHeaders = customKeys.map(key => formatKey(key))
+    
+    // Финальные заголовки
+    const finalHeaders = [
+      ...baseHeaders,
+      ...dynamicHeaders,
+      t("leads.table.status"), 
+      t("leads.table.date"), 
+      t("leads.table.result"), 
+      t("leads.table.form"), 
+      t("leads.detail.notes")
+    ]
+    
     const csv = [
-      [t("leads.table.url"), t("leads.table.email"), t("leads.detail.phone"), t("leads.table.status"), t("leads.table.date"), t("leads.table.result"), t("leads.table.form"), t("leads.detail.notes")],
-      ...dataToExport.map((lead) => [
-        escapeCsvValue(lead.url),
-        escapeCsvValue(lead.email || ""),
-        escapeCsvValue((lead.custom_fields?.phone as string) || ""),
-        escapeCsvValue(getStatusLabel(lead.lead_status || 'todo')),
-        escapeCsvValue(new Date(lead.created_at).toLocaleString()),
-        escapeCsvValue(lead.result_text || lead.result_image_url || ""),
-        escapeCsvValue(forms.find(f => f.id === lead.form_id)?.name || ""),
-        escapeCsvValue(lead.notes || ""),
-      ]),
+      finalHeaders,
+      ...dataToExport.map((lead) => {
+        // Базовые значения
+        const baseValues = [
+          escapeCsvValue(lead.email || ""),
+          escapeCsvValue((lead.custom_fields?.phone as string) || ""),
+          escapeCsvValue(lead.url || ""),
+        ]
+        
+        // Динамические значения
+        const dynamicValues = customKeys.map(key => 
+          escapeCsvValue(lead.custom_fields?.[key])
+        )
+        
+        // Финальные значения
+        return [
+          ...baseValues,
+          ...dynamicValues,
+          escapeCsvValue(getStatusLabel(lead.lead_status || 'todo')),
+          escapeCsvValue(new Date(lead.created_at).toLocaleString()),
+          escapeCsvValue(lead.result_text || lead.result_image_url || ""),
+          escapeCsvValue(forms.find(f => f.id === lead.form_id)?.name || ""),
+          escapeCsvValue(lead.notes || ""),
+        ]
+      }),
     ]
       .map((row) => row.join(","))
       .join("\n")

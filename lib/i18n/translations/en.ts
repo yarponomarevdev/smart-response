@@ -228,7 +228,9 @@ export const en: Translations = {
       imageError: "Image loading error",
       imageExpired: "Image URL expired (temporary OpenAI links last 1-2 hours)",
       openInNewTab: "Open in new tab",
+      formData: "Form Data",
     },
+    moreFields: "more",
     deleteDialog: {
       title: "Delete this lead?",
       description: "This action cannot be undone.",

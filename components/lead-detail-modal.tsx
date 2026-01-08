@@ -43,6 +43,41 @@ const statusColors: Record<LeadStatus, string> = {
   done: "bg-green-500/10 text-green-600",
 }
 
+// Служебные поля, которые не нужно показывать в списке
+const HIDDEN_FIELDS = ['phone', 'requestFeedback']
+
+// Форматирование ключа: "field_name" -> "Field name"
+const formatKey = (key: string): string => {
+  // Специальные ключи с понятными названиями
+  const keyMap: Record<string, string> = {
+    email: 'Email',
+    phone: 'Телефон',
+    url: 'URL',
+  }
+  if (keyMap[key]) return keyMap[key]
+  
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .replace(/^\w/, c => c.toUpperCase())
+}
+
+// Форматирование значения в зависимости от типа
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
+// Проверка, является ли значение URL
+const isUrl = (value: unknown): boolean => {
+  if (typeof value !== 'string') return false
+  return value.startsWith('http://') || value.startsWith('https://')
+}
+
 export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDetailModalProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
@@ -199,52 +234,81 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
               )}
             </div>
 
-            {/* Вторая строка: Email, Телефон (если есть), URL */}
-            <div className={`grid gap-2 grid-cols-1 ${phone ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-              {/* Email */}
-              <div className="space-y-1">
-                <Label className="text-xs">Email</Label>
-                <a
-                  href={`mailto:${lead.email}`}
-                  className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                >
-                  <Mail className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{lead.email || "-"}</span>
-                </a>
-              </div>
+            {/* Данные формы (Email, URL, телефон, custom_fields) */}
+            {(() => {
+              // Собираем все данные формы
+              const formDataEntries: [string, unknown][] = []
+              
+              // Email всегда первым
+              if (lead.email) {
+                formDataEntries.push(['email', lead.email])
+              }
+              
+              // Телефон из custom_fields
+              if (phone) {
+                formDataEntries.push(['phone', phone])
+              }
+              
+              // URL
+              if (lead.url) {
+                formDataEntries.push(['url', lead.url])
+              }
+              
+              // Остальные custom_fields (кроме служебных)
+              if (lead.custom_fields) {
+                Object.entries(lead.custom_fields)
+                  .filter(([key]) => !HIDDEN_FIELDS.includes(key))
+                  .forEach(([key, value]) => {
+                    if (value !== null && value !== undefined && value !== '') {
+                      formDataEntries.push([key, value])
+                    }
+                  })
+              }
 
-              {/* Телефон (только если есть) */}
-              {phone && (
-                <div className="space-y-1">
-                  <Label className="text-xs">{t("leads.detail.phone")}</Label>
-                  <a
-                    href={`tel:${phone}`}
-                    className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                  >
-                    <Phone className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{phone}</span>
-                  </a>
+              return formDataEntries.length > 0 ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">{t("leads.detail.formData")}</Label>
+                  <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {formDataEntries.map(([key, value]) => (
+                      <div key={key} className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{formatKey(key)}</Label>
+                        {key === 'email' ? (
+                          <a
+                            href={`mailto:${value}`}
+                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                          >
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{String(value)}</span>
+                          </a>
+                        ) : key === 'phone' ? (
+                          <a
+                            href={`tel:${value}`}
+                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                          >
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{String(value)}</span>
+                          </a>
+                        ) : isUrl(value) ? (
+                          <a
+                            href={String(value)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
+                          >
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{String(value)}</span>
+                          </a>
+                        ) : (
+                          <div className="flex items-center text-xs h-8 px-2.5 border rounded-md bg-muted/50">
+                            <span className="truncate">{formatValue(value)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-
-              {/* URL */}
-              <div className="space-y-1">
-                <Label className="text-xs">{t("leads.table.url")}</Label>
-                {lead.url ? (
-                  <a
-                    href={lead.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                  >
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{lead.url}</span>
-                  </a>
-                ) : (
-                  <div className="text-xs text-muted-foreground h-8 px-2.5 border rounded-md bg-muted/50 flex items-center">-</div>
-                )}
-              </div>
-            </div>
+              ) : null
+            })()}
 
             {/* Третья строка: Заметка */}
             <div className="space-y-1">

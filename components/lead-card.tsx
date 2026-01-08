@@ -6,7 +6,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Mail, Globe, Calendar, Image as ImageIcon } from "lucide-react"
+import { Mail, Calendar, Image as ImageIcon } from "lucide-react"
 import type { Lead, LeadStatus } from "@/lib/hooks/use-leads"
 import { useTranslation } from "@/lib/i18n"
 
@@ -20,6 +20,32 @@ const statusColors: Record<LeadStatus, string> = {
   todo: "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20",
   in_progress: "bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20",
   done: "bg-green-500/10 text-green-600 hover:bg-green-500/20",
+}
+
+// Служебные поля, которые не нужно показывать в списке
+const HIDDEN_FIELDS = ['phone', 'requestFeedback']
+
+// Форматирование ключа: "field_name" -> "Field name"
+const formatKey = (key: string): string => {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .replace(/^\w/, c => c.toUpperCase())
+}
+
+// Форматирование значения в зависимости от типа
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  const str = String(value)
+  // Убираем протокол для URL
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return str.replace(/^https?:\/\//, '').substring(0, 30) + (str.length > 40 ? '...' : '')
+  }
+  return str.length > 40 ? str.substring(0, 40) + '...' : str
 }
 
 export function LeadCard({ lead, formName, onClick }: LeadCardProps) {
@@ -36,15 +62,26 @@ export function LeadCard({ lead, formName, onClick }: LeadCardProps) {
     }
   }
 
-  const truncateUrl = (url: string, maxLength = 30) => {
-    if (!url) return "-"
-    // Убираем протокол для компактности
-    const cleanUrl = url.replace(/^https?:\/\//, "")
-    if (cleanUrl.length <= maxLength) return cleanUrl
-    return cleanUrl.substring(0, maxLength) + "..."
-  }
-
   const hasResult = lead.result_text || lead.result_image_url
+
+  // Собираем все отображаемые поля
+  const displayFields: [string, unknown][] = []
+  
+  // Добавляем URL если есть
+  if (lead.url) {
+    displayFields.push(['url', lead.url])
+  }
+  
+  // Добавляем custom_fields (кроме служебных)
+  if (lead.custom_fields) {
+    Object.entries(lead.custom_fields)
+      .filter(([key]) => !HIDDEN_FIELDS.includes(key))
+      .forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          displayFields.push([key, value])
+        }
+      })
+  }
 
   return (
     <Card
@@ -63,11 +100,22 @@ export function LeadCard({ lead, formName, onClick }: LeadCardProps) {
           </Badge>
         </div>
 
-        {/* URL */}
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Globe className="h-4 w-4 shrink-0" />
-          <span className="text-xs truncate">{truncateUrl(lead.url)}</span>
-        </div>
+        {/* Динамические поля */}
+        {displayFields.length > 0 && (
+          <div className="space-y-1">
+            {displayFields.slice(0, 3).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="font-medium shrink-0">{formatKey(key)}:</span>
+                <span className="truncate">{formatValue(value)}</span>
+              </div>
+            ))}
+            {displayFields.length > 3 && (
+              <span className="text-xs text-muted-foreground/70">
+                +{displayFields.length - 3} {t("leads.moreFields")}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Результат (превью) */}
         {hasResult && (

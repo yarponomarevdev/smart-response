@@ -226,7 +226,9 @@ export const ru = {
       imageError: "Ошибка загрузки изображения",
       imageExpired: "URL изображения истек (временные ссылки от OpenAI действуют 1-2 часа)",
       openInNewTab: "Открыть в новой вкладке",
+      formData: "Данные формы",
     },
+    moreFields: "ещё",
     deleteDialog: {
       title: "Удалить этот лид?",
       description: "Это действие нельзя отменить.",
