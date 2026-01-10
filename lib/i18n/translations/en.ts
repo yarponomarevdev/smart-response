@@ -20,6 +20,9 @@ export const en: Translations = {
     filter: "Filter",
     actions: "Actions",
     logout: "Logout",
+    login: "Login",
+    signup: "Sign Up",
+    signupShort: "Sign Up",
   },
 
   // Admin panel

@@ -153,7 +153,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center" suppressHydrationWarning>
-        {mounted ? t("common.loading") : "Загрузка..."}
+        {mounted ? t("common.loading") : "Loading..."}
       </div>
     )
   }

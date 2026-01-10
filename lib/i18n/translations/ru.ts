@@ -18,6 +18,9 @@ export const ru = {
     filter: "Фильтр",
     actions: "Действия",
     logout: "Выход",
+    login: "Вход",
+    signup: "Регистрация",
+    signupShort: "Регистр.",
   },
 
   // Админ панель

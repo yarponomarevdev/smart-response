@@ -21,8 +21,8 @@ const translations: Record<Language, Translations> = {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Всегда начинаем с "ru" для совместимости SSR/гидратации
-  const [language, setLanguageState] = useState<Language>("ru")
+  // Всегда начинаем с "en" для совместимости SSR/гидратации
+  const [language, setLanguageState] = useState<Language>("en")
   const [mounted, setMounted] = useState(false)
   const { data: user } = useCurrentUser()
 
@@ -68,11 +68,37 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           return currentLang
         })
       }
+    } else {
+      // Для неавторизованных пользователей слушаем изменения localStorage
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "preferred-language" && e.newValue) {
+          const newLanguage = e.newValue as Language
+          if (newLanguage === "ru" || newLanguage === "en") {
+            setLanguageState(newLanguage)
+          }
+        }
+      }
+      
+      window.addEventListener("storage", handleStorageChange)
+      
+      // Также проверяем localStorage при изменении mounted
+      const savedLanguage = localStorage.getItem("preferred-language") as Language | null
+      if (savedLanguage && (savedLanguage === "ru" || savedLanguage === "en")) {
+        setLanguageState(savedLanguage)
+      }
+      
+      return () => {
+        window.removeEventListener("storage", handleStorageChange)
+      }
     }
-  }, [user?.language, mounted])
+  }, [user?.language, mounted, user])
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
+    // Сохраняем в localStorage сразу
+    if (typeof window !== "undefined") {
+      localStorage.setItem("preferred-language", lang)
+    }
   }, [])
 
   // Мемоизируем объект translations для текущего языка
