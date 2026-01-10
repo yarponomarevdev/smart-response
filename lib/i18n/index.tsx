@@ -21,25 +21,55 @@ const translations: Record<Language, Translations> = {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  // Всегда начинаем с "ru" для совместимости SSR/гидратации
   const [language, setLanguageState] = useState<Language>("ru")
+  const [mounted, setMounted] = useState(false)
   const { data: user } = useCurrentUser()
 
-  // Синхронизируем язык с настройками пользователя
+  // После монтирования компонента загружаем язык из localStorage или настроек пользователя
   useEffect(() => {
+    setMounted(true)
+    
     if (user) {
-      // Проверяем, есть ли у пользователя сохранённый язык
+      // Если пользователь авторизован, приоритет у настроек из БД
       const userLanguage = (user as any).language as Language | undefined
       if (userLanguage && (userLanguage === "ru" || userLanguage === "en")) {
-        // Обновляем язык только если он отличается от текущего
+        setLanguageState(userLanguage)
+        // Также обновляем localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem("preferred-language", userLanguage)
+        }
+      }
+    } else {
+      // Если пользователь не авторизован, проверяем localStorage
+      if (typeof window !== "undefined") {
+        const savedLanguage = localStorage.getItem("preferred-language") as Language | null
+        if (savedLanguage && (savedLanguage === "ru" || savedLanguage === "en")) {
+          setLanguageState(savedLanguage)
+        }
+      }
+    }
+  }, [user?.language]) // Зависимость только от языка пользователя, а не от всего объекта user
+
+  // Синхронизируем изменения языка пользователя после монтирования
+  useEffect(() => {
+    if (!mounted) return
+    
+    if (user) {
+      const userLanguage = (user as any).language as Language | undefined
+      if (userLanguage && (userLanguage === "ru" || userLanguage === "en")) {
         setLanguageState((currentLang) => {
           if (currentLang !== userLanguage) {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("preferred-language", userLanguage)
+            }
             return userLanguage
           }
           return currentLang
         })
       }
     }
-  }, [user?.language]) // Зависимость только от языка пользователя, а не от всего объекта user
+  }, [user?.language, mounted])
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)

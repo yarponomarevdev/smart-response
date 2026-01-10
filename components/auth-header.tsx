@@ -3,10 +3,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageToggle } from "@/components/language-toggle"
 
 export function AuthHeader() {
   return (
     <div className="fixed top-0 right-0 p-2 sm:p-4 md:p-6 z-50 flex gap-2 sm:gap-3">
+      <LanguageToggle />
       <ThemeToggle />
       <Link href="/auth/login">
         <Button className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">

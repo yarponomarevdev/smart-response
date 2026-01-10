@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageToggle } from "@/components/language-toggle"
 import { LeadsView } from "./leads-view"
 import { ContentEditor } from "./content-editor"
 import { FormsManager } from "./forms-manager"
@@ -42,7 +43,12 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [editorFormId, setEditorFormId] = useState<string | undefined>(undefined)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -145,7 +151,11 @@ export function AdminDashboard() {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">{t("common.loading")}</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center" suppressHydrationWarning>
+        {mounted ? t("common.loading") : "Загрузка..."}
+      </div>
+    )
   }
 
   return (
@@ -172,6 +182,7 @@ export function AdminDashboard() {
               <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <LanguageToggle />
               <ThemeToggle />
               <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
                 <LogOut className="mr-1 sm:mr-2 h-4 w-4" />

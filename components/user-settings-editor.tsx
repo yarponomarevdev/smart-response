@@ -1,7 +1,7 @@
 /**
  * UserSettingsEditor - Редактор пользовательских настроек
  * Доступен всем пользователям
- * Позволяет настраивать: язык интерфейса, email, пароль, удаление аккаунта
+ * Позволяет настраивать: email, пароль, удаление аккаунта
  */
 "use client"
 
@@ -22,25 +22,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { CheckCircle2, Globe, Mail, Lock, Trash2, Languages } from "lucide-react"
-import { useUpdateUserLanguage, useCurrentUser, useUpdateEmail, useUpdatePassword, useDeleteAccount } from "@/lib/hooks"
+import { CheckCircle2, Mail, Lock, Trash2 } from "lucide-react"
+import { useCurrentUser, useUpdateEmail, useUpdatePassword, useDeleteAccount } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
 
 export function UserSettingsEditor() {
   const router = useRouter()
-  const { t, language, setLanguage } = useTranslation()
+  const { t } = useTranslation()
   const { data: user } = useCurrentUser()
   
   // Mutations
-  const updateLanguageMutation = useUpdateUserLanguage()
   const updateEmailMutation = useUpdateEmail()
   const updatePasswordMutation = useUpdatePassword()
   const deleteAccountMutation = useDeleteAccount()
 
   // Статусы операций
-  const [languageStatus, setLanguageStatus] = useState<"idle" | "success" | "error">("idle")
   const [emailStatus, setEmailStatus] = useState<"idle" | "success" | "error">("idle")
   const [passwordStatus, setPasswordStatus] = useState<"idle" | "success" | "error">("idle")
 
@@ -52,13 +49,6 @@ export function UserSettingsEditor() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   // Сбрасываем статусы через 3 секунды
-  useEffect(() => {
-    if (languageStatus !== "idle") {
-      const timer = setTimeout(() => setLanguageStatus("idle"), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [languageStatus])
-
   useEffect(() => {
     if (emailStatus !== "idle") {
       const timer = setTimeout(() => setEmailStatus("idle"), 5000)
@@ -72,17 +62,6 @@ export function UserSettingsEditor() {
       return () => clearTimeout(timer)
     }
   }, [passwordStatus])
-
-  const handleLanguageChange = async (newLanguage: "ru" | "en") => {
-    setLanguageStatus("idle")
-    try {
-      await updateLanguageMutation.mutateAsync(newLanguage)
-      setLanguage(newLanguage)
-      setLanguageStatus("success")
-    } catch {
-      setLanguageStatus("error")
-    }
-  }
 
   const handleEmailChange = async () => {
     setEmailStatus("idle")
@@ -150,49 +129,6 @@ export function UserSettingsEditor() {
       </div>
 
       <div className="grid gap-4 md:gap-6 md:grid-cols-2">
-        {/* Карточка языка */}
-        <Card className="py-4 gap-4">
-          <CardHeader className="pb-0">
-            <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">{t("settings.user.language.label")}</CardTitle>
-            </div>
-            <CardDescription className="text-xs">{t("settings.user.language.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleLanguageChange("ru")}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 transition-all hover:bg-accent text-sm",
-                  language === "ru" 
-                    ? "border-primary bg-primary/5 font-medium" 
-                    : "border-transparent bg-muted/50"
-                )}
-              >
-                <span>{t("settings.user.language.russian")}</span>
-              </button>
-              <button
-                onClick={() => handleLanguageChange("en")}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 transition-all hover:bg-accent text-sm",
-                  language === "en" 
-                    ? "border-primary bg-primary/5 font-medium" 
-                    : "border-transparent bg-muted/50"
-                )}
-              >
-                <span>{t("settings.user.language.english")}</span>
-              </button>
-            </div>
-            {languageStatus === "success" && (
-              <p className="text-xs text-green-600 mt-3 flex items-center">
-                <CheckCircle2 className="h-3 w-3 mr-1.5" />
-                {t("notifications.languageChanged")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Карточка Email */}
         <Card className="py-4 gap-4">
           <CardHeader className="pb-0">

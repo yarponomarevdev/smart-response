@@ -14,10 +14,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, CheckCircle2, AlertTriangle, Languages, MessageSquareText, Image as ImageIcon } from "lucide-react"
-import { useUpdateUserLanguage } from "@/lib/hooks"
+import { AlertCircle, CheckCircle2, AlertTriangle, MessageSquareText, Image as ImageIcon } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
-import { cn } from "@/lib/utils"
 
 // Доступные модели OpenAI
 const TEXT_MODELS = [
@@ -39,8 +37,7 @@ export function SystemSettingsEditor() {
   // React Query хуки
   const { data, isLoading, error: queryError } = useSystemSettings()
   const saveSettingsMutation = useSaveSystemSettings()
-  const updateLanguageMutation = useUpdateUserLanguage()
-  const { t, language, setLanguage } = useTranslation()
+  const { t } = useTranslation()
 
   // Локальное состояние для редактирования
   const [globalTextPrompt, setGlobalTextPrompt] = useState<string>("")
@@ -48,7 +45,6 @@ export function SystemSettingsEditor() {
   const [textModel, setTextModel] = useState<string>("")
   const [imageModel, setImageModel] = useState<string>("")
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
-  const [languageSaveStatus, setLanguageSaveStatus] = useState<"idle" | "success" | "error">("idle")
 
   // Синхронизируем локальное состояние с данными из кэша
   useEffect(() => {
@@ -68,14 +64,6 @@ export function SystemSettingsEditor() {
     }
   }, [saveStatus])
 
-  // Сбрасываем статус языка через 3 секунды
-  useEffect(() => {
-    if (languageSaveStatus !== "idle") {
-      const timer = setTimeout(() => setLanguageSaveStatus("idle"), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [languageSaveStatus])
-
   const handleSave = async () => {
     setSaveStatus("idle")
 
@@ -89,18 +77,6 @@ export function SystemSettingsEditor() {
       setSaveStatus("success")
     } catch (err) {
       setSaveStatus("error")
-    }
-  }
-
-  const handleLanguageChange = async (newLanguage: "ru" | "en") => {
-    setLanguageSaveStatus("idle")
-    
-    try {
-      await updateLanguageMutation.mutateAsync(newLanguage)
-      setLanguage(newLanguage)
-      setLanguageSaveStatus("success")
-    } catch (err) {
-      setLanguageSaveStatus("error")
     }
   }
 
@@ -162,61 +138,6 @@ export function SystemSettingsEditor() {
       )}
 
       <div className="grid gap-4 lg:gap-6">
-        {/* Карточка Языка */}
-        <Card className="py-4 sm:py-5 gap-4 sm:gap-5">
-          <CardHeader className="pb-0">
-            <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <CardTitle className="text-base sm:text-lg">{t("settings.user.language.label")}</CardTitle>
-            </div>
-            <CardDescription className="text-xs sm:text-sm">{t("settings.user.language.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              <button
-                onClick={() => handleLanguageChange("ru")}
-                disabled={updateLanguageMutation.isPending}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all hover:scale-[1.02]",
-                  language === "ru" 
-                    ? "border-primary bg-primary/10 shadow-sm" 
-                    : "border-border bg-muted/30 hover:bg-muted/50"
-                )}
-              >
-                <span className={cn("text-sm sm:text-base", language === "ru" && "font-semibold")}>
-                  {t("settings.user.language.russian")}
-                </span>
-              </button>
-              <button
-                onClick={() => handleLanguageChange("en")}
-                disabled={updateLanguageMutation.isPending}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all hover:scale-[1.02]",
-                  language === "en" 
-                    ? "border-primary bg-primary/10 shadow-sm" 
-                    : "border-border bg-muted/30 hover:bg-muted/50"
-                )}
-              >
-                <span className={cn("text-sm sm:text-base", language === "en" && "font-semibold")}>
-                  {t("settings.user.language.english")}
-                </span>
-              </button>
-            </div>
-
-            {languageSaveStatus === "success" && (
-              <p className="text-xs sm:text-sm text-green-600 mt-3 flex items-center">
-                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                {t("notifications.languageChanged")}
-              </p>
-            )}
-            {(languageSaveStatus === "error" || updateLanguageMutation.error) && (
-              <p className="text-xs sm:text-sm text-destructive mt-3">
-                {updateLanguageMutation.error?.message || t("errors.savingFailed")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Карточка генерации текста */}
         <Card className="py-4 sm:py-5 gap-4 sm:gap-5">
           <CardHeader className="pb-0">
