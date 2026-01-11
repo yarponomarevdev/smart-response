@@ -116,6 +116,7 @@ export const en: Translations = {
     unauthorized: "Access denied",
     notFound: "Not found",
     networkError: "Network error",
+    cannotPublishEmptyForm: "Cannot publish an empty form. Add fields in the editor.",
   },
 
   // Notifications
@@ -123,6 +124,39 @@ export const en: Translations = {
     saved: "Saved",
     settingsSaved: "Settings successfully updated",
     languageChanged: "Interface language changed",
+  },
+
+  // Authentication
+  auth: {
+    login: {
+      title: "Log In",
+      description: "Enter your credentials to access the control panel",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      password: "Password",
+      loginButton: "Log In",
+      loggingIn: "Logging in...",
+      noAccount: "Don't have an account?",
+      registerLink: "Sign Up",
+    },
+    register: {
+      title: "Sign Up",
+      description: "Create an account to manage forms",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      password: "Password",
+      confirmPassword: "Confirm Password",
+      registerButton: "Sign Up",
+      registering: "Signing up...",
+      alreadyHaveAccount: "Already have an account?",
+      loginLink: "Log In",
+      checkEmailTitle: "Check Your Email",
+      checkEmailDescription: "We sent a confirmation link to {email}. After confirming, you can log in to the system.",
+      backToLogin: "Back to Login",
+      passwordMismatch: "Passwords do not match",
+      passwordTooShort: "Password must be at least 6 characters",
+      verifyEmailToast: "Please check your email and click the confirmation link to complete registration",
+    },
   },
 
   // Forms

@@ -22,6 +22,7 @@ export async function GET(request: Request) {
           id: data.user.id,
           email: data.user.email!,
           role,
+          language: "en", // Английский язык по умолчанию для новых пользователей
         })
 
         // For regular users, create their first form

@@ -206,7 +206,9 @@ export function useToggleFormActive() {
         if (countError) throw new Error(countError.message)
         
         if (count === 0) {
-          throw new Error("Нельзя опубликовать пустую форму. Добавьте поля в редакторе.")
+          const error = new Error("CANNOT_PUBLISH_EMPTY_FORM")
+          error.name = "CANNOT_PUBLISH_EMPTY_FORM"
+          throw error
         }
       }
 

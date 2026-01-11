@@ -120,7 +120,11 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
     try {
       await toggleActiveMutation.mutateAsync({ formId: form.id, currentIsActive: form.is_active })
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.savingFailed"))
+      if (err instanceof Error && err.name === "CANNOT_PUBLISH_EMPTY_FORM") {
+        setError(t("errors.cannotPublishEmptyForm"))
+      } else {
+        setError(err instanceof Error ? err.message : t("errors.savingFailed"))
+      }
     }
   }
 

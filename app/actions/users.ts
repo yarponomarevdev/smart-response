@@ -183,7 +183,51 @@ export async function updateUserQuotas(
 }
 
 /**
+ * Проверяет существование записи пользователя и создаёт её при необходимости
+ * Используется для предотвращения бесконечной загрузки дашборда
+ */
+export async function ensureUserExists(
+  userId: string,
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  // Проверяем существование записи
+  const { data: existingUser, error: selectError } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .single()
+
+  // Если запись существует - всё ок
+  if (existingUser) {
+    return { success: true }
+  }
+
+  // Если запись не найдена (PGRST116) - создаём
+  if (selectError?.code === "PGRST116" || !existingUser) {
+    const { error: insertError } = await supabaseAdmin
+      .from("users")
+      .insert({
+        id: userId,
+        email: email,
+        role: "user",
+        language: "en", // Английский язык по умолчанию
+      })
+
+    if (insertError) {
+      // Игнорируем ошибку дубликата (запись уже создана)
+      if (insertError.code !== "23505") {
+        console.error("Error creating user record:", insertError)
+        return { success: false, error: insertError.message }
+      }
+    }
+  }
+
+  return { success: true }
+}
+
+/**
  * Получает язык пользователя
+ * По умолчанию возвращает 'en' (английский)
  */
 export async function getUserLanguage(userId: string): Promise<{ language: string | null; error?: string }> {
   const { data, error } = await supabaseAdmin
@@ -194,10 +238,10 @@ export async function getUserLanguage(userId: string): Promise<{ language: strin
 
   if (error) {
     console.error("Error fetching user language:", error)
-    return { language: null, error: error.message }
+    return { language: "en", error: error.message } // Английский по умолчанию
   }
 
-  return { language: data?.language || "ru" }
+  return { language: data?.language || "en" } // Английский по умолчанию
 }
 
 /**

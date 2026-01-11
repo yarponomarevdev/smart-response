@@ -114,6 +114,7 @@ export const ru = {
     unauthorized: "Недостаточно прав",
     notFound: "Не найдено",
     networkError: "Ошибка сети",
+    cannotPublishEmptyForm: "Нельзя опубликовать пустую форму. Добавьте поля в редакторе.",
   },
 
   // Уведомления
@@ -121,6 +122,39 @@ export const ru = {
     saved: "Сохранено",
     settingsSaved: "Настройки успешно обновлены",
     languageChanged: "Язык интерфейса изменён",
+  },
+
+  // Авторизация
+  auth: {
+    login: {
+      title: "Вход",
+      description: "Введите данные для доступа к панели управления",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      password: "Пароль",
+      loginButton: "Войти",
+      loggingIn: "Вход...",
+      noAccount: "Нет аккаунта?",
+      registerLink: "Зарегистрироваться",
+    },
+    register: {
+      title: "Регистрация",
+      description: "Создайте аккаунт для управления формами",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      password: "Пароль",
+      confirmPassword: "Подтвердите пароль",
+      registerButton: "Зарегистрироваться",
+      registering: "Регистрация...",
+      alreadyHaveAccount: "Уже есть аккаунт?",
+      loginLink: "Войти",
+      checkEmailTitle: "Проверьте почту",
+      checkEmailDescription: "Мы отправили ссылку для подтверждения на {email}. После подтверждения вы сможете войти в систему.",
+      backToLogin: "Вернуться к входу",
+      passwordMismatch: "Пароли не совпадают",
+      passwordTooShort: "Пароль должен быть не менее 6 символов",
+      verifyEmailToast: "Пожалуйста, проверьте свою электронную почту и перейдите по ссылке для подтверждения регистрации",
+    },
   },
 
   // Формы
