@@ -7,7 +7,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InlineEditableText } from "@/components/ui/inline-editable-text"
-import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info } from "lucide-react"
+import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare, Image, Heading1, Heading2, Heading3, Info, Asterisk } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
@@ -34,6 +34,7 @@ const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
   disclaimer: <Info className="h-4 w-4" />,
 }
 
+
 // Типы полей, для которых не нужен placeholder
 const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
 
@@ -45,6 +46,7 @@ export function FieldListItem({
   onFieldUpdate,
 }: FieldListItemProps) {
   const { t } = useTranslation()
+  
   const {
     attributes,
     listeners,
@@ -69,7 +71,7 @@ export function FieldListItem({
     >
       {/* Drag handle */}
       <div
-        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0 touch-none"
         {...attributes}
         {...listeners}
       >
@@ -90,16 +92,18 @@ export function FieldListItem({
               onSave={async (newValue) => {
                 await onFieldUpdate(field.id, { field_label: newValue })
               }}
-              placeholder={t("editor.fieldForm.fieldNamePlaceholder")}
+              placeholder={t("editor.fieldForm.fieldNameLabel")}
               className="font-medium text-base sm:text-lg"
             />
           ) : (
             <span className="font-medium truncate text-base sm:text-lg">{field.field_label}</span>
           )}
           {field.is_required && (
-            <Badge variant="secondary" className="text-xs flex-shrink-0 whitespace-nowrap">
+            <Badge variant="secondary" className="text-xs flex-shrink-0 px-1.5 sm:px-2.5">
+              <span className="sm:hidden">
+                <Asterisk className="h-3 w-3" />
+              </span>
               <span className="hidden sm:inline">{t("editor.fieldForm.requiredField")}</span>
-              <span className="sm:hidden">{t("editor.fieldForm.requiredField").slice(0, 5)}.</span>
             </Badge>
           )}
         </div>
@@ -113,7 +117,7 @@ export function FieldListItem({
                   onSave={async (newValue) => {
                     await onFieldUpdate(field.id, { placeholder: newValue || null })
                   }}
-                  placeholder={t("editor.fieldForm.placeholderText")}
+                  placeholder={t("editor.fieldForm.placeholderLabel")}
                   emptyText={t("editor.fieldForm.emptyPlaceholder")}
                   className="text-xs sm:text-sm"
                 />
@@ -123,7 +127,7 @@ export function FieldListItem({
               <span>•</span>
             </>
           )}
-          <span>{t(`editor.fieldTypesShort.${field.field_type}`)}</span>
+          <span>{t(`editor.fieldTypesShort.${field.field_type}` as const)}</span>
           {(field.field_type === "select" || field.field_type === "multiselect") && field.options?.length > 0 && (
             <>
               <span>•</span>

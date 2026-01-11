@@ -54,7 +54,7 @@ interface DynamicFieldsTabProps {
 }
 
 export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
-  const { t, language } = useTranslation()
+  const { t } = useTranslation()
   // Состояние диалогов
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [showFieldForm, setShowFieldForm] = useState(false)
@@ -82,8 +82,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
-        tolerance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -243,7 +242,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
             <div className="space-y-3 sm:space-y-4">
               {fields.map((field) => (
                 <FieldListItem
-                  key={`${field.id}-${language}`}
+                  key={field.id}
                   id={field.id}
                   field={field}
                   onEdit={() => handleEditField(field)}
