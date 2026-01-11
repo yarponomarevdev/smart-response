@@ -58,8 +58,7 @@ export async function GET(request: Request) {
       }
 
       // Redirect to the origin (the deployed app URL)
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
-      return NextResponse.redirect(`${redirectUrl}${next}`)
+      return NextResponse.redirect(`${origin}${next}`)
     }
   }
 

@@ -129,7 +129,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                 
                 <tr>
                   <td style="padding: 20px 40px 40px 40px; text-align: center;">
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://leadhero.com"}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
+                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://smartresponse.vercel.app"}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
                       Get More Recommendations
                     </a>
                   </td>

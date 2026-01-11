@@ -120,7 +120,7 @@ function generateOwnerNotificationHTML({
   resultImageUrl: string | null
 }) {
   const htmlContent = resultText ? marked(resultText) : ""
-  const dashboardUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://smartresponse.io"
+  const dashboardUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://smartresponse.vercel.app"
 
   return `
     <!DOCTYPE html>
