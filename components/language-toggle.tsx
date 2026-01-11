@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { Languages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/lib/i18n"
 import { useCurrentUser } from "@/lib/hooks/use-auth"
@@ -44,7 +43,7 @@ export function LanguageToggle() {
         className="h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors" 
         disabled
       >
-        <Languages className="h-[1.2rem] w-[1.2rem]" />
+        <span className="text-sm font-semibold">RU</span>
         <span className="sr-only">Переключить язык</span>
       </Button>
     )
@@ -52,15 +51,12 @@ export function LanguageToggle() {
 
   return (
     <Button
-      className="h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors relative"
+      className="h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors"
       onClick={handleLanguageChange}
     >
-      <div className="flex flex-col items-center justify-center">
-        <Languages className="h-[1.2rem] w-[1.2rem]" />
-        <span className="text-[8px] font-bold absolute bottom-1">
-          {language.toUpperCase()}
-        </span>
-      </div>
+      <span className="text-sm font-semibold">
+        {language.toUpperCase()}
+      </span>
       <span className="sr-only">Переключить язык</span>
     </Button>
   )
