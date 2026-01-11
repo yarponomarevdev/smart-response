@@ -17,15 +17,27 @@ export default function RegisterPage() {
   const { t } = useTranslation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+
+    if (password !== confirmPassword) {
+      setError(t("auth.register.passwordMismatch"))
+      return
+    }
+
+    if (password.length < 6) {
+      setError(t("auth.register.passwordTooShort"))
+      return
+    }
+
     const supabase = createClient()
     setIsLoading(true)
-    setError(null)
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -112,6 +124,18 @@ export default function RegisterPage() {
                       minLength={6}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="h-10 sm:h-11"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="confirmPassword">{t("auth.register.confirmPassword")}</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       className="h-10 sm:h-11"
                     />
                   </div>

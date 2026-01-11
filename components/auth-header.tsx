@@ -19,7 +19,7 @@ export function AuthHeader() {
           <span className="sm:hidden">{t("common.login")}</span>
         </Button>
       </Link>
-      <Link href="/auth/signup">
+      <Link href="/auth/register">
         <Button className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base">
           <span className="hidden sm:inline">{t("common.signup")}</span>
           <span className="sm:hidden">{t("common.signupShort")}</span>
