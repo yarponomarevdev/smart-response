@@ -24,6 +24,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -53,7 +54,7 @@ interface DynamicFieldsTabProps {
 }
 
 export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   // Состояние диалогов
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [showFieldForm, setShowFieldForm] = useState(false)
@@ -74,7 +75,17 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
 
   // Настройка сенсоров для drag-and-drop
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -232,7 +243,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
             <div className="space-y-3 sm:space-y-4">
               {fields.map((field) => (
                 <FieldListItem
-                  key={field.id}
+                  key={`${field.id}-${language}`}
                   id={field.id}
                   field={field}
                   onEdit={() => handleEditField(field)}

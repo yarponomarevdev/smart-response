@@ -11,6 +11,7 @@ import { GripVertical, Pencil, Trash2, Type, Link, List, ListChecks, CheckSquare
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
+import { useTranslation } from "@/lib/i18n"
 
 interface FieldListItemProps {
   id: string
@@ -33,19 +34,6 @@ const FIELD_TYPE_ICONS: Record<FieldType, React.ReactNode> = {
   disclaimer: <Info className="h-4 w-4" />,
 }
 
-const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  text: "Текст",
-  url: "Ссылка",
-  select: "Список",
-  multiselect: "Множ. выбор",
-  checkbox: "Чек-бокс",
-  image: "Изображение",
-  h1: "Заголовок H1",
-  h2: "Заголовок H2",
-  h3: "Заголовок H3",
-  disclaimer: "Дисклеймер",
-}
-
 // Типы полей, для которых не нужен placeholder
 const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
 
@@ -56,6 +44,7 @@ export function FieldListItem({
   onDelete,
   onFieldUpdate,
 }: FieldListItemProps) {
+  const { t } = useTranslation()
   const {
     attributes,
     listeners,
@@ -101,15 +90,16 @@ export function FieldListItem({
               onSave={async (newValue) => {
                 await onFieldUpdate(field.id, { field_label: newValue })
               }}
-              placeholder="Название поля"
+              placeholder={t("editor.fieldForm.fieldNamePlaceholder")}
               className="font-medium text-base sm:text-lg"
             />
           ) : (
             <span className="font-medium truncate text-base sm:text-lg">{field.field_label}</span>
           )}
           {field.is_required && (
-            <Badge variant="secondary" className="text-xs flex-shrink-0">
-              Обязательное
+            <Badge variant="secondary" className="text-xs flex-shrink-0 whitespace-nowrap">
+              <span className="hidden sm:inline">{t("editor.fieldForm.requiredField")}</span>
+              <span className="sm:hidden">{t("editor.fieldForm.requiredField").slice(0, 5)}.</span>
             </Badge>
           )}
         </div>
@@ -123,8 +113,8 @@ export function FieldListItem({
                   onSave={async (newValue) => {
                     await onFieldUpdate(field.id, { placeholder: newValue || null })
                   }}
-                  placeholder="Плейсхолдер"
-                  emptyText="+ плейсхолдер"
+                  placeholder={t("editor.fieldForm.placeholderText")}
+                  emptyText={t("editor.fieldForm.emptyPlaceholder")}
                   className="text-xs sm:text-sm"
                 />
               ) : (
@@ -133,11 +123,11 @@ export function FieldListItem({
               <span>•</span>
             </>
           )}
-          <span>{FIELD_TYPE_LABELS[field.field_type]}</span>
+          <span>{t(`editor.fieldTypesShort.${field.field_type}`)}</span>
           {(field.field_type === "select" || field.field_type === "multiselect") && field.options?.length > 0 && (
             <>
               <span>•</span>
-              <span>{field.options.length} опций</span>
+              <span>{field.options.length} {t("editor.fieldForm.optionsLabel").toLowerCase()}</span>
             </>
           )}
         </div>
