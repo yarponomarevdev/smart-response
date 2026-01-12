@@ -119,6 +119,8 @@ async function fetchFormContent(formId: string): Promise<FormContentData> {
       prompt = item.value
     } else if (item.key === "ai_result_format") {
       format = item.value
+      // Также добавляем в content для совместимости
+      contentMap[item.key] = item.value
     } else {
       contentMap[item.key] = item.value
     }
