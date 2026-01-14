@@ -106,15 +106,34 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     setIsLoading(true)
     setError(null)
 
-    // Ищем поле URL среди динамических полей, если есть
-    const urlField = dynamicFields.find(f => f.field_type === 'url')
-    let formattedUrl = ""
-    
-    if (urlField) {
-      const rawUrl = (fieldValues[urlField.field_key] as string) || ""
-      if (rawUrl) {
-        formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
-      }
+    // URL обязателен для генерации: без него /api/generate всегда вернёт 400
+    const urlFields = dynamicFields.filter((f) => f.field_type === "url")
+    if (urlFields.length === 0) {
+      setError("В этой форме нет поля URL. Добавьте поле типа URL в редакторе формы.")
+      setIsLoading(false)
+      return
+    }
+
+    // Если URL-полей несколько — берём первое непустое
+    const urlCandidate = urlFields
+      .map((f) => ({ field: f, value: String(fieldValues[f.field_key] ?? "").trim() }))
+      .find((x) => Boolean(x.value))
+
+    if (!urlCandidate) {
+      setError("Введите URL")
+      setIsLoading(false)
+      return
+    }
+
+    const rawUrl = urlCandidate.value
+    const formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
+    try {
+      // Валидируем URL, чтобы не отправлять мусор на сервер
+      new URL(formattedUrl)
+    } catch {
+      setError("Введите корректный URL")
+      setIsLoading(false)
+      return
     }
 
     const supabase = createClient()

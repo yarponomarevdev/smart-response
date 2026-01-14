@@ -129,6 +129,16 @@ export function GenerationStep({
   // Функция генерации результата и создания лида
   const generateAndCreateLead = useCallback(async (): Promise<void> => {
     try {
+      // Защита от некорректного состояния флоу: без url/formId API всегда вернёт 400
+      if (!url || !formId) {
+        const message = "Не хватает данных для генерации (URL или ID формы). Вернитесь назад и заполните URL."
+        console.error("[v0] Missing client-side required fields:", { url: Boolean(url), formId: Boolean(formId) })
+        setError(message)
+        setIsGenerating(false)
+        onError?.(message)
+        return
+      }
+
       setError(null)
       setIsGenerating(true)
       
