@@ -98,7 +98,7 @@ export function InlineEditableText({
 
   if (isEditing) {
     return (
-      <div className="relative inline-flex items-center min-w-[100px]">
+      <div className="relative flex items-center min-w-0 flex-1 max-w-full">
         <Input
           ref={inputRef}
           value={editValue}
@@ -108,7 +108,7 @@ export function InlineEditableText({
           placeholder={placeholder}
           disabled={isSaving}
           className={cn(
-            "h-7 py-0 px-2 text-sm",
+            "h-7 py-0 px-2 text-sm w-full",
             inputClassName
           )}
         />
@@ -123,14 +123,14 @@ export function InlineEditableText({
     <span
       onClick={handleClick}
       className={cn(
-        "inline-flex items-center gap-1 cursor-pointer rounded px-1 -mx-1",
+        "inline-flex items-center gap-1 cursor-pointer rounded px-1 -mx-1 min-w-0 max-w-full",
         "hover:bg-muted/50 transition-colors group",
         disabled && "cursor-default hover:bg-transparent",
         !value && "text-muted-foreground italic",
         className
       )}
     >
-      <span className="truncate">{value || emptyText}</span>
+      <span className="block min-w-0 truncate">{value || emptyText}</span>
       {!disabled && (
         <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
       )}

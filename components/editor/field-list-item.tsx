@@ -85,7 +85,7 @@ export function FieldListItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {onFieldUpdate ? (
             <InlineEditableText
               value={field.field_label}
@@ -93,10 +93,10 @@ export function FieldListItem({
                 await onFieldUpdate(field.id, { field_label: newValue })
               }}
               placeholder={t("editor.fieldForm.fieldNameLabel")}
-              className="font-medium text-base sm:text-lg"
+              className="font-medium text-base sm:text-lg flex-1 min-w-0"
             />
           ) : (
-            <span className="font-medium truncate text-base sm:text-lg">{field.field_label}</span>
+            <span className="font-medium block min-w-0 truncate text-base sm:text-lg">{field.field_label}</span>
           )}
           {field.is_required && (
             <Badge variant="secondary" className="text-xs flex-shrink-0 px-1.5 sm:px-2.5">
@@ -107,7 +107,7 @@ export function FieldListItem({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground min-w-0">
           {/* Placeholder только для input полей */}
           {!LAYOUT_FIELD_TYPES.includes(field.field_type) && (
             <>
@@ -119,10 +119,10 @@ export function FieldListItem({
                   }}
                   placeholder={t("editor.fieldForm.placeholderLabel")}
                   emptyText={t("editor.fieldForm.emptyPlaceholder")}
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm flex-1 min-w-0"
                 />
               ) : (
-                field.placeholder && <span className="truncate">{field.placeholder}</span>
+                field.placeholder && <span className="block min-w-0 truncate">{field.placeholder}</span>
               )}
               <span>•</span>
             </>

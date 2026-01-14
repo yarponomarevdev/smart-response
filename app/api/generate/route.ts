@@ -460,7 +460,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
                     content: userMessage,
                   },
                 ],
-                max_completion_tokens: 800,
+                max_completion_tokens: 4000,
                 temperature: 0.7,
               }),
             })
@@ -553,6 +553,114 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
       console.log("[v0] Using text model:", textModel)
       console.log("[v0] Knowledge base enabled:", useKnowledgeBase)
 
+      /**
+       * Извлекает текст из ответа OpenAI максимально безопасно.
+       * Некоторые модели могут вернуть tool_calls/refusal вместо content.
+       * Если finish_reason === 'length' но есть частичный контент — используем его.
+       */
+      const extractGeneratedText = (completion: any) => {
+        const choice = completion?.choices?.[0]
+        const message = choice?.message
+        const content = message?.content
+        const finishReason = choice?.finish_reason
+
+        // Если есть хоть какой-то текст — используем (даже при finish_reason: 'length')
+        if (typeof content === "string" && content.trim().length > 0) {
+          // Предупреждаем если ответ обрезан, но всё равно возвращаем
+          if (finishReason === "length") {
+            console.warn("[v0] Response truncated (finish_reason: length), using partial content")
+          }
+          return { text: content, debug: null, truncated: finishReason === "length" }
+        }
+
+        const toolCalls = message?.tool_calls
+        const refusal = message?.refusal
+
+        return {
+          text: "",
+          truncated: false,
+          debug: {
+            finishReason: finishReason ?? null,
+            hasToolCalls: Array.isArray(toolCalls) ? toolCalls.length > 0 : Boolean(toolCalls),
+            refusal: typeof refusal === "string" ? refusal : null,
+            model: completion?.model ?? null,
+            usage: completion?.usage ?? null,
+          },
+        }
+      }
+
+      /**
+       * Делает запрос к OpenAI и возвращает JSON completion.
+       * Важно: возвращаем развёрнутую ошибку, если OpenAI вернул не-JSON/ошибку.
+       */
+      const callOpenAiChat = async (params: { systemPrompt: string; userMessage: string }) => {
+        const { systemPrompt, userMessage } = params
+
+        let response
+        try {
+          response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: textModel,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage },
+              ],
+              max_completion_tokens: 8000,
+              temperature: 0.7,
+            }),
+          })
+        } catch (fetchError: unknown) {
+          console.error("[v0] OpenAI connection error:", fetchError)
+          return {
+            ok: false as const,
+            status: 502,
+            payload: {
+              error: "OpenAI connection failed",
+              details: fetchError instanceof Error ? fetchError.message : "Failed to connect to OpenAI API",
+            },
+          }
+        }
+
+        if (!response.ok) {
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch {
+            errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
+          }
+
+          console.error("[v0] OpenAI API error:", errorData)
+          return {
+            ok: false as const,
+            status: response.status,
+            payload: {
+              error: "OpenAI API error",
+              details: errorData.error?.message || "Unknown error",
+            },
+          }
+        }
+
+        try {
+          const completion = await response.json()
+          return { ok: true as const, completion }
+        } catch (parseError: unknown) {
+          console.error("[v0] OpenAI JSON parse error:", parseError)
+          return {
+            ok: false as const,
+            status: 502,
+            payload: {
+              error: "Некорректный ответ от OpenAI",
+              details: parseError instanceof Error ? parseError.message : "Не удалось распарсить JSON",
+            },
+          }
+        }
+      }
+
       // Формируем user message с контекстом
       const userMessage = `URL: ${url}
 
@@ -563,70 +671,62 @@ ${customFieldsContext}${knowledgeBaseContext}
 
 Please provide your analysis and recommendations.`
 
-      let response
-      try {
-        response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: textModel,
-            messages: [
-              {
-                role: "system",
-                content: textSystemPrompt,
-              },
-              {
-                role: "user",
-                content: userMessage,
-              },
-            ],
-            max_completion_tokens: 1500,
-            temperature: 0.7,
-          }),
-        })
-      } catch (fetchError: unknown) {
-        console.error("[v0] OpenAI connection error:", fetchError)
-        return Response.json(
-          {
-            error: "OpenAI connection failed",
-            details: fetchError instanceof Error ? fetchError.message : "Failed to connect to OpenAI API",
-          },
-          { status: 502, headers: corsHeaders },
-        )
+      const firstAttempt = await callOpenAiChat({ systemPrompt: textSystemPrompt, userMessage })
+      if (!firstAttempt.ok) {
+        return Response.json(firstAttempt.payload, { status: firstAttempt.status, headers: corsHeaders })
       }
 
-      if (!response.ok) {
-        let errorData
-        try {
-          errorData = await response.json()
-        } catch {
-          errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
-        }
-        console.error("[v0] OpenAI API error:", errorData)
-        return Response.json(
-          {
-            error: "OpenAI API error",
-            details: errorData.error?.message || "Unknown error",
-          },
-          { status: response.status, headers: corsHeaders },
-        )
-      }
+      const extracted1 = extractGeneratedText(firstAttempt.completion)
+      let generatedText = extracted1.text
 
-      const completion = await response.json()
-      const generatedText = completion.choices[0]?.message?.content || ""
-
+      // Fallback: если модель вернула tool_calls/refusal/пустой content — пробуем “дожать” текстом.
       if (!generatedText) {
-        console.error("[v0] Empty response from OpenAI:", completion)
-        return Response.json(
-          {
-            error: "Empty response from OpenAI",
-            details: "No content generated",
+        console.error("[v0] Empty/non-text response from OpenAI (attempt 1):", {
+          debug: extracted1.debug,
+          completionPreview: {
+            id: firstAttempt.completion?.id,
+            model: firstAttempt.completion?.model,
+            choices0: firstAttempt.completion?.choices?.[0],
           },
-          { status: 500, headers: corsHeaders },
-        )
+        })
+
+        const fallbackUserMessage = `${userMessage}\n\nВАЖНО: Ответь строго обычным текстом. Не используй инструменты, вызовы функций или JSON.`
+        const secondAttempt = await callOpenAiChat({ systemPrompt: textSystemPrompt, userMessage: fallbackUserMessage })
+        if (!secondAttempt.ok) {
+          return Response.json(
+            {
+              ...secondAttempt.payload,
+              debug: extracted1.debug,
+            },
+            { status: secondAttempt.status, headers: corsHeaders },
+          )
+        }
+
+        const extracted2 = extractGeneratedText(secondAttempt.completion)
+        generatedText = extracted2.text
+
+        if (!generatedText) {
+          console.error("[v0] Empty/non-text response from OpenAI (attempt 2):", {
+            debug: extracted2.debug,
+            completionPreview: {
+              id: secondAttempt.completion?.id,
+              model: secondAttempt.completion?.model,
+              choices0: secondAttempt.completion?.choices?.[0],
+            },
+          })
+
+          return Response.json(
+            {
+              error: "Пустой ответ от модели",
+              details: "No content generated",
+              debug: {
+                attempt1: extracted1.debug,
+                attempt2: extracted2.debug,
+              },
+            },
+            { status: 500, headers: corsHeaders },
+          )
+        }
       }
 
       return Response.json(

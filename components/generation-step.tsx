@@ -13,6 +13,31 @@ import { AlertCircle, RefreshCw } from "lucide-react"
 import { createLead } from "@/app/actions/leads"
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 
+function extractErrorMessageFromPayload(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback
+
+  const maybeAny = payload as any
+  const details = maybeAny?.details
+  const error = maybeAny?.error
+
+  if (typeof details === "string" && details.trim()) return details
+  if (typeof error === "string" && error.trim()) return error
+  if (error && typeof error === "object" && typeof error.message === "string" && error.message.trim()) return error.message
+
+  return fallback
+}
+
+async function readJsonOrText(response: Response) {
+  const rawText = await response.text().catch(() => "")
+  if (!rawText) return { data: null as any, rawText: "" }
+
+  try {
+    return { data: JSON.parse(rawText), rawText }
+  } catch {
+    return { data: null as any, rawText }
+  }
+}
+
 interface GenerationStepProps {
   url: string
   formId: string
@@ -124,12 +149,28 @@ export function GenerationStep({
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-        console.error("[v0] Generation failed:", errorData)
-        throw new Error(errorData.details || errorData.error || "Failed to generate result")
+        const parsed = await readJsonOrText(response)
+        const fallback = `HTTP ${response.status}: ${response.statusText}`
+        const errorMessage = extractErrorMessageFromPayload(parsed.data, fallback)
+
+        console.error("[v0] Generation failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get("content-type"),
+          errorData: parsed.data,
+          errorText: parsed.data ? undefined : parsed.rawText?.slice(0, 2000),
+        })
+
+        throw new Error(errorMessage)
       }
 
-      const data = await response.json()
+      const parsedOk = await readJsonOrText(response)
+      const data = parsedOk.data
+
+      if (!data) {
+        console.error("[v0] Сервер вернул не-JSON ответ:", parsedOk.rawText?.slice(0, 2000))
+        throw new Error("Сервер вернул не-JSON ответ от /api/generate")
+      }
 
       if (data.success && data.result) {
         const generatedResult = data.result
@@ -179,8 +220,13 @@ export function GenerationStep({
         setIsGenerating(false)
         onCompleteRef.current(generatedResult)
       } else {
-        console.error("[v0] Generation failed:", data.error || data.details)
-        throw new Error(data.details || data.error || "Failed to generate result")
+        console.error("[v0] Generation failed:", data?.error || data?.details || data)
+        throw new Error(
+          extractErrorMessageFromPayload(
+            data,
+            "Не удалось сгенерировать результат (некорректный формат ответа сервера)",
+          ),
+        )
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
