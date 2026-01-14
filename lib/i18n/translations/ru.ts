@@ -115,6 +115,10 @@ export const ru = {
     notFound: "Не найдено",
     networkError: "Ошибка сети",
     cannotPublishEmptyForm: "Нельзя опубликовать пустую форму. Добавьте поля в редакторе.",
+    urlFieldMissing: "В этой форме нет поля URL. Добавьте поле типа URL в редакторе формы.",
+    urlRequired: "Введите URL",
+    urlInvalid: "Введите корректный URL",
+    generationMissingData: "Не хватает данных для генерации (URL или ID формы). Вернитесь назад и заполните URL.",
   },
 
   // Уведомления

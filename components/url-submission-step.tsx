@@ -17,6 +17,7 @@ import { Upload, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { getFormFields, type FormField } from "@/app/actions/form-fields"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/i18n"
 
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
@@ -26,6 +27,7 @@ interface URLSubmissionStepProps {
 }
 
 export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) {
+  const { t } = useTranslation()
   const effectiveFormId = formId || MAIN_FORM_ID
 
   const [isLoading, setIsLoading] = useState(false)
@@ -109,7 +111,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     // URL обязателен для генерации: без него /api/generate всегда вернёт 400
     const urlFields = dynamicFields.filter((f) => f.field_type === "url")
     if (urlFields.length === 0) {
-      setError("В этой форме нет поля URL. Добавьте поле типа URL в редакторе формы.")
+      setError(t("errors.urlFieldMissing"))
       setIsLoading(false)
       return
     }
@@ -120,7 +122,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       .find((x) => Boolean(x.value))
 
     if (!urlCandidate) {
-      setError("Введите URL")
+      setError(t("errors.urlRequired"))
       setIsLoading(false)
       return
     }
@@ -131,7 +133,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       // Валидируем URL, чтобы не отправлять мусор на сервер
       new URL(formattedUrl)
     } catch {
-      setError("Введите корректный URL")
+      setError(t("errors.urlInvalid"))
       setIsLoading(false)
       return
     }

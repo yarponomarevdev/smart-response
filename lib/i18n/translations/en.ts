@@ -117,6 +117,10 @@ export const en: Translations = {
     notFound: "Not found",
     networkError: "Network error",
     cannotPublishEmptyForm: "Cannot publish an empty form. Add fields in the editor.",
+    urlFieldMissing: "This form has no URL field. Add a URL field in the form editor.",
+    urlRequired: "Enter a URL",
+    urlInvalid: "Enter a valid URL",
+    generationMissingData: "Missing data for generation (URL or form ID). Go back and enter the URL.",
   },
 
   // Notifications

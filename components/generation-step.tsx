@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, RefreshCw } from "lucide-react"
 import { createLead } from "@/app/actions/leads"
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
+import { useTranslation } from "@/lib/i18n"
 
 function extractErrorMessageFromPayload(payload: unknown, fallback: string) {
   if (!payload || typeof payload !== "object") return fallback
@@ -67,6 +68,7 @@ export function GenerationStep({
   onComplete, 
   onError 
 }: GenerationStepProps) {
+  const { t } = useTranslation()
   // Состояние генерации
   const [isGenerating, setIsGenerating] = useState(true)
   const [messageIndex, setMessageIndex] = useState(0)
@@ -131,7 +133,7 @@ export function GenerationStep({
     try {
       // Защита от некорректного состояния флоу: без url/formId API всегда вернёт 400
       if (!url || !formId) {
-        const message = "Не хватает данных для генерации (URL или ID формы). Вернитесь назад и заполните URL."
+        const message = t("errors.generationMissingData")
         console.error("[v0] Missing client-side required fields:", { url: Boolean(url), formId: Boolean(formId) })
         setError(message)
         setIsGenerating(false)
@@ -161,7 +163,9 @@ export function GenerationStep({
       if (!response.ok) {
         const parsed = await readJsonOrText(response)
         const fallback = `HTTP ${response.status}: ${response.statusText}`
-        const errorMessage = extractErrorMessageFromPayload(parsed.data, fallback)
+        const rawErrorMessage = extractErrorMessageFromPayload(parsed.data, fallback)
+        const errorMessage =
+          rawErrorMessage === "Both 'url' and 'formId' are required" ? t("errors.generationMissingData") : rawErrorMessage
 
         console.error("[v0] Generation failed:", {
           status: response.status,
@@ -247,7 +251,7 @@ export function GenerationStep({
     } finally {
       setIsRetrying(false)
     }
-  }, [url, formId, customFields, contactData, sendEmailToRespondent, onError])
+  }, [url, formId, customFields, contactData, sendEmailToRespondent, onError, t])
 
   // Ротация сообщений
   useEffect(() => {
