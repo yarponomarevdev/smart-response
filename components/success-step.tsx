@@ -477,19 +477,19 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
         </div>
       </div>
 
-      {/* Дисклеймер об использованиях */}
-      {usageInfo && usageInfo.usageCount > 0 && !usageInfo.hasReachedLimit && (
+      {/* Дисклеймер об использованиях - показывается только если установлен лимит (maxCount !== null) */}
+      {usageInfo && usageInfo.maxCount !== null && usageInfo.usageCount > 0 && !usageInfo.hasReachedLimit && (
         <div className="w-full max-w-md p-4 bg-muted rounded-lg text-center">
           <p className="text-sm text-muted-foreground">
             Вы использовали форму {usageInfo.usageCount} из {usageInfo.maxCount} раз
-            {usageInfo.remainingCount > 0 && (
+            {usageInfo.remainingCount !== null && usageInfo.remainingCount > 0 && (
               <span> (осталось {usageInfo.remainingCount})</span>
             )}
           </p>
         </div>
       )}
 
-      {/* Финальное сообщение при достижении лимита */}
+      {/* Финальное сообщение при достижении лимита - при безлимите не показывается */}
       {usageInfo?.hasReachedLimit && (
         <div className="w-full max-w-md p-6 bg-primary/10 rounded-lg text-center space-y-4">
           <p className="text-sm font-medium">

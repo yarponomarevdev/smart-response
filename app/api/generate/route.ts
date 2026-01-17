@@ -60,13 +60,13 @@ async function fetchUrlContent(url: string): Promise<string> {
   }
 
   const extractText = (html: string) => {
+    // Безлимит на входящие токены - возвращаем весь текст без обрезки
     return html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 3000)
   }
 
   try {
@@ -117,17 +117,9 @@ async function getKnowledgeBaseContent(
     }
 
     const fileContents: string[] = []
-    
-    // Ограничиваем общий размер контекста (~30000 символов для файлов)
-    const maxTotalLength = 30000
-    let totalLength = 0
 
+    // Безлимит на размер контекста - загружаем все файлы полностью
     for (const file of files) {
-      if (totalLength >= maxTotalLength) {
-        fileContents.push("\n[Достигнут лимит контекста, остальные файлы пропущены]")
-        break
-      }
-
       try {
         // Скачиваем файл из Storage
         const { data: fileData, error: downloadError } = await supabase.storage
@@ -145,14 +137,8 @@ async function getKnowledgeBaseContent(
         const text = await extractTextFromFile(buffer, file.file_type, file.file_name)
 
         if (text) {
-          // Ограничиваем размер каждого файла
-          const maxFileLength = Math.min(10000, maxTotalLength - totalLength)
-          const truncatedText = text.length > maxFileLength 
-            ? text.slice(0, maxFileLength) + "\n[Файл обрезан из-за ограничений размера]"
-            : text
-
-          fileContents.push(`--- Файл: ${file.file_name} ---\n${truncatedText}`)
-          totalLength += truncatedText.length
+          // Не обрезаем файлы - используем полный текст
+          fileContents.push(`--- Файл: ${file.file_name} ---\n${text}`)
         }
       } catch (fileError) {
         console.error(`Ошибка обработки файла ${file.file_name}:`, fileError)
@@ -385,8 +371,8 @@ export async function POST(req: Request) {
       }
 
       // Формируем финальный промпт для генерации изображения
-      // Для изображений база знаний добавляется как часть промпта (ограничение API)
-      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${additionalUrlsContext.slice(0, 1500)}${customFieldsContext}${knowledgeBaseContext.slice(0, 2000)}`
+      // Для изображений база знаний добавляется как часть промпта
+      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}`
 
       console.log("Используется модель изображений:", imageModel)
       console.log("Превью промпта изображения:", imagePrompt.slice(0, 100) + "...")
@@ -516,7 +502,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
                   content: userMessage,
                 },
               ],
-              max_completion_tokens: 4000,
+              // Безлимит на токены выхода - используем максимум модели
             }
 
             const textResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -633,7 +619,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
             { role: "system", content: systemPrompt },
             { role: "user", content: userMessage },
           ],
-          max_completion_tokens: 8000,
+          // Безлимит на токены выхода - используем максимум модели
         }
 
         let response

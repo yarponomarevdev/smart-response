@@ -7,7 +7,8 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const MAX_USAGE_COUNT = 5
+// Безлимитное использование для всех пользователей
+const MAX_USAGE_COUNT = null // null = безлимит
 const TEST_EMAIL = "hello@vasilkov.digital"
 
 export async function GET(request: NextRequest) {
@@ -23,20 +24,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Проверяем, является ли это тестовым email
-    const isTestEmail = email.toLowerCase() === TEST_EMAIL.toLowerCase()
-
-    if (isTestEmail) {
-      // Для тестового email возвращаем нулевое использование
-      return NextResponse.json({
-        usageCount: 0,
-        remainingCount: MAX_USAGE_COUNT,
-        maxCount: MAX_USAGE_COUNT,
-        hasReachedLimit: false,
-      })
-    }
-
-    // Считаем количество leads для данной пары form_id + email
+    // Считаем количество leads для данной пары form_id + email (для статистики)
     const { count, error } = await supabaseAdmin
       .from("leads")
       .select("id", { count: "exact", head: true })
@@ -52,14 +40,13 @@ export async function GET(request: NextRequest) {
     }
 
     const usageCount = count || 0
-    const remainingCount = Math.max(0, MAX_USAGE_COUNT - usageCount)
-    const hasReachedLimit = usageCount >= MAX_USAGE_COUNT
 
+    // Безлимит для всех пользователей
     return NextResponse.json({
       usageCount,
-      remainingCount,
-      maxCount: MAX_USAGE_COUNT,
-      hasReachedLimit,
+      remainingCount: null, // null = безлимит
+      maxCount: null, // null = безлимит
+      hasReachedLimit: false, // всегда false
     })
   } catch (error) {
     console.error("[check-usage] Неожиданная ошибка:", error)
