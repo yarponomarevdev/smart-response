@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       .eq("email", email)
 
     if (error) {
-      console.error("[check-usage] Error counting leads:", error)
+      console.error("[check-usage] Ошибка подсчета лидов:", error)
       return NextResponse.json(
         { error: "Ошибка при проверке использований" },
         { status: 500 }
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       hasReachedLimit,
     })
   } catch (error) {
-    console.error("[check-usage] Unexpected error:", error)
+    console.error("[check-usage] Неожиданная ошибка:", error)
     return NextResponse.json(
       { error: "Внутренняя ошибка сервера" },
       { status: 500 }

@@ -38,7 +38,7 @@ export async function getSystemSetting(key: string): Promise<{ value: string | n
     .single()
 
   if (error && error.code !== "PGRST116") {
-    console.error("Error fetching system setting:", error)
+    console.error("Ошибка получения системной настройки:", error)
     return { value: null, error: error.message }
   }
 
@@ -108,7 +108,7 @@ export async function updateSystemSetting(
       .insert({ key, value, updated_by: userId })
 
     if (insertError) {
-      console.error("Error saving system setting:", insertError)
+      console.error("Ошибка сохранения системной настройки:", insertError)
       return { success: false, error: insertError.message }
     }
   }
@@ -133,7 +133,7 @@ export async function getAllSystemSettings(
     .select("key, value")
 
   if (error) {
-    console.error("Error fetching system settings:", error)
+    console.error("Ошибка получения системных настроек:", error)
     return { settings: {}, error: error.message }
   }
 

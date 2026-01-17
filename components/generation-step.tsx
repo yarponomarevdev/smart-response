@@ -134,7 +134,7 @@ export function GenerationStep({
       // Защита от некорректного состояния флоу: без url/formId API всегда вернёт 400
       if (!url || !formId) {
         const message = t("errors.generationMissingData")
-        console.error("[v0] Missing client-side required fields:", { url: Boolean(url), formId: Boolean(formId) })
+        console.error("Отсутствуют обязательные поля на клиенте:", { url: Boolean(url), formId: Boolean(formId) })
         setError(message)
         setIsGenerating(false)
         onError?.(message)
@@ -167,7 +167,7 @@ export function GenerationStep({
         const errorMessage =
           rawErrorMessage === "Both 'url' and 'formId' are required" ? t("errors.generationMissingData") : rawErrorMessage
 
-        console.error("[v0] Generation failed:", {
+        console.error("Генерация не удалась:", {
           status: response.status,
           statusText: response.statusText,
           contentType: response.headers.get("content-type"),
@@ -182,7 +182,7 @@ export function GenerationStep({
       const data = parsedOk.data
 
       if (!data) {
-        console.error("[v0] Сервер вернул не-JSON ответ:", parsedOk.rawText?.slice(0, 2000))
+        console.error("Сервер вернул не-JSON ответ:", parsedOk.rawText?.slice(0, 2000))
         throw new Error("Сервер вернул не-JSON ответ от /api/generate")
       }
 
@@ -206,7 +206,7 @@ export function GenerationStep({
         })
 
         if (leadResponse.error) {
-          console.error("[v0] Lead creation failed:", leadResponse.error)
+          console.error("Не удалось создать лид:", leadResponse.error)
           // Продолжаем даже если лид не создался
         }
 
@@ -227,14 +227,14 @@ export function GenerationStep({
               url,
             }),
           }).catch((err) => {
-            console.error("[v0] Error sending email:", err)
+            console.error("Ошибка отправки email:", err)
           })
         }
 
         setIsGenerating(false)
         onCompleteRef.current(generatedResult)
       } else {
-        console.error("[v0] Generation failed:", data?.error || data?.details || data)
+        console.error("Генерация не удалась:", data?.error || data?.details || data)
         throw new Error(
           extractErrorMessageFromPayload(
             data,
@@ -244,7 +244,7 @@ export function GenerationStep({
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
-      console.error("[v0] Error calling generate API:", errorMessage)
+      console.error("Ошибка вызова API генерации:", errorMessage)
       setError(errorMessage)
       setIsGenerating(false)
       onError?.(errorMessage)

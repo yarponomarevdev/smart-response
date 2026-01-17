@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
   try {
     const { email, resultText, resultImageUrl, resultType, url } = await request.json()
 
-    console.log("[v0] Email request received for:", email)
-    console.log("[v0] Result type:", resultType)
+    console.log("Получен запрос на отправку email для:", email)
+    console.log("Тип результата:", resultType)
 
     if (!email || (!resultText && !resultImageUrl)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders })
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const fromEmail = "hello@vasilkov.digital"
 
-    console.log("[v0] Sending email from:", fromEmail, "to:", email)
+    console.log("Отправка email с:", fromEmail, "на:", email)
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
@@ -58,17 +58,17 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error("[v0] Resend error:", error)
+      console.error("Ошибка Resend:", error)
       return NextResponse.json(
         { error: "Failed to send email", details: error, success: false },
         { status: 500, headers: corsHeaders },
       )
     }
 
-    console.log("[v0] Email sent successfully:", data)
+    console.log("Email успешно отправлен:", data)
     return NextResponse.json({ success: true, data }, { headers: corsHeaders })
   } catch (error: any) {
-    console.error("[v0] Error sending email:", error)
+    console.error("Ошибка отправки email:", error)
     return NextResponse.json(
       { error: "Failed to send email", details: error.message, success: false },
       { status: 500, headers: corsHeaders },

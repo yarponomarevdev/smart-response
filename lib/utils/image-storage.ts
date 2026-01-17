@@ -25,7 +25,7 @@ export async function saveImageToStorage(
     // Скачиваем изображение
     const response = await fetch(imageUrl)
     if (!response.ok) {
-      console.error("[ImageStorage] Failed to fetch image:", response.statusText)
+      console.error("[ImageStorage] Не удалось получить изображение:", response.statusText)
       return null
     }
 
@@ -48,7 +48,7 @@ export async function saveImageToStorage(
       })
 
     if (error) {
-      console.error("[ImageStorage] Upload error:", error)
+      console.error("[ImageStorage] Ошибка загрузки:", error)
       return null
     }
 
@@ -59,7 +59,7 @@ export async function saveImageToStorage(
 
     return urlData.publicUrl
   } catch (error) {
-    console.error("[ImageStorage] Error saving image:", error)
+    console.error("[ImageStorage] Ошибка сохранения изображения:", error)
     return null
   }
 }
@@ -75,7 +75,7 @@ export async function deleteImageFromStorage(imageUrl: string): Promise<boolean>
     const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)/)
     
     if (!pathMatch) {
-      console.error("[ImageStorage] Invalid URL format:", imageUrl)
+      console.error("[ImageStorage] Некорректный формат URL:", imageUrl)
       return false
     }
 
@@ -87,13 +87,13 @@ export async function deleteImageFromStorage(imageUrl: string): Promise<boolean>
       .remove([filePath])
 
     if (error) {
-      console.error("[ImageStorage] Delete error:", error)
+      console.error("[ImageStorage] Ошибка удаления:", error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error("[ImageStorage] Error deleting image:", error)
+    console.error("[ImageStorage] Ошибка удаления изображения:", error)
     return false
   }
 }

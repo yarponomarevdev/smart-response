@@ -63,7 +63,7 @@ export function InlineEditableText({
       setIsEditing(false)
     } catch (error) {
       // При ошибке остаёмся в режиме редактирования
-      console.error("Failed to save:", error)
+      console.error("Не удалось сохранить:", error)
     } finally {
       setIsSaving(false)
     }

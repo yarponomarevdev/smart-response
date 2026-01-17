@@ -92,7 +92,7 @@ async function fetchUrlContent(url: string): Promise<string> {
 
     return textContent || "Не удалось извлечь содержательный текст по ссылке"
   } catch (error) {
-    console.error("[v0] Error fetching URL:", error)
+    console.error("Ошибка получения URL:", error)
     return `Ошибка при загрузке ссылки: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`
   }
 }
@@ -135,7 +135,7 @@ async function getKnowledgeBaseContent(
           .download(file.file_path)
 
         if (downloadError || !fileData) {
-          console.error(`[v0] Ошибка загрузки файла ${file.file_name}:`, downloadError)
+          console.error(`Ошибка загрузки файла ${file.file_name}:`, downloadError)
           continue
         }
 
@@ -155,7 +155,7 @@ async function getKnowledgeBaseContent(
           totalLength += truncatedText.length
         }
       } catch (fileError) {
-        console.error(`[v0] Ошибка обработки файла ${file.file_name}:`, fileError)
+        console.error(`Ошибка обработки файла ${file.file_name}:`, fileError)
       }
     }
 
@@ -165,7 +165,7 @@ async function getKnowledgeBaseContent(
 
     return fileContents.join("\n\n")
   } catch (error) {
-    console.error("[v0] Ошибка получения базы знаний:", error)
+    console.error("Ошибка получения базы знаний:", error)
     return ""
   }
 }
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
     try {
       body = await req.json()
     } catch (parseError) {
-      console.error("[v0] JSON parse error:", parseError)
+      console.error("Ошибка парсинга JSON:", parseError)
       return Response.json(
         {
           error: "Invalid JSON in request body",
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
     const { url, formId, customFields } = body
 
     if (!url || !formId) {
-      console.error("[v0] Missing required fields:", { url: !!url, formId: !!formId })
+      console.error("Отсутствуют обязательные поля:", { url: !!url, formId: !!formId })
       return Response.json(
         {
           error: "Missing required fields",
@@ -230,7 +230,7 @@ export async function POST(req: Request) {
 
     // Проверка наличия API ключа OpenAI
     if (!process.env.OPENAI_API_KEY) {
-      console.error("[v0] OPENAI_API_KEY is not set")
+      console.error("OPENAI_API_KEY не установлен")
       return Response.json(
         {
           error: "Server configuration error",
@@ -249,7 +249,7 @@ export async function POST(req: Request) {
       .eq("form_id", formId)
 
     if (contentError) {
-      console.error("[v0] Supabase query error:", contentError)
+      console.error("Ошибка запроса Supabase:", contentError)
       return Response.json(
         {
           error: "Database error",
@@ -336,7 +336,7 @@ export async function POST(req: Request) {
             knowledgeUrlContent = ""
           }
         } catch (e) {
-          console.error("[v0] Ошибка загрузки ссылки базы знаний:", e)
+          console.error("Ошибка загрузки ссылки базы знаний:", e)
         }
       }
 
@@ -388,8 +388,8 @@ export async function POST(req: Request) {
       // Для изображений база знаний добавляется как часть промпта (ограничение API)
       const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent.slice(0, 1500)}${additionalUrlsContext.slice(0, 1500)}${customFieldsContext}${knowledgeBaseContext.slice(0, 2000)}`
 
-      console.log("[v0] Using image model:", imageModel)
-      console.log("[v0] Image prompt preview:", imagePrompt.slice(0, 100) + "...")
+      console.log("Используется модель изображений:", imageModel)
+      console.log("Превью промпта изображения:", imagePrompt.slice(0, 100) + "...")
 
       let imageResponse
       try {
@@ -407,7 +407,7 @@ export async function POST(req: Request) {
           }),
         })
       } catch (imageFetchError: unknown) {
-        console.error("[v0] Image generation connection error:", imageFetchError)
+        console.error("Ошибка подключения к API генерации изображений:", imageFetchError)
         return Response.json(
           {
             error: "Ошибка подключения к API генерации изображений",
@@ -424,7 +424,7 @@ export async function POST(req: Request) {
         } catch {
           errorData = { error: { message: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` } }
         }
-        console.error("[v0] Image generation API error:", errorData)
+        console.error("Ошибка API генерации изображений:", errorData)
 
         return Response.json(
           {
@@ -439,7 +439,7 @@ export async function POST(req: Request) {
       const tempImageUrl = imageData.data[0]?.url || ""
 
       if (!tempImageUrl) {
-        console.error("[v0] Empty image URL:", imageData)
+        console.error("Пустой URL изображения:", imageData)
         return Response.json(
           {
             error: "Пустой ответ от API",
@@ -457,7 +457,7 @@ export async function POST(req: Request) {
       const finalImageUrl = imageUrl || tempImageUrl
       
       if (!imageUrl) {
-        console.warn("[v0] Failed to save image to storage, using temporary URL")
+        console.warn("Не удалось сохранить изображение в хранилище, используется временный URL")
       }
 
       // Для формата image_with_text генерируем также текстовое описание
@@ -547,7 +547,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
               }
             }
           } catch (textError) {
-            console.error("[v0] Text generation error for image_with_text:", textError)
+            console.error("Ошибка генерации текста для image_with_text:", textError)
           }
         }
 
@@ -613,8 +613,8 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
         )
       }
 
-      console.log("[v0] Using text model:", textModel)
-      console.log("[v0] Knowledge base enabled:", useKnowledgeBase)
+      console.log("Используется текстовая модель:", textModel)
+      console.log("База знаний включена:", useKnowledgeBase)
 
       // Извлекаем текст из ответа OpenAI
       const extractGeneratedText = (completion: any) => {
@@ -647,7 +647,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
             body: JSON.stringify(requestBody),
           })
         } catch (fetchError: unknown) {
-          console.error("[v0] OpenAI connection error:", fetchError)
+          console.error("Ошибка подключения к OpenAI:", fetchError)
           return {
             ok: false as const,
             status: 502,
@@ -666,7 +666,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
             errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
           }
 
-          console.error("[v0] OpenAI API error:", errorData)
+          console.error("Ошибка API OpenAI:", errorData)
           return {
             ok: false as const,
             status: response.status,
@@ -681,7 +681,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
           const completion = await response.json()
           return { ok: true as const, completion }
         } catch (parseError: unknown) {
-          console.error("[v0] OpenAI JSON parse error:", parseError)
+          console.error("Ошибка парсинга JSON от OpenAI:", parseError)
           return {
             ok: false as const,
             status: 502,
@@ -733,8 +733,8 @@ Please provide your analysis and recommendations.`
       )
     }
   } catch (error: unknown) {
-    console.error("[v0] Generation error:", error)
-    console.error("[v0] Error stack:", error instanceof Error ? error.stack : undefined)
+    console.error("Ошибка генерации:", error)
+    console.error("Стек ошибки:", error instanceof Error ? error.stack : undefined)
     return Response.json(
       {
         error: "Failed to generate result",

@@ -32,7 +32,7 @@ export function LanguageToggle() {
       try {
         await updateLanguageMutation.mutateAsync(newLanguage)
       } catch (error) {
-        console.error("Failed to update language in database:", error)
+        console.error("Не удалось обновить язык в базе данных:", error)
       }
     }
   }

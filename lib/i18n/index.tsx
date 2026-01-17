@@ -161,7 +161,7 @@ export function useTranslation() {
       for (const k of keys) {
         value = value?.[k]
         if (value === undefined) {
-          console.warn(`Translation key not found: ${key}`)
+          console.warn(`Ключ перевода не найден: ${key}`)
           return key
         }
       }

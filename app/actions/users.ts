@@ -168,13 +168,13 @@ export async function updateUserQuotas(
     .select()
 
   if (error) {
-    console.error("Error updating user quotas:", error)
+    console.error("Ошибка обновления квот пользователя:", error)
     return { error: "Ошибка обновления квот: " + error.message }
   }
 
   // Проверяем, что обновление действительно произошло
   if (!data || data.length === 0) {
-    console.error("No rows updated for user:", params.userId)
+    console.error("Не обновлено ни одной строки для пользователя:", params.userId)
     return { error: "Пользователь не найден или обновление не выполнено" }
   }
 
@@ -215,7 +215,7 @@ export async function ensureUserExists(
     if (insertError) {
       // Игнорируем ошибку дубликата (запись уже создана)
       if (insertError.code !== "23505") {
-        console.error("Error creating user record:", insertError)
+        console.error("Ошибка создания записи пользователя:", insertError)
         return { success: false, error: insertError.message }
       }
     }
@@ -236,7 +236,7 @@ export async function getUserLanguage(userId: string): Promise<{ language: strin
     .single()
 
   if (error) {
-    console.error("Error fetching user language:", error)
+    console.error("Ошибка получения языка пользователя:", error)
     return { language: "en", error: error.message } // Английский по умолчанию
   }
 
@@ -261,7 +261,7 @@ export async function updateUserLanguage(
     .eq("id", userId)
 
   if (error) {
-    console.error("Error updating user language:", error)
+    console.error("Ошибка обновления языка пользователя:", error)
     return { success: false, error: error.message }
   }
 
@@ -294,7 +294,7 @@ export async function updateUserEmail(
   const { error } = await supabase.auth.updateUser({ email: newEmail })
 
   if (error) {
-    console.error("Error updating user email:", error)
+    console.error("Ошибка обновления email пользователя:", error)
     // Обрабатываем специфичные ошибки Supabase
     if (error.message.includes("already registered")) {
       return { success: false, error: "Этот email уже используется" }
@@ -329,7 +329,7 @@ export async function updateUserPassword(
   const { error } = await supabase.auth.updateUser({ password: newPassword })
 
   if (error) {
-    console.error("Error updating user password:", error)
+    console.error("Ошибка обновления пароля пользователя:", error)
     return { success: false, error: error.message }
   }
 
@@ -426,13 +426,13 @@ export async function deleteUserAccount(): Promise<{ success: boolean; error?: s
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
     if (authError) {
-      console.error("Error deleting user from auth:", authError)
+      console.error("Ошибка удаления пользователя из auth:", authError)
       return { success: false, error: "Ошибка удаления аккаунта из системы авторизации" }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("Error deleting user account:", error)
+    console.error("Ошибка удаления аккаунта пользователя:", error)
     return { success: false, error: "Ошибка удаления аккаунта" }
   }
 }

@@ -63,7 +63,7 @@ export function EmailCaptureStep({ url, formId, result, onSuccess }: EmailCaptur
         url,
       }),
     }).catch((error) => {
-      console.error("[v0] Error sending email:", error)
+      console.error("Ошибка отправки email:", error)
     })
 
     onSuccess()

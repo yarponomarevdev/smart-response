@@ -81,7 +81,7 @@ export async function getDailyTestInfo(userId: string): Promise<{
   const { data, error } = await supabaseAdmin.rpc("get_daily_test_info", { user_id: userId })
 
   if (error || !data || data.length === 0) {
-    console.error("Error getting daily test info:", error)
+    console.error("Ошибка получения информации о ежедневных тестах:", error)
     return { currentCount: 0, limit: 50, resetDate: new Date().toISOString().split("T")[0] }
   }
 
@@ -104,7 +104,7 @@ export async function incrementDailyTestCount(userId: string): Promise<{
   const { data, error } = await supabaseAdmin.rpc("increment_daily_test_count", { user_id: userId })
 
   if (error || !data || data.length === 0) {
-    console.error("Error incrementing daily test count:", error)
+    console.error("Ошибка увеличения счетчика ежедневных тестов:", error)
     // По умолчанию разрешаем тестирование при ошибке
     return { canTest: true, currentCount: 0, limit: null }
   }

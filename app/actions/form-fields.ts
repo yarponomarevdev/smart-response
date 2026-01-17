@@ -71,7 +71,7 @@ export async function getFormFields(formId: string): Promise<{ fields: FormField
     .order("order_index", { ascending: true })
 
   if (error) {
-    console.error("Error fetching form fields:", error)
+    console.error("Ошибка получения полей формы:", error)
     return { error: "Ошибка загрузки полей: " + error.message }
   }
 
@@ -108,7 +108,7 @@ export async function saveFormField(
       .single()
 
     if (error) {
-      console.error("Error updating form field:", error)
+      console.error("Ошибка обновления поля формы:", error)
       return { error: "Ошибка обновления поля: " + error.message }
     }
 
@@ -137,7 +137,7 @@ export async function saveFormField(
       .single()
 
     if (error) {
-      console.error("Error creating form field:", error)
+      console.error("Ошибка создания поля формы:", error)
       return { error: "Ошибка создания поля: " + error.message }
     }
 
@@ -166,7 +166,7 @@ export async function deleteFormField(
     .eq("form_id", formId)
 
   if (error) {
-    console.error("Error deleting form field:", error)
+    console.error("Ошибка удаления поля формы:", error)
     return { error: "Ошибка удаления поля: " + error.message }
   }
 
@@ -200,7 +200,7 @@ export async function reorderFormFields(
   const hasError = results.some((r) => r.error)
 
   if (hasError) {
-    console.error("Error reordering form fields:", results.find((r) => r.error)?.error)
+    console.error("Ошибка изменения порядка полей формы:", results.find((r) => r.error)?.error)
     return { error: "Ошибка изменения порядка полей" }
   }
 

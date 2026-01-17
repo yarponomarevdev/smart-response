@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     // Проверяем API ключ
     if (!process.env.OPENAI_API_KEY) {
-      console.error("[improve-prompt] OPENAI_API_KEY is not set")
+      console.error("[improve-prompt] OPENAI_API_KEY не установлен")
       return Response.json(
         { error: "OpenAI API key не настроен" },
         { status: 500 }
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log("[improve-prompt] Using model:", textModel)
+    console.log("[improve-prompt] Используется модель:", textModel)
 
     // Отправляем запрос в OpenAI
     let response
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
         }),
       })
     } catch (fetchError: any) {
-      console.error("[improve-prompt] OpenAI connection error:", fetchError)
+      console.error("[improve-prompt] Ошибка подключения к OpenAI:", fetchError)
       return Response.json(
         { error: "Ошибка подключения к OpenAI" },
         { status: 502 }
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
       } catch {
         errorData = { error: { message: `HTTP ${response.status}` } }
       }
-      console.error("[improve-prompt] OpenAI API error:", errorData)
+      console.error("[improve-prompt] Ошибка API OpenAI:", errorData)
       return Response.json(
         { error: errorData.error?.message || "Ошибка OpenAI API" },
         { status: response.status }
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     const improvedPrompt = completion.choices[0]?.message?.content?.trim() || ""
 
     if (!improvedPrompt) {
-      console.error("[improve-prompt] Empty response from OpenAI:", completion)
+      console.error("[improve-prompt] Пустой ответ от OpenAI:", completion)
       return Response.json(
         { error: "Пустой ответ от OpenAI" },
         { status: 500 }
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
     return Response.json({ improvedPrompt })
 
   } catch (error: any) {
-    console.error("[improve-prompt] Error:", error)
+    console.error("[improve-prompt] Ошибка:", error)
     return Response.json(
       { error: error?.message || "Неизвестная ошибка" },
       { status: 500 }

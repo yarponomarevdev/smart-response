@@ -73,7 +73,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
     })
 
     if (userError) {
-      console.error("Error creating user:", userError)
+      console.error("Ошибка создания пользователя:", userError)
       return { error: "Ошибка создания пользователя: " + userError.message }
     }
   }
@@ -92,7 +92,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
     .single()
 
   if (formError) {
-    console.error("Error creating form:", formError)
+    console.error("Ошибка создания формы:", formError)
     return { error: "Ошибка создания формы: " + formError.message }
   }
 
@@ -179,7 +179,7 @@ export async function deleteUserForm(userId: string, formId: string) {
     .eq("id", formId)
 
   if (error) {
-    console.error("Error deleting form:", error)
+    console.error("Ошибка удаления формы:", error)
     return { error: "Ошибка удаления формы: " + error.message }
   }
 
@@ -226,7 +226,7 @@ async function updateFormField<T>(
     .eq("id", formId)
 
   if (error) {
-    console.error(`Error updating ${field}:`, error)
+    console.error(`Ошибка обновления ${field}:`, error)
     return { error: `${errorMessage}: ${error.message}` }
   }
 

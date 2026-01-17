@@ -47,13 +47,13 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       .single()
 
     if (formError || !form) {
-      console.error("[Notification] Form not found:", formError)
+      console.error("[Уведомление] Форма не найдена:", formError)
       return
     }
 
     // Проверяем, включены ли уведомления для этой формы
     if (form.notify_on_new_lead === false) {
-      console.log("[Notification] Notifications disabled for form:", formId)
+      console.log("[Уведомление] Уведомления отключены для формы:", formId)
       return
     }
 
@@ -65,7 +65,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
       .single()
 
     if (ownerError || !owner?.email) {
-      console.error("[Notification] Owner not found:", ownerError)
+      console.error("[Уведомление] Владелец не найден:", ownerError)
       return
     }
 
@@ -78,7 +78,7 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     const fromEmail = "hello@vasilkov.digital"
     const subject = "Новая заявка"
 
-    console.log("[Notification] Sending notification to owner:", ownerEmail, "for form:", form.name)
+    console.log("[Уведомление] Отправка уведомления владельцу:", ownerEmail, "для формы:", form.name)
 
     const { error: sendError } = await resend.emails.send({
       from: fromEmail,
@@ -94,12 +94,12 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
     })
 
     if (sendError) {
-      console.error("[Notification] Failed to send email:", sendError)
+      console.error("[Уведомление] Не удалось отправить email:", sendError)
     } else {
-      console.log("[Notification] Email sent successfully to:", ownerEmail)
+      console.log("[Уведомление] Email успешно отправлен на:", ownerEmail)
     }
   } catch (error) {
-    console.error("[Notification] Unexpected error:", error)
+    console.error("[Уведомление] Неожиданная ошибка:", error)
   }
 }
 
@@ -278,7 +278,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     }
   } catch (error) {
     // Если не удалось получить пользователя (например, анонимный запрос), продолжаем
-    console.error("Error checking form owner:", error)
+    console.error("Ошибка проверки владельца формы:", error)
   }
 
   // Проверяем лимит лидов для владельца формы (если это не тестовый email и не владелец)
@@ -355,18 +355,18 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
   // Увеличиваем счетчик лидов только если это не тестовый email и не владелец формы
   // Владелец формы может использовать свою форму неограниченное количество раз
   if (!isTestEmail && !isOwner) {
-    console.log("[Lead] Incrementing lead count for form:", formId)
+    console.log("[Лид] Увеличение счетчика лидов для формы:", formId)
     
     // Используем только RPC функцию - она атомарная и безопасная
     // Убираем лишние запросы перед/после инкремента
     const { error: rpcError } = await supabaseAdmin.rpc("increment_lead_count", { form_id: formId })
     
     if (rpcError) {
-      console.error("[Lead] Error incrementing lead count:", rpcError)
+      console.error("[Лид] Ошибка увеличения счетчика лидов:", rpcError)
       // Не возвращаем ошибку, так как лид уже создан
     }
   } else {
-    console.log("[Lead] Skipping lead count increment - test email or owner:", { isTestEmail, isOwner })
+    console.log("[Лид] Пропуск увеличения счетчика лидов - тестовый email или владелец:", { isTestEmail, isOwner })
   }
 
   // Отправляем уведомление владельцу формы (асинхронно, не блокируем ответ)
@@ -377,7 +377,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     resultText,
     resultImageUrl,
   }).catch((error) => {
-    console.error("[Notification] Failed to send owner notification:", error)
+    console.error("[Уведомление] Не удалось отправить уведомление владельцу:", error)
   })
 
   return { success: true }
@@ -441,7 +441,7 @@ export async function deleteLead(leadId: string): Promise<{ success: boolean } |
         .eq("id", lead.form_id)
 
       if (updateError) {
-        console.error("Error decrementing lead count:", updateError)
+        console.error("Ошибка уменьшения счетчика лидов:", updateError)
         // Не возвращаем ошибку, так как лид уже удален
       }
     }
@@ -509,7 +509,7 @@ export async function updateLead({ leadId, lead_status, notes }: UpdateLeadParam
     .eq("id", leadId)
 
   if (updateError) {
-    console.error("Error updating lead:", updateError)
+    console.error("Ошибка обновления лида:", updateError)
     return { error: "Ошибка обновления лида" }
   }
 

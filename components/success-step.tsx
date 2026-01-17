@@ -92,7 +92,7 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
           setUsageInfo(data)
         }
       } catch (error) {
-        console.error("Error fetching usage info:", error)
+        console.error("Ошибка получения информации об использовании:", error)
       }
     }
 
@@ -442,7 +442,7 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
         setDownloading(false)
       }
     } catch (error) {
-      console.error("Download error:", error)
+      console.error("Ошибка загрузки:", error)
       if (result.type === "image" && result.imageUrl) {
         window.open(result.imageUrl, "_blank")
       }
