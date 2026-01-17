@@ -16,10 +16,10 @@ COMMENT ON COLUMN public.users.max_leads IS 'Максимальное колич
 COMMENT ON COLUMN public.users.can_publish_forms IS 'Может ли пользователь публиковать формы';
 
 -- 3. Устанавливаем дефолтные значения для существующих пользователей
--- Суперадмины и админы - неограниченно (NULL)
+-- Суперадмины - неограниченно (NULL)
 UPDATE public.users 
 SET max_forms = NULL, max_leads = NULL, can_publish_forms = true
-WHERE role IN ('superadmin', 'admin');
+WHERE role = 'superadmin';
 
 -- Обычные пользователи - лимит 1 форма, 20 лидов
 UPDATE public.users 

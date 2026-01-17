@@ -19,12 +19,10 @@ import { useTranslation } from "@/lib/i18n"
 
 // Доступные модели OpenAI
 const TEXT_MODELS = [
-  { value: "gpt-5.1", label: "GPT-5.1" },
-  { value: "gpt-5.1-mini", label: "GPT-5.1 Mini" },
-  { value: "gpt-5.1-nano", label: "GPT-5.1 Nano" },
+  { value: "gpt-5", label: "GPT-5" },
+  { value: "gpt-5-mini", label: "GPT-5 Mini" },
+  { value: "gpt-5-nano", label: "GPT-5 Nano" },
   { value: "gpt-5.2", label: "GPT-5.2" },
-  { value: "gpt-5.2-mini", label: "GPT-5.2 Mini" },
-  { value: "gpt-5.2-nano", label: "GPT-5.2 Nano" },
 ]
 
 const IMAGE_MODELS = [

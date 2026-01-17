@@ -20,32 +20,80 @@ export async function OPTIONS() {
   })
 }
 
-async function fetchUrlContent(url: string): Promise<string> {
+function normalizeUrl(value: string): string | null {
+  const trimmedValue = value.trim()
+  if (!trimmedValue) return null
+
+  const urlCandidate = trimmedValue.startsWith("http") ? trimmedValue : `https://${trimmedValue}`
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; LeadHeroBot/1.0)",
-      },
-    })
+    return new URL(urlCandidate).toString()
+  } catch {
+    return null
+  }
+}
 
-    if (!response.ok) {
-      return `Unable to fetch URL content (Status: ${response.status})`
-    }
+function buildJinaReaderUrl(url: string) {
+  const normalized = url.replace(/^https?:\/\//, "")
+  return `https://r.jina.ai/http://${normalized}`
+}
 
-    const html = await response.text()
+function isFetchErrorContent(content: string) {
+  return content.startsWith("Не удалось") || content.startsWith("Ошибка")
+}
 
-    const textContent = html
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function fetchUrlContent(url: string): Promise<string> {
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (compatible; LeadHeroBot/1.0)",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ru,en;q=0.9",
+  }
+
+  const extractText = (html: string) => {
+    return html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 3000)
+  }
 
-    return textContent || "Unable to extract meaningful content from URL"
+  try {
+    const response = await fetchWithTimeout(url, { headers }, 12000)
+
+    if (!response.ok) {
+      // Если сайт режет прямой доступ — пробуем через Reader-прокси
+      if (response.status === 403 || response.status === 429) {
+        const proxyUrl = buildJinaReaderUrl(url)
+        const proxyResponse = await fetchWithTimeout(proxyUrl, { headers }, 12000)
+        if (proxyResponse.ok) {
+          const proxyHtml = await proxyResponse.text()
+          const proxyText = extractText(proxyHtml)
+          return proxyText || "Не удалось извлечь содержательный текст по ссылке"
+        }
+      }
+
+      return `Не удалось получить контент по ссылке (HTTP ${response.status})`
+    }
+
+    const html = await response.text()
+    const textContent = extractText(html)
+
+    return textContent || "Не удалось извлечь содержательный текст по ссылке"
   } catch (error) {
     console.error("[v0] Error fetching URL:", error)
-    return `Error fetching URL: ${error instanceof Error ? error.message : "Unknown error"}`
+    return `Ошибка при загрузке ссылки: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`
   }
 }
 
@@ -152,6 +200,17 @@ export async function POST(req: Request) {
       )
     }
 
+    const normalizedMainUrl = normalizeUrl(String(url))
+    if (!normalizedMainUrl) {
+      return Response.json(
+        {
+          error: "Некорректная ссылка",
+          details: "Не удалось распознать URL",
+        },
+        { status: 400, headers: corsHeaders },
+      )
+    }
+
     // Форматируем кастомные поля для включения в контекст
     let customFieldsContext = ""
     if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
@@ -216,15 +275,15 @@ export async function POST(req: Request) {
       for (const field of urlFields) {
         // Skip if this field's value is the same as the main URL (already fetched)
         const fieldValue = customFields[field.field_key]
-        if (typeof fieldValue === 'string' && fieldValue && fieldValue !== url) {
-           // Ensure it's a valid URL string
-           if (fieldValue.startsWith('http')) {
-             urlsToFetch.push({
-               key: field.field_key,
-               label: field.field_label,
-               url: fieldValue
-             })
-           }
+        if (typeof fieldValue === "string" && fieldValue.trim()) {
+          const normalizedFieldUrl = normalizeUrl(fieldValue)
+          if (normalizedFieldUrl && normalizedFieldUrl !== normalizedMainUrl) {
+            urlsToFetch.push({
+              key: field.field_key,
+              label: field.field_label,
+              url: normalizedFieldUrl,
+            })
+          }
         }
       }
 
@@ -254,7 +313,7 @@ export async function POST(req: Request) {
     const knowledgeUrl = getContent("knowledge_url", "")
 
     // Получаем контент из URL пользователя
-    const urlContent = await fetchUrlContent(url)
+    const urlContent = await fetchUrlContent(normalizedMainUrl)
 
     // Формируем контекст базы знаний
     let knowledgeBaseContext = ""
@@ -267,8 +326,11 @@ export async function POST(req: Request) {
       let knowledgeUrlContent = ""
       if (knowledgeUrl && knowledgeUrl.trim()) {
         try {
-          knowledgeUrlContent = await fetchUrlContent(knowledgeUrl.trim())
-          if (knowledgeUrlContent && !knowledgeUrlContent.startsWith("Error") && !knowledgeUrlContent.startsWith("Unable")) {
+          const normalizedKnowledgeUrl = normalizeUrl(knowledgeUrl.trim())
+          if (normalizedKnowledgeUrl) {
+            knowledgeUrlContent = await fetchUrlContent(normalizedKnowledgeUrl)
+          }
+          if (knowledgeUrlContent && !isFetchErrorContent(knowledgeUrlContent)) {
             knowledgeUrlContent = `--- Ссылка базы знаний: ${knowledgeUrl} ---\n${knowledgeUrlContent}`
           } else {
             knowledgeUrlContent = ""
@@ -432,7 +494,7 @@ export async function POST(req: Request) {
 
         if (textSystemPrompt) {
           // Формируем user message с контекстом для генерации текста
-          const userMessage = `URL: ${url}
+          const userMessage = `URL: ${normalizedMainUrl}
 
 --- Контент страницы ---
 ${urlContent}
@@ -442,27 +504,28 @@ ${customFieldsContext}${knowledgeBaseContext}
 Provide a brief explanatory text to accompany the generated image. Keep it concise and relevant.`
 
           try {
+            const requestBody = {
+              model: textModel,
+              messages: [
+                {
+                  role: "system",
+                  content: textSystemPrompt,
+                },
+                {
+                  role: "user",
+                  content: userMessage,
+                },
+              ],
+              max_completion_tokens: 4000,
+            }
+
             const textResponse = await fetch("https://api.openai.com/v1/chat/completions", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
               },
-              body: JSON.stringify({
-                model: textModel,
-                messages: [
-                  {
-                    role: "system",
-                    content: textSystemPrompt,
-                  },
-                  {
-                    role: "user",
-                    content: userMessage,
-                  },
-                ],
-                max_completion_tokens: 4000,
-                temperature: 0.7,
-              }),
+              body: JSON.stringify(requestBody),
             })
 
             if (textResponse.ok) {
@@ -553,48 +616,25 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
       console.log("[v0] Using text model:", textModel)
       console.log("[v0] Knowledge base enabled:", useKnowledgeBase)
 
-      /**
-       * Извлекает текст из ответа OpenAI максимально безопасно.
-       * Некоторые модели могут вернуть tool_calls/refusal вместо content.
-       * Если finish_reason === 'length' но есть частичный контент — используем его.
-       */
+      // Извлекаем текст из ответа OpenAI
       const extractGeneratedText = (completion: any) => {
-        const choice = completion?.choices?.[0]
-        const message = choice?.message
-        const content = message?.content
-        const finishReason = choice?.finish_reason
-
-        // Если есть хоть какой-то текст — используем (даже при finish_reason: 'length')
-        if (typeof content === "string" && content.trim().length > 0) {
-          // Предупреждаем если ответ обрезан, но всё равно возвращаем
-          if (finishReason === "length") {
-            console.warn("[v0] Response truncated (finish_reason: length), using partial content")
-          }
-          return { text: content, debug: null, truncated: finishReason === "length" }
-        }
-
-        const toolCalls = message?.tool_calls
-        const refusal = message?.refusal
-
-        return {
-          text: "",
-          truncated: false,
-          debug: {
-            finishReason: finishReason ?? null,
-            hasToolCalls: Array.isArray(toolCalls) ? toolCalls.length > 0 : Boolean(toolCalls),
-            refusal: typeof refusal === "string" ? refusal : null,
-            model: completion?.model ?? null,
-            usage: completion?.usage ?? null,
-          },
-        }
+        return completion?.choices?.[0]?.message?.content || ""
       }
 
       /**
        * Делает запрос к OpenAI и возвращает JSON completion.
-       * Важно: возвращаем развёрнутую ошибку, если OpenAI вернул не-JSON/ошибку.
        */
       const callOpenAiChat = async (params: { systemPrompt: string; userMessage: string }) => {
         const { systemPrompt, userMessage } = params
+
+        const requestBody = {
+          model: textModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          max_completion_tokens: 8000,
+        }
 
         let response
         try {
@@ -604,15 +644,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
               "Content-Type": "application/json",
               Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
             },
-            body: JSON.stringify({
-              model: textModel,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage },
-              ],
-              max_completion_tokens: 8000,
-              temperature: 0.7,
-            }),
+            body: JSON.stringify(requestBody),
           })
         } catch (fetchError: unknown) {
           console.error("[v0] OpenAI connection error:", fetchError)
@@ -662,7 +694,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
       }
 
       // Формируем user message с контекстом
-      const userMessage = `URL: ${url}
+      const userMessage = `URL: ${normalizedMainUrl}
 
 --- Контент страницы ---
 ${urlContent}
@@ -676,57 +708,17 @@ Please provide your analysis and recommendations.`
         return Response.json(firstAttempt.payload, { status: firstAttempt.status, headers: corsHeaders })
       }
 
-      const extracted1 = extractGeneratedText(firstAttempt.completion)
-      let generatedText = extracted1.text
+      const generatedText = extractGeneratedText(firstAttempt.completion)
 
       // Fallback: если модель вернула tool_calls/refusal/пустой content — пробуем “дожать” текстом.
       if (!generatedText) {
-        console.error("[v0] Empty/non-text response from OpenAI (attempt 1):", {
-          debug: extracted1.debug,
-          completionPreview: {
-            id: firstAttempt.completion?.id,
-            model: firstAttempt.completion?.model,
-            choices0: firstAttempt.completion?.choices?.[0],
+        return Response.json(
+          {
+            error: "Пустой ответ от модели",
+            details: "No content generated",
           },
-        })
-
-        const fallbackUserMessage = `${userMessage}\n\nВАЖНО: Ответь строго обычным текстом. Не используй инструменты, вызовы функций или JSON.`
-        const secondAttempt = await callOpenAiChat({ systemPrompt: textSystemPrompt, userMessage: fallbackUserMessage })
-        if (!secondAttempt.ok) {
-          return Response.json(
-            {
-              ...secondAttempt.payload,
-              debug: extracted1.debug,
-            },
-            { status: secondAttempt.status, headers: corsHeaders },
-          )
-        }
-
-        const extracted2 = extractGeneratedText(secondAttempt.completion)
-        generatedText = extracted2.text
-
-        if (!generatedText) {
-          console.error("[v0] Empty/non-text response from OpenAI (attempt 2):", {
-            debug: extracted2.debug,
-            completionPreview: {
-              id: secondAttempt.completion?.id,
-              model: secondAttempt.completion?.model,
-              choices0: secondAttempt.completion?.choices?.[0],
-            },
-          })
-
-          return Response.json(
-            {
-              error: "Пустой ответ от модели",
-              details: "No content generated",
-              debug: {
-                attempt1: extracted1.debug,
-                attempt2: extracted2.debug,
-              },
-            },
-            { status: 500, headers: corsHeaders },
-          )
-        }
+          { status: 500, headers: corsHeaders },
+        )
       }
 
       return Response.json(

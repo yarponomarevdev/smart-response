@@ -88,12 +88,11 @@ export async function getAllUsers(): Promise<{ users: UserWithStats[] } | { erro
     }),
   )
 
-  // Сортируем по ролям: superadmin -> admin -> user
+  // Сортируем по ролям: superadmin -> user
   // Внутри каждой группы сортируем по дате создания (новые сверху)
   const rolePriority: Record<string, number> = {
     superadmin: 1,
-    admin: 2,
-    user: 3,
+    user: 2,
   }
 
   const sortedUsers = usersWithStats.sort((a, b) => {
