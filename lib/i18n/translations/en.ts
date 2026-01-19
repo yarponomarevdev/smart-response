@@ -270,6 +270,7 @@ export const en: Translations = {
       imageExpired: "Image URL expired (temporary OpenAI links last 1-2 hours)",
       openInNewTab: "Open in new tab",
       formData: "Form Data",
+      integrationSite: "Integration Site",
     },
     moreFields: "more",
     deleteDialog: {

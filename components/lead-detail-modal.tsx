@@ -47,12 +47,13 @@ const statusColors: Record<LeadStatus, string> = {
 const HIDDEN_FIELDS = ['phone', 'requestFeedback']
 
 // Форматирование ключа: "field_name" -> "Field name"
-const formatKey = (key: string): string => {
+const formatKey = (key: string, t: (key: string) => string): string => {
   // Специальные ключи с понятными названиями
   const keyMap: Record<string, string> = {
     email: 'Email',
-    phone: 'Телефон',
+    phone: t("leads.detail.phone"),
     url: 'URL',
+    parent_page_url: t("leads.detail.integrationSite"),
   }
   if (keyMap[key]) return keyMap[key]
   
@@ -249,15 +250,19 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                 formDataEntries.push(['phone', phone])
               }
               
-              // URL
-              if (lead.url) {
+              // parent_page_url с приоритетом над обычным URL
+              const parentPageUrl = lead.custom_fields?.parent_page_url as string | undefined
+              if (parentPageUrl) {
+                formDataEntries.push(['parent_page_url', parentPageUrl])
+              } else if (lead.url) {
+                // Показываем обычный URL только если нет parent_page_url
                 formDataEntries.push(['url', lead.url])
               }
               
-              // Остальные custom_fields (кроме служебных)
+              // Остальные custom_fields (кроме служебных и уже обработанных)
               if (lead.custom_fields) {
                 Object.entries(lead.custom_fields)
-                  .filter(([key]) => !HIDDEN_FIELDS.includes(key))
+                  .filter(([key]) => !HIDDEN_FIELDS.includes(key) && key !== 'parent_page_url')
                   .forEach(([key, value]) => {
                     if (value !== null && value !== undefined && value !== '') {
                       formDataEntries.push([key, value])
@@ -271,7 +276,7 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                   <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {formDataEntries.map(([key, value]) => (
                       <div key={key} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">{formatKey(key)}</Label>
+                        <Label className="text-xs text-muted-foreground">{formatKey(key, t)}</Label>
                         {key === 'email' ? (
                           <a
                             href={`mailto:${value}`}
@@ -288,7 +293,7 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                             <Phone className="h-3 w-3 shrink-0" />
                             <span className="truncate">{String(value)}</span>
                           </a>
-                        ) : isUrl(value) ? (
+                        ) : key === 'url' || key === 'parent_page_url' || isUrl(value) ? (
                           <a
                             href={String(value)}
                             target="_blank"

@@ -160,8 +160,35 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       return
     }
 
+    // Захватываем URL родительской страницы (если форма встроена в iframe)
+    let parentPageUrl = ""
+    try {
+      // Проверяем, находимся ли мы во фрейме
+      if (window.self !== window.top) {
+        // Пытаемся получить URL родительской страницы (работает только если нет CORS ограничений)
+        try {
+          parentPageUrl = window.parent.location.href
+        } catch {
+          // Если не получилось из-за CORS, используем referrer
+          parentPageUrl = document.referrer || ""
+        }
+      } else {
+        // Если не во фрейме, используем текущий URL
+        parentPageUrl = window.location.href
+      }
+    } catch {
+      // На случай любых ошибок
+      parentPageUrl = document.referrer || window.location.href
+    }
+
+    // Добавляем parent_page_url в кастомные поля
+    const extendedFieldValues = {
+      ...(dynamicFields.length > 0 ? fieldValues : {}),
+      ...(parentPageUrl ? { parent_page_url: parentPageUrl } : {})
+    }
+
     // Передаём URL и кастомные поля
-    onSubmit(formattedUrl, dynamicFields.length > 0 ? fieldValues : undefined)
+    onSubmit(formattedUrl, extendedFieldValues)
   }
 
   // Рендер динамического поля
