@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Share2, Download } from "lucide-react"
 import { jsPDF } from "jspdf"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { marked } from "marked"
 import { createClient } from "@/lib/supabase/client"
+import { markdownToPdfContent, getPdfStyles } from "@/lib/utils/markdown-to-pdf"
 
 interface SuccessStepProps {
   result: { type: string; text: string; imageUrl?: string }
@@ -44,6 +44,23 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
   const [downloading, setDownloading] = useState(false)
   const [content, setContent] = useState<FormContent>({})
   const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null)
+  const [pdfMakeReady, setPdfMakeReady] = useState(false)
+
+  // Динамически загружаем pdfMake только на клиенте
+  useEffect(() => {
+    const initPdfMake = async () => {
+      const pdfMakeModule = await import("pdfmake/build/pdfmake")
+      const pdfFontsModule = await import("pdfmake/build/vfs_fonts")
+      
+      const pdfMake = pdfMakeModule.default
+      const pdfFonts = (pdfFontsModule as any).default || pdfFontsModule
+      
+      pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || pdfFonts
+      setPdfMakeReady(true)
+    }
+    
+    initPdfMake()
+  }, [])
 
   // Загрузка контента формы
   useEffect(() => {
@@ -178,18 +195,10 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
 
         img.src = result.imageUrl
       } else if (result.type === "image_with_text" && result.imageUrl) {
-        // Создаём PDF с изображением и текстом
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "mm",
-          format: "a4",
-        })
-
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const margin = 20
-        const maxWidth = pageWidth - margin * 2
-
-        // Загружаем изображение
+        // Создаём PDF с изображением и текстом через pdfMake
+        const pdfMakeModule = await import("pdfmake/build/pdfmake")
+        const pdfMake = pdfMakeModule.default
+        
         const img = new Image()
         img.crossOrigin = "anonymous"
 
@@ -202,31 +211,27 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
 
           const imgData = canvas.toDataURL("image/png")
           
-          // Рассчитываем размеры изображения для PDF
-          const imgAspectRatio = img.naturalWidth / img.naturalHeight
-          const imgWidthMm = Math.min(maxWidth, 120)
-          const imgHeightMm = imgWidthMm / imgAspectRatio
-
-          // Добавляем изображение
-          pdf.addImage(imgData, "PNG", margin, margin, imgWidthMm, imgHeightMm)
-
-          // Добавляем текст под изображением
-          if (result.text) {
-            const textStartY = margin + imgHeightMm + 15
-            const fontSize = 11
-            const lineHeight = fontSize * 0.5
-            
-            pdf.setFontSize(fontSize)
-            pdf.setTextColor(0, 0, 0)
-
-            // Простая обработка текста
-            const plainText = result.text.replace(/[#*_`]/g, "").trim()
-            const lines = pdf.splitTextToSize(plainText, maxWidth)
-            
-            pdf.text(lines, margin, textStartY)
+          // Конвертируем текст из markdown в pdfmake формат
+          const textContent = result.text ? await markdownToPdfContent(result.text) : []
+          
+          const docDefinition = {
+            content: [
+              {
+                image: imgData,
+                width: 400,
+                alignment: "center" as const,
+                margin: [0, 0, 0, 20] as [number, number, number, number],
+              },
+              ...textContent,
+            ],
+            styles: getPdfStyles(),
+            defaultStyle: {
+              font: "Roboto",
+            },
+            pageMargins: [40, 60, 40, 60] as [number, number, number, number],
           }
 
-          pdf.save("result.pdf")
+          pdfMake.createPdf(docDefinition).download("result.pdf")
           setDownloading(false)
         }
 
@@ -237,208 +242,35 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
 
         img.src = result.imageUrl
       } else {
-        // Download text as PDF с поддержкой кириллицы через canvas
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "mm",
-          format: "a4",
-        })
+        // Download text as PDF с использованием pdfMake
+        const pdfMakeModule = await import("pdfmake/build/pdfmake")
+        const pdfMake = pdfMakeModule.default
         
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const pageHeight = pdf.internal.pageSize.getHeight()
-        const margin = 20
-        const maxWidth = pageWidth - margin * 2
+        const content = await markdownToPdfContent(result.text)
         
-        // Настраиваем marked для правильной обработки списков
-        marked.setOptions({
-          breaks: true,
-          gfm: true,
-        })
-        
-        // Конвертируем markdown в HTML для PDF
-        const htmlContent = await marked(result.text)
-        
-        // Создаем временный контейнер для рендеринга текста
-        const tempContainer = document.createElement("div")
-        tempContainer.style.position = "absolute"
-        tempContainer.style.left = "-9999px"
-        tempContainer.style.width = `${maxWidth}mm`
-        tempContainer.style.padding = "20px"
-        tempContainer.style.fontSize = "11px"
-        tempContainer.style.fontFamily = "Arial, sans-serif"
-        tempContainer.style.color = "#000000"
-        tempContainer.style.backgroundColor = "#ffffff"
-        tempContainer.style.lineHeight = "1.5"
-        
-        // Добавляем заголовок и конвертированный markdown
-        tempContainer.innerHTML = `
-          <h1 style="font-size: 16px; font-weight: bold; margin: 10px 0 10px 0; padding-top: 10px;">Ваши рекомендации</h1>
-          <div style="word-wrap: break-word;">
-            <style>
-              h1 { font-size: 16px; font-weight: bold; margin: 10px 0; padding-top: 10px; }
-              h2, h3, h4 { page-break-inside: avoid; break-inside: avoid; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.4; margin-top: 12px; margin-bottom: 8px; font-weight: bold; }
-              h2 { font-size: 14px; }
-              h3 { font-size: 13px; }
-              h4 { font-size: 12px; }
-              p { white-space: normal; word-wrap: break-word; margin: 8px 0; line-height: 1.5; }
-              ul, ol { margin: 8px 0; padding-left: 24px; line-height: 1.5; }
-              ul { list-style-type: disc; list-style-position: outside; }
-              ol { list-style-type: decimal; list-style-position: outside; }
-              li { margin: 4px 0; padding-left: 4px; word-wrap: break-word; white-space: normal; display: list-item; }
-              strong { font-weight: bold; }
-              em { font-style: italic; }
-              code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 10px; }
-              blockquote { border-left: 3px solid #59191f; padding-left: 12px; margin: 8px 0; font-style: italic; color: #666; }
-            </style>
-            ${htmlContent}
-          </div>
-        `
-        
-        document.body.appendChild(tempContainer)
-        
-        // Используем простой canvas для рендеринга текста
-        const canvas = document.createElement("canvas")
-        const ctx = canvas.getContext("2d")
-        
-        if (ctx) {
-          const fontSize = 11
-          const lineHeight = fontSize * 1.5
-          ctx.font = `${fontSize}px Arial`
-          ctx.fillStyle = "#000000"
-          ctx.textBaseline = "top"
-          
-          // Конвертируем markdown в простой текст для canvas
-          const htmlContentParsed = await marked(result.text)
-          const tempDiv = document.createElement("div")
-          tempDiv.innerHTML = htmlContentParsed
-          
-          // Извлекаем текст, сохраняя структуру списков
-          let plainText = ""
-          const processNode = (node: Node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const el = node as Element
-              const tagName = el.tagName.toLowerCase()
-              
-              if (tagName === "ol" || tagName === "ul") {
-                const items = el.querySelectorAll("li")
-                items.forEach((item, index) => {
-                  const prefix = tagName === "ol" ? `${index + 1}. ` : "• "
-                  plainText += prefix + (item.textContent || "") + "\n"
-                })
-              } else if (tagName === "li") {
-                return
-              } else {
-                Array.from(node.childNodes).forEach(processNode)
-              }
-            } else if (node.nodeType === Node.TEXT_NODE) {
-              const text = node.textContent || ""
-              if (text.trim()) {
-                plainText += text
-              }
-            } else {
-              Array.from(node.childNodes).forEach(processNode)
-            }
-          }
-          
-          processNode(tempDiv)
-          
-          if (!plainText) {
-            plainText = tempDiv.textContent || tempDiv.innerText || result.text
-          }
-          
-          // Рассчитываем размеры
-          const textLines = plainText.split("\n")
-          const maxWidthPx = maxWidth * 3.779527559
-          let totalHeight = 50
-          
-          for (const line of textLines) {
-            const words = line.split(" ")
-            let currentLine = ""
-            
-            for (const word of words) {
-              const testLine = currentLine ? `${currentLine} ${word}` : word
-              const testWidth = ctx.measureText(testLine).width
-              
-              if (testWidth > maxWidthPx && currentLine) {
-                totalHeight += lineHeight
-                currentLine = word
-              } else {
-                currentLine = testLine
-              }
-            }
-            if (currentLine) totalHeight += lineHeight
-          }
-          
-          canvas.width = Math.ceil(maxWidthPx) + 40
-          canvas.height = Math.max(totalHeight, 200)
-          ctx.fillStyle = "#ffffff"
-          ctx.fillRect(0, 0, canvas.width, canvas.height)
-          ctx.fillStyle = "#000000"
-          ctx.font = `bold ${16}px Arial`
-          ctx.fillText("Ваши рекомендации", 20, 20)
-          
-          ctx.font = `${fontSize}px Arial`
-          let yPos = 40
-          
-          for (const line of textLines) {
-            if (!line.trim()) {
-              yPos += lineHeight * 0.5
-              continue
-            }
-            
-            const words = line.split(" ")
-            let currentLine = ""
-            
-            for (const word of words) {
-              const testLine = currentLine ? `${currentLine} ${word}` : word
-              const testWidth = ctx.measureText(testLine).width
-              
-              if (testWidth > maxWidthPx && currentLine) {
-                ctx.fillText(currentLine, 20, yPos)
-                yPos += lineHeight
-                currentLine = word
-              } else {
-                currentLine = testLine
-              }
-            }
-            
-            if (currentLine) {
-              ctx.fillText(currentLine, 20, yPos)
-              yPos += lineHeight
-            }
-          }
-          
-          const imgData = canvas.toDataURL("image/png")
-          const imgWidth = canvas.width / 3.779527559
-          const imgHeight = canvas.height / 3.779527559
-          
-          const maxHeight = pageHeight - margin * 2
-          if (imgHeight <= maxHeight) {
-            pdf.addImage(imgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), imgHeight)
-          } else {
-            const pages = Math.ceil(imgHeight / maxHeight)
-            for (let i = 0; i < pages; i++) {
-              if (i > 0) pdf.addPage()
-              const sourceY = i === 0 ? 0 : (i * maxHeight) * 3.779527559
-              const remainingHeight = canvas.height - sourceY
-              const sourceHeight = Math.min(maxHeight * 3.779527559, remainingHeight)
-              const destHeight = sourceHeight / 3.779527559
-              
-              const pageCanvas = document.createElement("canvas")
-              pageCanvas.width = canvas.width
-              pageCanvas.height = sourceHeight
-              const pageCtx = pageCanvas.getContext("2d")
-              if (pageCtx) {
-                pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight)
-                const pageImgData = pageCanvas.toDataURL("image/png")
-                pdf.addImage(pageImgData, "PNG", margin, margin, Math.min(imgWidth, maxWidth), destHeight)
-              }
-            }
-          }
+        const docDefinition = {
+          content: [
+            {
+              text: "Ваши рекомендации",
+              style: "title",
+            },
+            ...content,
+          ],
+          styles: {
+            title: {
+              fontSize: 20,
+              bold: true,
+              margin: [0, 0, 0, 15] as [number, number, number, number],
+            },
+            ...getPdfStyles(),
+          },
+          defaultStyle: {
+            font: "Roboto",
+          },
+          pageMargins: [40, 60, 40, 60] as [number, number, number, number],
         }
-        
-        document.body.removeChild(tempContainer)
-        pdf.save("recommendations.pdf")
+
+        pdfMake.createPdf(docDefinition).download("recommendations.pdf")
         setDownloading(false)
       }
     } catch (error) {
