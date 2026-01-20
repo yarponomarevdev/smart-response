@@ -419,7 +419,7 @@ ${customFieldsContext}${knowledgeBaseContext}`
                 content: fullContext,
               },
             ],
-            max_tokens: 1000, // Ограничиваем выход, чтобы промпт точно уместился в 3500 символов
+            max_completion_tokens: 1000, // Ограничиваем выход, чтобы промпт точно уместился в 3500 символов
           }),
         })
 
