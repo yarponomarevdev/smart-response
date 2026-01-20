@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { LanguageProvider } from "@/lib/i18n"
 import { Toaster } from "@/components/ui/toaster"
+import { UpdateNotification } from "@/components/update-notification"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -39,6 +40,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Получаем версию из переменных окружения Vercel
+  const currentVersion =
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.NEXT_PUBLIC_APP_VERSION ||
+    "dev"
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
@@ -52,6 +59,7 @@ export default function RootLayout({
             >
               {children}
               <Toaster />
+              <UpdateNotification currentVersion={currentVersion} />
             </ThemeProvider>
           </LanguageProvider>
         </QueryProvider>

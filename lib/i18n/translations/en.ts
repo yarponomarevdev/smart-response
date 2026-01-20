@@ -130,6 +130,14 @@ export const en: Translations = {
     languageChanged: "Interface language changed",
   },
 
+  // Update notification
+  update: {
+    title: "New Version Available",
+    description: "The application has been updated. Reload the page to get the latest version.",
+    reload: "Reload",
+    dismiss: "Later",
+  },
+
   // Authentication
   auth: {
     login: {
