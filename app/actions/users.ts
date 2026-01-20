@@ -337,6 +337,88 @@ export async function updateUserPassword(
 }
 
 /**
+ * Экспортирует всех пользователей в CSV формат (только для суперадминов)
+ */
+export async function exportUsersToCSV(): Promise<{ csv: string } | { error: string }> {
+  // Получаем текущего пользователя через серверный клиент
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Не авторизован" }
+  }
+
+  // Проверяем, является ли пользователь суперадмином
+  const { data: currentUser } = await supabaseAdmin.from("users").select("role").eq("id", user.id).single()
+
+  if (currentUser?.role !== "superadmin") {
+    return { error: "Доступ запрещён" }
+  }
+
+  // Получаем всех пользователей
+  const result = await getAllUsers()
+  
+  if ('error' in result) {
+    return { error: result.error }
+  }
+
+  const users = result.users
+
+  // Формируем CSV
+  const headers = [
+    "Email",
+    "Роль",
+    "Количество форм",
+    "Лимит форм",
+    "Использовано лидов",
+    "Лимит лидов",
+    "Публикация разрешена",
+    "Дата регистрации"
+  ]
+
+  const rows = users.map((user) => {
+    const roleText = user.role === "superadmin" ? "Супер-админ" : "Пользователь"
+    const formsLimit = user.role === "superadmin" ? "∞" : (user.max_forms ?? 0).toString()
+    const leadsLimit = user.role === "superadmin" ? "∞" : (user.max_leads ?? 0).toString()
+    const canPublish = user.can_publish_forms ? "Да" : "Нет"
+    const registrationDate = new Date(user.created_at).toLocaleString("ru-RU")
+
+    return [
+      user.email,
+      roleText,
+      user.form_count.toString(),
+      formsLimit,
+      user.lead_count.toString(),
+      leadsLimit,
+      canPublish,
+      registrationDate
+    ]
+  })
+
+  // Создаем CSV строку с экранированием кавычек
+  const escapeCsvValue = (value: string) => {
+    if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+      return `"${value.replace(/"/g, '""')}"`
+    }
+    return value
+  }
+
+  const csvLines = [
+    headers.map(escapeCsvValue).join(","),
+    ...rows.map((row) => row.map(escapeCsvValue).join(","))
+  ]
+
+  const csv = csvLines.join("\n")
+
+  // Добавляем BOM для корректного отображения кириллицы в Excel
+  const csvWithBOM = "\uFEFF" + csv
+
+  return { csv: csvWithBOM }
+}
+
+/**
  * Удаляет аккаунт пользователя и все связанные данные
  * Каскадно удаляет: формы, лиды, файлы из storage
  */

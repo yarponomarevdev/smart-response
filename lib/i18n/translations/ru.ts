@@ -211,6 +211,10 @@ export const ru = {
     description: "Управление квотами и статистика пользователей",
     noUsers: "Пользователей пока нет",
     loading: "Загрузка пользователей...",
+    exportCSV: "Экспорт в CSV",
+    exporting: "Экспорт...",
+    exportSuccess: "Пользователи экспортированы в CSV",
+    exportError: "Ошибка экспорта пользователей",
     table: {
       email: "Email",
       role: "Роль",

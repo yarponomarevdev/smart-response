@@ -10,11 +10,14 @@ import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
 import { QuotaCounter } from "@/components/quota-counter"
 import { cn } from "@/lib/utils"
 import { useUsers, useUpdateUserQuotas } from "@/lib/hooks"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Download } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
+import { exportUsersToCSV } from "@/app/actions/users"
+import { toast } from "sonner"
 
 export function UsersTable() {
   const { t } = useTranslation()
@@ -25,6 +28,7 @@ export function UsersTable() {
   
   // Отслеживаем, какой пользователь сейчас обновляется
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleQuotaUpdate = async (
     userId: string,
@@ -38,6 +42,39 @@ export function UsersTable() {
       console.error("Ошибка обновления квот:", err)
     } finally {
       setUpdatingUserId(null)
+    }
+  }
+
+  const handleExportToCSV = async () => {
+    setIsExporting(true)
+    try {
+      const result = await exportUsersToCSV()
+      
+      if ('error' in result) {
+        toast.error(result.error)
+        return
+      }
+
+      // Создаем blob и скачиваем файл
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute("href", url)
+      link.setAttribute("download", `users_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = "hidden"
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      URL.revokeObjectURL(url)
+      toast.success(t("users.exportSuccess"))
+    } catch (err) {
+      console.error("Ошибка экспорта:", err)
+      toast.error(t("users.exportError"))
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -65,9 +102,21 @@ export function UsersTable() {
 
   return (
     <div className="py-4 space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("users.description")}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-xl sm:text-2xl font-bold">{t("users.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("users.description")}</p>
+        </div>
+        <Button
+          onClick={handleExportToCSV}
+          disabled={isExporting || !users || users.length === 0}
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          {isExporting ? t("users.exporting") : t("users.exportCSV")}
+        </Button>
       </div>
       <div>
         <div className="border rounded-lg overflow-x-auto">

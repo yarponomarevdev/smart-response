@@ -213,6 +213,10 @@ export const en: Translations = {
     description: "Manage quotas and user statistics",
     noUsers: "No users yet",
     loading: "Loading users...",
+    exportCSV: "Export to CSV",
+    exporting: "Exporting...",
+    exportSuccess: "Users exported to CSV",
+    exportError: "Error exporting users",
     table: {
       email: "Email",
       role: "Role",
