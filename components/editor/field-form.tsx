@@ -61,7 +61,7 @@ export function FieldForm({
   const [label, setLabel] = useState(initialData?.field_label || "")
   const [key, setKey] = useState(initialData?.field_key || "")
   const [placeholder, setPlaceholder] = useState(initialData?.placeholder || "")
-  const [isRequired, setIsRequired] = useState(initialData?.is_required || false)
+  const [isRequired, setIsRequired] = useState(initialData?.is_required ?? false)
   const [options, setOptions] = useState<FieldOption[]>(initialData?.options || [])
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false)
 
@@ -81,17 +81,17 @@ export function FieldForm({
     disclaimer: t("editor.fieldTypes.disclaimer"),
   }), [t, language])
 
-  // Сбрасываем форму при открытии с новыми данными
+  // Сбрасываем форму только при открытии диалога (не при обновлении initialData)
   useEffect(() => {
     if (open) {
       setLabel(initialData?.field_label || "")
       setKey(initialData?.field_key || "")
       setPlaceholder(initialData?.placeholder || "")
-      setIsRequired(initialData?.is_required || false)
+      setIsRequired(initialData?.is_required ?? false)
       setOptions(initialData?.options || [])
       setKeyManuallyEdited(!!initialData?.field_key)
     }
-  }, [open, initialData])
+  }, [open])
 
   // Автогенерация ключа из названия
   useEffect(() => {

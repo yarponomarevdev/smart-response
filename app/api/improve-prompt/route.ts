@@ -84,8 +84,7 @@ export async function POST(req: Request) {
               content: prompt,
             },
           ],
-          // Безлимит на токены выхода - используем максимум модели
-          temperature: 0.7,
+          // Не задаём temperature: некоторые модели принимают только значение по умолчанию
         }),
       })
     } catch (fetchError: any) {
