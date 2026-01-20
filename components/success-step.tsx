@@ -125,8 +125,50 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
   const buttonText = content.button_text || ""
   const buttonUrl = content.button_url || ""
 
+  // Функция для удаления markdown разметки из текста
+  const stripMarkdown = (text: string): string => {
+    return text
+      // Удаляем заголовки
+      .replace(/^#{1,6}\s+/gm, '')
+      // Удаляем жирный текст
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      // Удаляем курсив
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      // Удаляем зачеркнутый текст
+      .replace(/~~(.+?)~~/g, '$1')
+      // Удаляем код
+      .replace(/`(.+?)`/g, '$1')
+      // Удаляем блоки кода
+      .replace(/```[\s\S]*?```/g, '')
+      // Удаляем ссылки [text](url)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Удаляем изображения ![alt](url)
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+      // Удаляем цитаты
+      .replace(/^>\s+/gm, '')
+      // Удаляем списки
+      .replace(/^[\*\-\+]\s+/gm, '')
+      .replace(/^\d+\.\s+/gm, '')
+      // Удаляем лишние пробелы и переносы
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
   const handleShare = async () => {
-    const shareTextContent = `Получил рекомендации! ${window.location.origin}`
+    // Подготавливаем контент для копирования в зависимости от типа результата
+    let shareTextContent = ""
+    
+    if (result.type === "image" && result.imageUrl) {
+      // Для изображения копируем URL
+      shareTextContent = `Результат: ${result.imageUrl}`
+    } else if (result.type === "image_with_text" && result.text) {
+      // Для изображения с текстом копируем текст без markdown
+      shareTextContent = stripMarkdown(result.text)
+    } else {
+      // Для текста копируем содержимое без markdown
+      shareTextContent = stripMarkdown(result.text || "")
+    }
 
     try {
       await navigator.clipboard.writeText(shareTextContent)
@@ -136,9 +178,8 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
       if (navigator.share && window.isSecureContext) {
         try {
           await navigator.share({
-            title: "Lead Hero",
-            text: "Получил персональные рекомендации!",
-            url: window.location.origin,
+            title: resultTitle,
+            text: shareTextContent,
           })
         } catch {
           // User cancelled
