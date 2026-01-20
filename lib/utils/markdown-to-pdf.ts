@@ -36,7 +36,29 @@ export async function markdownToPdfContent(markdown: string): Promise<Content[]>
 
       case "list": {
         const items = token.items.map((item) => {
-          return parseInlineTokens(item.tokens || [])
+          // Обрабатываем токены внутри элемента списка
+          const itemTokens = item.tokens || []
+          
+          // Если есть только один параграф, берем его содержимое
+          if (itemTokens.length === 1 && itemTokens[0].type === "paragraph") {
+            return parseInlineTokens(itemTokens[0].tokens || [])
+          }
+          
+          // Если несколько токенов, обрабатываем их как блоки
+          if (itemTokens.length > 1) {
+            const itemContent: any[] = []
+            for (const t of itemTokens) {
+              if (t.type === "paragraph") {
+                itemContent.push(parseInlineTokens(t.tokens || []))
+              } else if (t.type === "text") {
+                itemContent.push(parseInlineTokens([t]))
+              }
+            }
+            return itemContent.length === 1 ? itemContent[0] : itemContent
+          }
+          
+          // Иначе просто парсим как inline токены
+          return parseInlineTokens(itemTokens)
         })
 
         if (token.ordered) {
@@ -106,14 +128,16 @@ function parseInlineTokens(tokens: marked.Token[]): ContentText {
   for (const token of tokens) {
     if (token.type === "strong") {
       const innerTokens = (token as any).tokens || []
+      const text = extractTextWithFormatting(innerTokens)
       parts.push({
-        text: extractText(innerTokens),
+        text: text,
         bold: true,
       })
     } else if (token.type === "em") {
       const innerTokens = (token as any).tokens || []
+      const text = extractTextWithFormatting(innerTokens)
       parts.push({
-        text: extractText(innerTokens),
+        text: text,
         italics: true,
       })
     } else if (token.type === "text") {
@@ -138,6 +162,13 @@ function parseInlineTokens(tokens: marked.Token[]): ContentText {
       parts.push({
         text: "\n",
       })
+    } else if (token.type === "paragraph") {
+      // Обрабатываем параграфы внутри inline контекста
+      const innerTokens = (token as any).tokens || []
+      const innerContent = parseInlineTokens(innerTokens)
+      if (innerContent.text) {
+        parts.push(innerContent)
+      }
     }
   }
 
@@ -151,6 +182,35 @@ function parseInlineTokens(tokens: marked.Token[]): ContentText {
       text: parts,
     }
   }
+}
+
+/**
+ * Извлекает текст с сохранением форматирования
+ */
+function extractTextWithFormatting(tokens: marked.Token[]): any {
+  if (tokens.length === 0) return ""
+  
+  const parts: any[] = []
+  
+  for (const token of tokens) {
+    if (token.type === "text") {
+      parts.push(token.raw || (token as any).text || "")
+    } else if (token.type === "strong") {
+      parts.push({
+        text: extractText((token as any).tokens || []),
+        bold: true,
+      })
+    } else if (token.type === "em") {
+      parts.push({
+        text: extractText((token as any).tokens || []),
+        italics: true,
+      })
+    } else if (token.type === "codespan") {
+      parts.push((token as any).text || token.raw)
+    }
+  }
+  
+  return parts.length === 1 ? parts[0] : parts
 }
 
 /**
