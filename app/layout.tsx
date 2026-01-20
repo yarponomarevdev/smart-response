@@ -47,9 +47,6 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_APP_VERSION ||
     "dev"
 
-  // Временный лог для проверки версии на проде
-  console.log("[Layout] App Version:", currentVersion)
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
