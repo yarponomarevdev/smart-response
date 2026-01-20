@@ -32,6 +32,17 @@ function normalizeUrl(value: string): string | null {
   }
 }
 
+interface LimitTextByCharsParams {
+  value: string
+  maxLength: number
+}
+
+interface BuildFallbackImagePromptParams {
+  imageSystemPrompt: string
+  context: string
+  maxLength: number
+}
+
 function buildJinaReaderUrl(url: string) {
   const normalized = url.replace(/^https?:\/\//, "")
   return `https://r.jina.ai/http://${normalized}`
@@ -50,6 +61,29 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   } finally {
     clearTimeout(timeoutId)
   }
+}
+
+function limitTextByChars(params: LimitTextByCharsParams) {
+  const { value, maxLength } = params
+
+  if (value.length <= maxLength) {
+    return { text: value, wasTruncated: false }
+  }
+
+  return {
+    text: value.slice(0, maxLength),
+    wasTruncated: true,
+  }
+}
+
+function buildFallbackImagePrompt(params: BuildFallbackImagePromptParams) {
+  const { imageSystemPrompt, context, maxLength } = params
+  const contextLimit = Math.min(2000, maxLength)
+  const { text: clippedContext } = limitTextByChars({ value: context, maxLength: contextLimit })
+  const basePrompt = `${imageSystemPrompt}\n\nWebsite description:\n${clippedContext}`
+  const { text: finalPrompt } = limitTextByChars({ value: basePrompt, maxLength })
+
+  return finalPrompt
 }
 
 async function fetchUrlContent(url: string): Promise<string> {
@@ -385,19 +419,28 @@ export async function POST(req: Request) {
 
       // DALL-E имеет лимит 4000 символов для промпта
       // Используем GPT для создания короткого промпта на основе всего контекста
+      const maxContextChars = 12000
+      const maxDallePromptChars = 3500
+      const metaContext = `${customFieldsContext}${additionalUrlsContext}${knowledgeBaseContext}`.trim()
       const fullContext = `URL: ${normalizedMainUrl}
 
---- Контент страницы ---
-${urlContent}
-${additionalUrlsContext}
-${customFieldsContext}${knowledgeBaseContext}`
+${metaContext ? `${metaContext}\n\n` : ""}--- Контент страницы ---
+${urlContent}`
+      const { text: limitedContext, wasTruncated: wasContextTruncated } = limitTextByChars({
+        value: fullContext,
+        maxLength: maxContextChars,
+      })
 
       console.log("Используется модель изображений:", imageModel)
       console.log("Используется текстовая модель для создания промпта:", textModel)
       console.log("Размер полного контекста:", fullContext.length, "символов")
+      if (wasContextTruncated) {
+        console.log("Контекст обрезан до", maxContextChars, "символов")
+      }
 
       // Создаем короткий промпт через GPT
-      let compressedPrompt: string
+      let compressedPrompt = ""
+      let promptSource: "gpt" | "fallback" = "gpt"
       try {
         const promptCreationResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -416,7 +459,7 @@ ${customFieldsContext}${knowledgeBaseContext}`
               },
               {
                 role: "user",
-                content: fullContext,
+                content: limitedContext,
               },
             ],
             max_completion_tokens: 1000, // Ограничиваем выход, чтобы промпт точно уместился в 3500 символов
@@ -424,47 +467,65 @@ ${customFieldsContext}${knowledgeBaseContext}`
         })
 
         if (!promptCreationResponse.ok) {
-          const errorData = await promptCreationResponse.json()
+          let errorData: unknown = null
+          try {
+            errorData = await promptCreationResponse.json()
+          } catch {
+            errorData = { error: { message: `HTTP ${promptCreationResponse.status}: ${promptCreationResponse.statusText}` } }
+          }
           console.error("Ошибка создания промпта через GPT:", errorData)
-          return Response.json(
-            {
-              error: "Ошибка создания промпта для изображения",
-              details: errorData.error?.message || "Не удалось создать промпт",
-            },
-            { status: promptCreationResponse.status, headers: corsHeaders },
-          )
+          promptSource = "fallback"
+          compressedPrompt = buildFallbackImagePrompt({
+            imageSystemPrompt,
+            context: limitedContext,
+            maxLength: maxDallePromptChars,
+          })
+        } else {
+          try {
+            const promptData = await promptCreationResponse.json()
+            compressedPrompt = promptData.choices?.[0]?.message?.content || ""
+          } catch (parseError) {
+            console.error("Ошибка парсинга промпта от GPT:", parseError)
+            promptSource = "fallback"
+            compressedPrompt = buildFallbackImagePrompt({
+              imageSystemPrompt,
+              context: limitedContext,
+              maxLength: maxDallePromptChars,
+            })
+          }
         }
 
-        const promptData = await promptCreationResponse.json()
-        compressedPrompt = promptData.choices[0]?.message?.content || ""
-        
-        if (!compressedPrompt) {
-          return Response.json(
-            {
-              error: "Пустой промпт от GPT",
-              details: "Не удалось создать промпт для изображения",
-            },
-            { status: 500, headers: corsHeaders },
-          )
-        }
-
-        // Обрезаем на всякий случай до 3500 символов
-        if (compressedPrompt.length > 3500) {
-          compressedPrompt = compressedPrompt.slice(0, 3500)
-        }
-
-        console.log("Размер сжатого промпта:", compressedPrompt.length, "символов")
-        console.log("Превью промпта изображения:", compressedPrompt.slice(0, 200) + "...")
       } catch (promptError: unknown) {
         console.error("Ошибка создания промпта:", promptError)
-        return Response.json(
-          {
-            error: "Ошибка создания промпта для изображения",
-            details: promptError instanceof Error ? promptError.message : "Unknown error",
-          },
-          { status: 500, headers: corsHeaders },
-        )
+        promptSource = "fallback"
+        compressedPrompt = buildFallbackImagePrompt({
+          imageSystemPrompt,
+          context: limitedContext,
+          maxLength: maxDallePromptChars,
+        })
       }
+
+      if (!compressedPrompt) {
+        promptSource = "fallback"
+        compressedPrompt = buildFallbackImagePrompt({
+          imageSystemPrompt,
+          context: limitedContext,
+          maxLength: maxDallePromptChars,
+        })
+      }
+
+      const { text: finalPrompt, wasTruncated: wasPromptTruncated } = limitTextByChars({
+        value: compressedPrompt,
+        maxLength: maxDallePromptChars,
+      })
+      compressedPrompt = finalPrompt
+
+      console.log("Источник промпта изображения:", promptSource)
+      console.log("Размер сжатого промпта:", compressedPrompt.length, "символов")
+      if (wasPromptTruncated) {
+        console.log("Промпт обрезан до", maxDallePromptChars, "символов")
+      }
+      console.log("Превью промпта изображения:", compressedPrompt.slice(0, 200) + "...")
 
       // Теперь генерируем изображение с коротким промптом
       let imageResponse
