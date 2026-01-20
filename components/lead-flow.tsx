@@ -24,7 +24,7 @@ interface ContactData {
 export function LeadFlow({ formId }: LeadFlowProps = {}) {
   const effectiveFormId = formId || MAIN_FORM_ID
   const [step, setStep] = useState<FlowStep>("url")
-  const [url, setUrl] = useState("")
+  const [url, setUrl] = useState<string | null>(null)
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({})
   const [contactData, setContactData] = useState<ContactData>({ email: "" })
   const [result, setResult] = useState<{ type: string; text: string; imageUrl: string }>({
@@ -96,7 +96,7 @@ export function LeadFlow({ formId }: LeadFlowProps = {}) {
           formId={effectiveFormId}
           email={contactData.email}
           onRestart={() => {
-            setUrl("")
+            setUrl(null)
             setCustomFields({})
             setContactData({ email: "" })
             setResult({ type: "text", text: "", imageUrl: "" })

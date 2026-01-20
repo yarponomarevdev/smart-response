@@ -40,7 +40,7 @@ async function readJsonOrText(response: Response) {
 }
 
 interface GenerationStepProps {
-  url: string
+  url: string | null
   formId: string
   customFields?: Record<string, unknown>
   contactData: { email: string; phone?: string; feedback?: boolean }
@@ -165,7 +165,7 @@ export function GenerationStep({
         const fallback = `HTTP ${response.status}: ${response.statusText}`
         const rawErrorMessage = extractErrorMessageFromPayload(parsed.data, fallback)
         const errorMessage =
-          rawErrorMessage === "Both 'url' and 'formId' are required" ? t("errors.generationMissingData") : rawErrorMessage
+          rawErrorMessage === "'formId' is required" ? t("errors.generationMissingData") : rawErrorMessage
 
         console.error("Генерация не удалась:", {
           status: response.status,

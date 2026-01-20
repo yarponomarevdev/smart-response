@@ -22,7 +22,7 @@ import { useTranslation } from "@/lib/i18n"
 const MAIN_FORM_ID = "f5fad560-eea2-443c-98e9-1a66447dae86"
 
 interface URLSubmissionStepProps {
-  onSubmit: (url: string, customFields?: Record<string, unknown>) => void
+  onSubmit: (url: string | null, customFields?: Record<string, unknown>) => void
   formId?: string
 }
 
@@ -108,34 +108,31 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     setIsLoading(true)
     setError(null)
 
-    // URL обязателен для генерации: без него /api/generate всегда вернёт 400
+    // URL опционален: если есть поле URL и оно заполнено — используем его
     const urlFields = dynamicFields.filter((f) => f.field_type === "url")
-    if (urlFields.length === 0) {
-      setError(t("errors.urlFieldMissing"))
-      setIsLoading(false)
-      return
-    }
+    let formattedUrl = ""
+    
+    if (urlFields.length > 0) {
+      // Если URL-полей несколько — берём первое непустое
+      const urlCandidate = urlFields
+        .map((f) => ({ field: f, value: String(fieldValues[f.field_key] ?? "").trim() }))
+        .find((x) => Boolean(x.value))
 
-    // Если URL-полей несколько — берём первое непустое
-    const urlCandidate = urlFields
-      .map((f) => ({ field: f, value: String(fieldValues[f.field_key] ?? "").trim() }))
-      .find((x) => Boolean(x.value))
-
-    if (!urlCandidate) {
-      setError(t("errors.urlRequired"))
-      setIsLoading(false)
-      return
-    }
-
-    const rawUrl = urlCandidate.value
-    const formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
-    try {
-      // Валидируем URL, чтобы не отправлять мусор на сервер
-      new URL(formattedUrl)
-    } catch {
-      setError(t("errors.urlInvalid"))
-      setIsLoading(false)
-      return
+      if (urlCandidate) {
+        const rawUrl = urlCandidate.value
+        formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
+        try {
+          // Валидируем URL, чтобы не отправлять мусор на сервер
+          new URL(formattedUrl)
+        } catch {
+          setError(t("errors.urlInvalid"))
+          setIsLoading(false)
+          return
+        }
+      } else {
+        // Если поле URL есть, но не заполнено и обязательно — это уже отловлено в validateRequiredFields
+        // Здесь просто оставляем пустой URL
+      }
     }
 
     const supabase = createClient()
@@ -187,8 +184,8 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       ...(parentPageUrl ? { parent_page_url: parentPageUrl } : {})
     }
 
-    // Передаём URL и кастомные поля
-    onSubmit(formattedUrl, extendedFieldValues)
+    // Передаём URL (или null если нет) и кастомные поля
+    onSubmit(formattedUrl || null, extendedFieldValues)
   }
 
   // Рендер динамического поля

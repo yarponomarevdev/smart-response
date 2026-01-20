@@ -209,35 +209,49 @@ export async function POST(req: Request) {
 
     const { url, formId, customFields } = body
 
-    if (!url || !formId) {
-      console.error("Отсутствуют обязательные поля:", { url: !!url, formId: !!formId })
+    if (!formId) {
+      console.error("Отсутствует обязательное поле formId")
       return Response.json(
         {
-          error: "Missing required fields",
-          details: "Both 'url' and 'formId' are required",
+          error: "Missing required field",
+          details: "'formId' is required",
         },
         { status: 400, headers: corsHeaders },
       )
     }
 
-    const normalizedMainUrl = normalizeUrl(String(url))
-    if (!normalizedMainUrl) {
-      return Response.json(
-        {
-          error: "Некорректная ссылка",
-          details: "Не удалось распознать URL",
-        },
-        { status: 400, headers: corsHeaders },
-      )
+    // URL опционален: если передан, валидируем и нормализуем
+    let normalizedMainUrl: string | null = null
+    if (url) {
+      normalizedMainUrl = normalizeUrl(String(url))
+      if (!normalizedMainUrl) {
+        return Response.json(
+          {
+            error: "Некорректная ссылка",
+            details: "Не удалось распознать URL",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
     }
 
     // Форматируем кастомные поля для включения в контекст
+    // Извлекаем image поля отдельно - они не должны попадать в текстовый контекст
+    const imageFieldKeys = new Set(imageFields.map(f => f.field_key))
+    let inputImages: Record<string, string> = {}
     let customFieldsContext = ""
+    
     if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
       customFieldsContext = "\n\n--- Данные пользователя ---\n"
       for (const [key, value] of Object.entries(customFields)) {
         if (value !== undefined && value !== null && value !== "") {
-          if (Array.isArray(value)) {
+          // Исключаем image поля из текстового контекста
+          if (imageFieldKeys.has(key)) {
+            // Сохраняем base64 изображения отдельно
+            if (typeof value === "string" && value.startsWith("data:image/")) {
+              inputImages[key] = value
+            }
+          } else if (Array.isArray(value)) {
             customFieldsContext += `- ${key}: ${value.join(", ")}\n`
           } else if (typeof value === "boolean") {
             customFieldsContext += `- ${key}: ${value ? "Да" : "Нет"}\n`
@@ -279,13 +293,14 @@ export async function POST(req: Request) {
       )
     }
 
-    // Fetch form fields to identify URL fields
+    // Fetch form fields to identify URL and image fields
     const { data: fieldsData } = await supabase
       .from("form_fields")
       .select("field_key, field_type, field_label")
       .eq("form_id", formId)
 
     const urlFields = fieldsData?.filter(f => f.field_type === 'url') || []
+    const imageFields = fieldsData?.filter(f => f.field_type === 'image') || []
     
     // Process additional URL fields
     let additionalUrlsContext = ""
@@ -332,8 +347,8 @@ export async function POST(req: Request) {
     const useKnowledgeBase = getContent("use_knowledge_base", "false") === "true"
     const knowledgeUrl = getContent("knowledge_url", "")
 
-    // Получаем контент из URL пользователя
-    const urlContent = await fetchUrlContent(normalizedMainUrl)
+    // Получаем контент из URL пользователя (если URL передан)
+    const urlContent = normalizedMainUrl ? await fetchUrlContent(normalizedMainUrl) : ""
 
     // Формируем контекст базы знаний
     let knowledgeBaseContext = ""
@@ -422,10 +437,7 @@ export async function POST(req: Request) {
       const maxContextChars = 12000
       const maxDallePromptChars = 3500
       const metaContext = `${customFieldsContext}${additionalUrlsContext}${knowledgeBaseContext}`.trim()
-      const fullContext = `URL: ${normalizedMainUrl}
-
-${metaContext ? `${metaContext}\n\n` : ""}--- Контент страницы ---
-${urlContent}`
+      const fullContext = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${metaContext ? `${metaContext}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}` : ""}`.trim()
       const { text: limitedContext, wasTruncated: wasContextTruncated } = limitTextByChars({
         value: fullContext,
         maxLength: maxContextChars,
@@ -438,10 +450,19 @@ ${urlContent}`
         console.log("Контекст обрезан до", maxContextChars, "символов")
       }
 
+      // Определяем режим генерации для формирования промпта
+      const hasInputImage = Object.keys(inputImages).length > 0
+      const useEditAPI = hasInputImage
+
       // Создаем короткий промпт через GPT
       let compressedPrompt = ""
       let promptSource: "gpt" | "fallback" = "gpt"
       try {
+        // Инструкции для промпта зависят от режима
+        const promptInstructions = useEditAPI
+          ? `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для редактирования изображения (максимум 3500 символов). Пользователь загрузил своё изображение, и нужно описать, ЧТО ИЗМЕНИТЬ или ДОБАВИТЬ к нему. Промпт должен быть на английском языке и описывать конкретные изменения. Например: "Add a red hat to the person", "Change background to blue sky", "Add sunglasses to the face". Фокусируйся на действиях редактирования, а не на описании всей сцены.`
+          : `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для DALL-E (максимум 3500 символов). Промпт должен быть на английском языке и описывать конкретные визуальные детали, которые нужно сгенерировать. Фокусируйся на ключевых визуальных элементах, цветах, стиле, настроении. Избегай излишних деталей, но сохрани суть.`
+
         const promptCreationResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -455,7 +476,7 @@ ${urlContent}`
                 role: "system",
                 content: `${imageSystemPrompt}
 
-ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для DALL-E (максимум 3500 символов). Промпт должен быть на английском языке и описывать конкретные визуальные детали, которые нужно сгенерировать. Фокусируйся на ключевых визуальных элементах, цветах, стиле, настроении. Избегай излишних деталей, но сохрани суть.`,
+${promptInstructions}`,
               },
               {
                 role: "user",
@@ -530,19 +551,52 @@ ${urlContent}`
       // Теперь генерируем изображение с коротким промптом
       let imageResponse
       try {
-        imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: imageModel,
-            prompt: compressedPrompt,
-            n: 1,
-            size: "1024x1024",
-          }),
-        })
+        if (useEditAPI) {
+          // Используем Images Edit API для редактирования входного изображения
+          console.log("Использование Images Edit API с входным изображением")
+          
+          // Берём первое доступное изображение
+          const firstImageKey = Object.keys(inputImages)[0]
+          const base64Image = inputImages[firstImageKey]
+          
+          // Извлекаем base64 данные (убираем префикс data:image/png;base64,)
+          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "")
+          const imageBuffer = Buffer.from(base64Data, "base64")
+          
+          // Создаём FormData для отправки (используем глобальный FormData из Node.js 18+)
+          const formData = new FormData()
+          
+          // Создаём Blob из буфера и добавляем как файл
+          const blob = new Blob([imageBuffer], { type: "image/png" })
+          formData.append("model", imageModel)
+          formData.append("image", blob, "input.png")
+          formData.append("prompt", compressedPrompt)
+          formData.append("n", "1")
+          formData.append("size", "1024x1024")
+          
+          imageResponse = await fetch("https://api.openai.com/v1/images/edits", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: formData,
+          })
+        } else {
+          // Используем стандартный Images Generations API
+          imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: imageModel,
+              prompt: compressedPrompt,
+              n: 1,
+              size: "1024x1024",
+            }),
+          })
+        }
       } catch (imageFetchError: unknown) {
         console.error("Ошибка подключения к API генерации изображений:", imageFetchError)
         return Response.json(
@@ -644,12 +698,7 @@ ${urlContent}`
 
         if (textSystemPrompt) {
           // Формируем user message с контекстом для генерации текста
-          const userMessage = `URL: ${normalizedMainUrl}
-
---- Контент страницы ---
-${urlContent}
-${additionalUrlsContext}
-${customFieldsContext}${knowledgeBaseContext}
+          const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}
 
 Provide a brief explanatory text to accompany the generated image. Keep it concise and relevant.`
 
@@ -844,12 +893,7 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
       }
 
       // Формируем user message с контекстом
-      const userMessage = `URL: ${normalizedMainUrl}
-
---- Контент страницы ---
-${urlContent}
-${additionalUrlsContext}
-${customFieldsContext}${knowledgeBaseContext}
+      const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}
 
 Please provide your analysis and recommendations.`
 
