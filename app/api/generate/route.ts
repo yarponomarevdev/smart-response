@@ -347,6 +347,19 @@ export async function POST(req: Request) {
         )
       }
 
+      // Получаем текстовую модель для создания промпта
+      const textModel = await getTextModel()
+      
+      if (!textModel) {
+        return Response.json(
+          {
+            error: "Модель для генерации текста не настроена (требуется для создания промпта изображения)",
+            details: "Выберите модель текста в системных настройках супер-админа",
+          },
+          { status: 400, headers: corsHeaders },
+        )
+      }
+
       // Получаем глобальный промпт для изображений
       const globalImagePrompt = await getGlobalImagePrompt()
 
@@ -370,13 +383,90 @@ export async function POST(req: Request) {
         )
       }
 
-      // Формируем финальный промпт для генерации изображения
-      // Для изображений база знаний добавляется как часть промпта
-      const imagePrompt = `${imageSystemPrompt}\n\nUser preferences from URL content:\n${urlContent}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}`
+      // DALL-E имеет лимит 4000 символов для промпта
+      // Используем GPT для создания короткого промпта на основе всего контекста
+      const fullContext = `URL: ${normalizedMainUrl}
+
+--- Контент страницы ---
+${urlContent}
+${additionalUrlsContext}
+${customFieldsContext}${knowledgeBaseContext}`
 
       console.log("Используется модель изображений:", imageModel)
-      console.log("Превью промпта изображения:", imagePrompt.slice(0, 100) + "...")
+      console.log("Используется текстовая модель для создания промпта:", textModel)
+      console.log("Размер полного контекста:", fullContext.length, "символов")
 
+      // Создаем короткий промпт через GPT
+      let compressedPrompt: string
+      try {
+        const promptCreationResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: textModel,
+            messages: [
+              {
+                role: "system",
+                content: `${imageSystemPrompt}
+
+ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для DALL-E (максимум 3500 символов). Промпт должен быть на английском языке и описывать конкретные визуальные детали, которые нужно сгенерировать. Фокусируйся на ключевых визуальных элементах, цветах, стиле, настроении. Избегай излишних деталей, но сохрани суть.`,
+              },
+              {
+                role: "user",
+                content: fullContext,
+              },
+            ],
+            max_tokens: 1000, // Ограничиваем выход, чтобы промпт точно уместился в 3500 символов
+          }),
+        })
+
+        if (!promptCreationResponse.ok) {
+          const errorData = await promptCreationResponse.json()
+          console.error("Ошибка создания промпта через GPT:", errorData)
+          return Response.json(
+            {
+              error: "Ошибка создания промпта для изображения",
+              details: errorData.error?.message || "Не удалось создать промпт",
+            },
+            { status: promptCreationResponse.status, headers: corsHeaders },
+          )
+        }
+
+        const promptData = await promptCreationResponse.json()
+        compressedPrompt = promptData.choices[0]?.message?.content || ""
+        
+        if (!compressedPrompt) {
+          return Response.json(
+            {
+              error: "Пустой промпт от GPT",
+              details: "Не удалось создать промпт для изображения",
+            },
+            { status: 500, headers: corsHeaders },
+          )
+        }
+
+        // Обрезаем на всякий случай до 3500 символов
+        if (compressedPrompt.length > 3500) {
+          compressedPrompt = compressedPrompt.slice(0, 3500)
+        }
+
+        console.log("Размер сжатого промпта:", compressedPrompt.length, "символов")
+        console.log("Превью промпта изображения:", compressedPrompt.slice(0, 200) + "...")
+      } catch (promptError: unknown) {
+        console.error("Ошибка создания промпта:", promptError)
+        return Response.json(
+          {
+            error: "Ошибка создания промпта для изображения",
+            details: promptError instanceof Error ? promptError.message : "Unknown error",
+          },
+          { status: 500, headers: corsHeaders },
+        )
+      }
+
+      // Теперь генерируем изображение с коротким промптом
       let imageResponse
       try {
         imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
@@ -387,7 +477,7 @@ export async function POST(req: Request) {
           },
           body: JSON.stringify({
             model: imageModel,
-            prompt: imagePrompt,
+            prompt: compressedPrompt,
             n: 1,
             size: "1024x1024",
           }),
