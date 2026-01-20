@@ -90,6 +90,19 @@ export async function markdownToPdfContent(markdown: string): Promise<Content[]>
         break
       }
 
+      case "code": {
+        // Блоки кода
+        const codeText = (token as any).text || ""
+        content.push({
+          text: codeText,
+          font: "Courier",
+          fontSize: 9,
+          background: "#f5f5f5",
+          margin: [0, 5, 0, 10] as [number, number, number, number],
+        } as ContentText)
+        break
+      }
+
       case "hr":
         content.push({
           canvas: [
@@ -110,6 +123,12 @@ export async function markdownToPdfContent(markdown: string): Promise<Content[]>
       case "space":
         // Добавляем небольшой отступ для пустых строк
         break
+
+      case "table": {
+        // Базовая обработка таблиц (если нужно)
+        // Пока пропускаем, так как pdfmake требует специальную структуру
+        break
+      }
 
       default:
         break
@@ -141,12 +160,15 @@ function parseInlineTokens(tokens: marked.Token[]): ContentText {
         italics: true,
       })
     } else if (token.type === "text") {
+      // Используем text вместо raw, чтобы избежать markdown символов
+      const textContent = (token as any).text || ""
       parts.push({
-        text: token.raw || (token as any).text || "",
+        text: textContent,
       })
     } else if (token.type === "codespan") {
+      // Для codespan используем text (без обратных кавычек)
       parts.push({
-        text: (token as any).text || token.raw,
+        text: (token as any).text || "",
         font: "Courier",
         fontSize: 9,
         background: "#f5f5f5",
@@ -169,6 +191,22 @@ function parseInlineTokens(tokens: marked.Token[]): ContentText {
       if (innerContent.text) {
         parts.push(innerContent)
       }
+    } else if (token.type === "escape") {
+      // Обрабатываем экранированные символы
+      parts.push({
+        text: (token as any).text || "",
+      })
+    } else if (token.type === "html") {
+      // Игнорируем HTML теги
+      continue
+    } else if (token.type === "del") {
+      // Зачеркнутый текст (strikethrough)
+      const innerTokens = (token as any).tokens || []
+      const text = extractTextWithFormatting(innerTokens)
+      parts.push({
+        text: text,
+        decoration: "lineThrough",
+      })
     }
   }
 
@@ -194,7 +232,8 @@ function extractTextWithFormatting(tokens: marked.Token[]): any {
   
   for (const token of tokens) {
     if (token.type === "text") {
-      parts.push(token.raw || (token as any).text || "")
+      // Используем text вместо raw
+      parts.push((token as any).text || "")
     } else if (token.type === "strong") {
       parts.push({
         text: extractText((token as any).tokens || []),
@@ -206,7 +245,15 @@ function extractTextWithFormatting(tokens: marked.Token[]): any {
         italics: true,
       })
     } else if (token.type === "codespan") {
-      parts.push((token as any).text || token.raw)
+      // Используем text (без обратных кавычек)
+      parts.push((token as any).text || "")
+    } else if (token.type === "del") {
+      parts.push({
+        text: extractText((token as any).tokens || []),
+        decoration: "lineThrough",
+      })
+    } else if (token.type === "escape") {
+      parts.push((token as any).text || "")
     }
   }
   
@@ -220,13 +267,19 @@ function extractText(tokens: marked.Token[]): string {
   return tokens
     .map((token) => {
       if (token.type === "text") {
-        return token.raw || (token as any).text || ""
+        // Используем text вместо raw, чтобы избежать markdown символов
+        return (token as any).text || ""
       } else if (token.type === "strong" || token.type === "em") {
         return extractText((token as any).tokens || [])
       } else if (token.type === "codespan") {
-        return (token as any).text || token.raw
+        // Используем text (без обратных кавычек)
+        return (token as any).text || ""
       } else if (token.type === "link") {
         return extractText((token as any).tokens || [])
+      } else if (token.type === "del") {
+        return extractText((token as any).tokens || [])
+      } else if (token.type === "escape") {
+        return (token as any).text || ""
       }
       return ""
     })
