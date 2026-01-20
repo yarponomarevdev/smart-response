@@ -224,10 +224,10 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
             </Label>
             <Input
               id={field.field_key}
-              type="url"
+              type="text"
               value={(value as string) || ""}
               onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-              placeholder={field.placeholder || "https://example.com"}
+              placeholder={field.placeholder || "example.com"}
               className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border"
               disabled={isLoading}
             />
