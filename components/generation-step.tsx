@@ -225,6 +225,7 @@ export function GenerationStep({
               resultImageUrl: generatedResult.imageUrl || null,
               resultType: generatedResult.type,
               url,
+              formId,
             }),
           }).catch((err) => {
             console.error("Ошибка отправки email:", err)

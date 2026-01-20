@@ -34,13 +34,52 @@ function extractDomain(url: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, resultText, resultImageUrl, resultType, url } = await request.json()
+    const { email, resultText, resultImageUrl, resultType, url, formId } = await request.json()
 
     console.log("Получен запрос на отправку email для:", email)
     console.log("Тип результата:", resultType)
 
     if (!email || (!resultText && !resultImageUrl)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders })
+    }
+
+    // Загружаем настройки формы
+    let headerTitle = "Ваш результат"
+    let ctaText = ""
+    let buttonText = ""
+    let buttonUrl = ""
+
+    if (formId) {
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = await createClient()
+
+      // Загружаем первый h1 заголовок из динамических полей
+      const { data: fields } = await supabase
+        .from("form_fields")
+        .select("field_label, field_type")
+        .eq("form_id", formId)
+        .eq("field_type", "h1")
+        .order("position", { ascending: true })
+        .limit(1)
+
+      if (fields && fields.length > 0) {
+        headerTitle = fields[0].field_label
+      }
+
+      // Загружаем CTA настройки из form_content
+      const { data: contentData } = await supabase
+        .from("form_content")
+        .select("key, value")
+        .eq("form_id", formId)
+        .in("key", ["cta_text", "button_text", "button_url"])
+
+      if (contentData && contentData.length > 0) {
+        contentData.forEach((item) => {
+          if (item.key === "cta_text") ctaText = item.value || ""
+          if (item.key === "button_text") buttonText = item.value || ""
+          if (item.key === "button_url") buttonUrl = item.value || ""
+        })
+      }
     }
 
     const { Resend } = await import("resend")
@@ -54,7 +93,7 @@ export async function POST(request: NextRequest) {
       from: fromEmail,
       to: [email],
       subject: "Ваш результат",
-      html: generateEmailHTML(resultText, resultImageUrl, resultType, url),
+      html: generateEmailHTML(resultText, resultImageUrl, resultType, url, headerTitle, ctaText, buttonText, buttonUrl),
     })
 
     if (error) {
@@ -76,10 +115,22 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateEmailHTML(resultText: string, resultImageUrl: string | null, resultType: string, url: string) {
+function generateEmailHTML(
+  resultText: string, 
+  resultImageUrl: string | null, 
+  resultType: string, 
+  url: string,
+  headerTitle: string,
+  ctaText: string,
+  buttonText: string,
+  buttonUrl: string
+) {
   // Конвертируем markdown в HTML для email (используем глобальные настройки marked)
   const htmlContent = resultText ? marked(resultText) : ""
   const domain = extractDomain(url)
+  
+  // Определяем, показывать ли CTA блок
+  const showCTA = buttonText && buttonUrl
   
   return `
     <!DOCTYPE html>
@@ -97,7 +148,7 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171717; border-radius: 8px; overflow: hidden;">
                 <tr>
                   <td style="padding: 40px 40px 20px 40px; text-align: center;">
-                    <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #ffffff;">Your Personalized Recommendations</h1>
+                    <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #ffffff;">${headerTitle}</h1>
                   </td>
                 </tr>
                 
@@ -127,21 +178,22 @@ function generateEmailHTML(resultText: string, resultImageUrl: string | null, re
                     : ""
                 }
                 
+                ${
+                  showCTA
+                    ? `
                 <tr>
-                  <td style="padding: 20px 40px 40px 40px; text-align: center;">
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://smartresponse.vercel.app"}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
-                      Get More Recommendations
+                  <td style="padding: ${ctaText ? '20px 40px 10px 40px' : '20px 40px 40px 40px'}; text-align: center;">
+                    ${ctaText ? `<p style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 500;">${ctaText}</p>` : ''}
+                    <a href="${buttonUrl}" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
+                      ${buttonText}
                     </a>
                   </td>
                 </tr>
+                `
+                    : ""
+                }
                 
-                <tr>
-                  <td style="padding: 20px 40px; text-align: center; border-top: 1px solid #262626;">
-                    <p style="margin: 0; color: #737373; font-size: 12px;">
-                      You received this email because you requested personalized recommendations from Lead Hero.
-                    </p>
-                  </td>
-                </tr>
+                
               </table>
             </td>
           </tr>
