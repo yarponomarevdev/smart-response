@@ -41,10 +41,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   // Получаем версию из переменных окружения Vercel
+  // NEXT_PUBLIC_ префикс делает переменную доступной в браузере
   const currentVersion =
-    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
     process.env.NEXT_PUBLIC_APP_VERSION ||
     "dev"
+
+  // Временный лог для проверки версии на проде
+  console.log("[Layout] App Version:", currentVersion)
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -27,16 +27,25 @@ export function UpdateNotification({ currentVersion }: UpdateNotificationProps) 
     if (typeof window === "undefined") return
 
     // Пропускаем для dev-версии
-    if (currentVersion === "dev") return
+    if (currentVersion === "dev") {
+      console.log("[UpdateNotification] Пропускаем проверку для dev-версии")
+      return
+    }
 
     const savedVersion = localStorage.getItem(VERSION_STORAGE_KEY)
+    console.log("[UpdateNotification] Текущая версия:", currentVersion)
+    console.log("[UpdateNotification] Сохраненная версия:", savedVersion)
 
     if (!savedVersion) {
       // Первый визит - сохраняем текущую версию без показа модалки
+      console.log("[UpdateNotification] Первый визит, сохраняем версию")
       localStorage.setItem(VERSION_STORAGE_KEY, currentVersion)
     } else if (savedVersion !== currentVersion) {
       // Версия изменилась - показываем модалку
+      console.log("[UpdateNotification] Версия изменилась! Показываем модалку")
       setShowModal(true)
+    } else {
+      console.log("[UpdateNotification] Версия не изменилась")
     }
   }, [currentVersion])
 
