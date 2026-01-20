@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 import { extractTextFromFile } from "@/lib/file-parser"
-import { saveImageToStorage } from "@/lib/utils/image-storage"
+import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
 
 export const maxDuration = 60
 
@@ -573,14 +573,16 @@ ${urlContent}`
       }
 
       const imageData = await imageResponse.json()
-      const tempImageUrl = imageData.data[0]?.url || ""
+      const imageItem = imageData.data?.[0]
+      const tempImageUrl = imageItem?.url || ""
+      const tempImageBase64 = imageItem?.b64_json || ""
 
-      if (!tempImageUrl) {
-        console.error("Пустой URL изображения:", imageData)
+      if (!tempImageUrl && !tempImageBase64) {
+        console.error("Пустой ответ изображения:", imageData)
         return Response.json(
           {
             error: "Пустой ответ от API",
-            details: "API не вернул ссылку на изображение. Попробуйте другие настройки промптов.",
+            details: "API не вернуло URL или base64. Попробуйте другие настройки промптов.",
           },
           { status: 500, headers: corsHeaders },
         )
@@ -588,13 +590,24 @@ ${urlContent}`
 
       // Сохраняем изображение в Supabase Storage для постоянного хранения
       const leadId = crypto.randomUUID()
-      const imageUrl = await saveImageToStorage(tempImageUrl, leadId)
-      
-      // Если не удалось сохранить, используем временный URL
-      const finalImageUrl = imageUrl || tempImageUrl
-      
+      let imageUrl: string | null = null
+
+      if (tempImageBase64) {
+        imageUrl = await saveBase64ImageToStorage({
+          base64: tempImageBase64,
+          leadId,
+        })
+      } else {
+        imageUrl = await saveImageToStorage(tempImageUrl, leadId)
+      }
+
+      const finalImageUrl =
+        imageUrl ||
+        tempImageUrl ||
+        (tempImageBase64 ? `data:image/png;base64,${tempImageBase64}` : "")
+
       if (!imageUrl) {
-        console.warn("Не удалось сохранить изображение в хранилище, используется временный URL")
+        console.warn("Не удалось сохранить изображение в хранилище, используется временный ответ")
       }
 
       // Для формата image_with_text генерируем также текстовое описание

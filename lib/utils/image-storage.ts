@@ -11,6 +11,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const BUCKET_NAME = "generated-images"
 
+interface SaveBase64ImageParams {
+  base64: string
+  leadId: string
+  contentType?: string
+}
+
 /**
  * Скачивает изображение по URL и загружает в Supabase Storage
  * @param imageUrl - URL изображения (временный от OpenAI)
@@ -60,6 +66,53 @@ export async function saveImageToStorage(
     return urlData.publicUrl
   } catch (error) {
     console.error("[ImageStorage] Ошибка сохранения изображения:", error)
+    return null
+  }
+}
+
+/**
+ * Сохраняет изображение в Supabase Storage из base64
+ * @param base64 - Base64 без префикса data:
+ * @param leadId - ID лида для уникального имени файла
+ * @param contentType - MIME тип изображения
+ */
+export async function saveBase64ImageToStorage({
+  base64,
+  leadId,
+  contentType = "image/png",
+}: SaveBase64ImageParams): Promise<string | null> {
+  if (!base64) return null
+
+  try {
+    const normalizedBase64 = base64.includes(",") ? base64.split(",").pop() || "" : base64
+    if (!normalizedBase64) return null
+
+    const buffer = Buffer.from(normalizedBase64, "base64")
+    const timestamp = Date.now()
+    const extension = contentType.includes("webp") ? "webp" : "png"
+    const fileName = `${leadId}-${timestamp}.${extension}`
+    const filePath = `leads/${fileName}`
+
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, buffer, {
+        contentType,
+        cacheControl: "31536000",
+        upsert: false,
+      })
+
+    if (error) {
+      console.error("[ImageStorage] Ошибка загрузки base64:", error)
+      return null
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath)
+
+    return urlData.publicUrl
+  } catch (error) {
+    console.error("[ImageStorage] Ошибка сохранения base64 изображения:", error)
     return null
   }
 }
