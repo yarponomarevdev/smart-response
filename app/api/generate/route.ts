@@ -3,7 +3,7 @@ import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel 
 import { extractTextFromFile } from "@/lib/file-parser"
 import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // CORS заголовки для поддержки запросов с внешних сайтов
 const corsHeaders = {
