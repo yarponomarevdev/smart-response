@@ -11,12 +11,10 @@ interface UseAutoSaveFieldOptions {
   fieldKey: string
   initialValue: string
   debounceMs?: number
-  /** Для boolean полей - сохранять "true"/"false" */
-  isBoolean?: boolean
 }
 
 /**
- * Хук для автосохранения отдельного поля в form_content
+ * Хук для автосохранения отдельного поля в таблицу forms
  */
 export function useAutoSaveField({
   formId,
@@ -36,7 +34,6 @@ export function useAutoSaveField({
   // Сброс состояния при смене формы
   useEffect(() => {
     if (formId !== formIdRef.current) {
-      // Отменяем все pending сохранения для старой формы
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -47,14 +44,12 @@ export function useAutoSaveField({
       }
       setStatus("idle")
       formIdRef.current = formId
-      // Сбрасываем флаг инициализации, чтобы обновилось значение при загрузке новых данных
       isInitializedRef.current = false
     }
   }, [formId])
 
-  // Обновляем значение когда приходит новое initialValue (загрузка данных)
+  // Обновляем значение когда приходит новое initialValue
   useEffect(() => {
-    // Не обновляем извне, если есть несохраненные изменения (таймер активен)
     if (timeoutRef.current) return
 
     if (initialValue !== initialValueRef.current || !isInitializedRef.current) {
@@ -79,24 +74,22 @@ export function useAutoSaveField({
     
     try {
       const supabase = createClient()
+      
+      // Сохраняем напрямую в таблицу forms
       const { error } = await supabase
-        .from("form_content")
-        .upsert(
-          { form_id: formId, key: fieldKey, value: newValue },
-          { onConflict: "form_id,key" }
-        )
+        .from("forms")
+        .update({ [fieldKey]: newValue || null })
+        .eq("id", formId)
 
       if (error) throw error
 
-      // Проверяем, что форма не изменилась во время сохранения
       if (formId !== formIdRef.current) return
 
-      // Инвалидируем кэш, чтобы данные обновились везде (включая другие вкладки)
+      // Инвалидируем кэш
       await queryClient.invalidateQueries({ queryKey: ["formContent", formId] })
 
       setStatus("saved")
       
-      // Сбрасываем статус через 2 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {
@@ -104,13 +97,11 @@ export function useAutoSaveField({
         }
       }, 2000)
     } catch (err) {
-      // Если форма изменилась, не показываем ошибку
       if (formId !== formIdRef.current) return
 
       console.error("Ошибка автосохранения:", err)
       setStatus("error")
       
-      // Сбрасываем статус ошибки через 3 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {
@@ -123,10 +114,8 @@ export function useAutoSaveField({
   const onChange = useCallback((newValue: string) => {
     setValue(newValue)
     
-    // Отменяем предыдущий таймаут
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     
-    // Запускаем новый debounce
     timeoutRef.current = setTimeout(() => {
       saveField(newValue)
     }, debounceMs)
@@ -163,7 +152,6 @@ export function useAutoSaveFormName({
   // Сброс состояния при смене формы
   useEffect(() => {
     if (formId !== formIdRef.current) {
-      // Отменяем все pending сохранения для старой формы
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -174,14 +162,12 @@ export function useAutoSaveFormName({
       }
       setStatus("idle")
       formIdRef.current = formId
-      // Сбрасываем флаг инициализации, чтобы обновилось значение при загрузке новых данных
       isInitializedRef.current = false
     }
   }, [formId])
 
   // Обновляем значение когда приходит новое initialValue
   useEffect(() => {
-    // Не обновляем извне, если есть несохраненные изменения
     if (timeoutRef.current) return
 
     if (initialValue !== initialValueRef.current || !isInitializedRef.current) {
@@ -213,7 +199,6 @@ export function useAutoSaveFormName({
 
       if (error) throw error
 
-      // Проверяем, что форма не изменилась во время сохранения
       if (formId !== formIdRef.current) return
 
       // Инвалидируем кэши
@@ -223,7 +208,6 @@ export function useAutoSaveFormName({
 
       setStatus("saved")
       
-      // Сбрасываем статус через 2 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {
@@ -231,13 +215,11 @@ export function useAutoSaveFormName({
         }
       }, 2000)
     } catch (err) {
-      // Если форма изменилась, не показываем ошибку
       if (formId !== formIdRef.current) return
 
       console.error("Ошибка сохранения названия:", err)
       setStatus("error")
       
-      // Сбрасываем статус ошибки через 3 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {
@@ -250,10 +232,8 @@ export function useAutoSaveFormName({
   const onChange = useCallback((newValue: string) => {
     setValue(newValue)
     
-    // Отменяем предыдущий таймаут
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     
-    // Запускаем новый debounce только если значение валидно
     if (newValue.trim() && newValue.length <= maxLength) {
       timeoutRef.current = setTimeout(() => {
         saveFormName(newValue)
@@ -271,7 +251,7 @@ interface UseAutoSaveBooleanOptions {
 }
 
 /**
- * Хук для автосохранения boolean поля (Switch)
+ * Хук для автосохранения boolean поля (Switch) в таблицу forms
  */
 export function useAutoSaveBoolean({
   formId,
@@ -289,14 +269,12 @@ export function useAutoSaveBoolean({
   // Сброс состояния при смене формы
   useEffect(() => {
     if (formId !== formIdRef.current) {
-      // Отменяем все pending сохранения для старой формы
       if (statusTimeoutRef.current) {
         clearTimeout(statusTimeoutRef.current)
         statusTimeoutRef.current = null
       }
       setStatus("idle")
       formIdRef.current = formId
-      // Сбрасываем флаг инициализации, чтобы обновилось значение при загрузке новых данных
       isInitializedRef.current = false
     }
   }, [formId])
@@ -325,16 +303,15 @@ export function useAutoSaveBoolean({
     
     try {
       const supabase = createClient()
+      
+      // Сохраняем напрямую в таблицу forms
       const { error } = await supabase
-        .from("form_content")
-        .upsert(
-          { form_id: formId, key: fieldKey, value: newValue ? "true" : "false" },
-          { onConflict: "form_id,key" }
-        )
+        .from("forms")
+        .update({ [fieldKey]: newValue })
+        .eq("id", formId)
 
       if (error) throw error
 
-      // Проверяем, что форма не изменилась во время сохранения
       if (formId !== formIdRef.current) return
 
       // Инвалидируем кэш
@@ -342,7 +319,6 @@ export function useAutoSaveBoolean({
 
       setStatus("saved")
       
-      // Сбрасываем статус через 2 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {
@@ -350,13 +326,11 @@ export function useAutoSaveBoolean({
         }
       }, 2000)
     } catch (err) {
-      // Если форма изменилась, не показываем ошибку
       if (formId !== formIdRef.current) return
 
       console.error("Ошибка автосохранения:", err)
       setStatus("error")
       
-      // Сбрасываем статус ошибки через 3 секунды
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
       statusTimeoutRef.current = setTimeout(() => {
         if (formId === formIdRef.current) {

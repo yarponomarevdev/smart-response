@@ -78,7 +78,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
     }
   }
 
-  // Создаём форму
+  // Создаём форму с дефолтными значениями (все настройки теперь в колонках forms)
   const { data: newForm, error: formError } = await supabaseAdmin
     .from("forms")
     .insert({
@@ -87,6 +87,12 @@ export async function createUserForm(userId: string, userEmail: string, formName
       lead_limit: 20,
       lead_count: 0,
       is_active: false,
+      // Дефолтные значения для контента (остальные берутся из DEFAULT в БД)
+      page_subtitle: "Получите детальный анализ вашего сайта за 30 секунд",
+      disclaimer: "Бесплатно • Занимает 30 секунд",
+      email_subtitle: "Введите email чтобы получить полный анализ",
+      ai_system_prompt: "You are an expert business consultant. Analyze the provided website and generate clear, actionable recommendations in Russian.",
+      loading_messages: ["Анализируем сайт...", "Генерируем рекомендации...", "Почти готово..."],
     })
     .select()
     .single()
@@ -95,37 +101,6 @@ export async function createUserForm(userId: string, userEmail: string, formName
     console.error("Ошибка создания формы:", formError)
     return { error: "Ошибка создания формы: " + formError.message }
   }
-
-  // Создаём дефолтный контент для формы
-  const defaultContent = [
-    { form_id: newForm.id, key: "page_title", value: "Анализ сайта с помощью ИИ" },
-    { form_id: newForm.id, key: "page_subtitle", value: "Получите детальный анализ вашего сайта за 30 секунд" },
-    { form_id: newForm.id, key: "submit_button", value: "Получить анализ" },
-    { form_id: newForm.id, key: "url_placeholder", value: "https://example.com" },
-    { form_id: newForm.id, key: "disclaimer", value: "Бесплатно • Занимает 30 секунд" },
-    {
-      form_id: newForm.id,
-      key: "ai_system_prompt",
-      value:
-        "You are an expert business consultant. Analyze the provided website and generate clear, actionable recommendations in Russian.",
-    },
-    { form_id: newForm.id, key: "ai_result_format", value: "text" },
-    { form_id: newForm.id, key: "loading_message_1", value: "Анализируем сайт..." },
-    { form_id: newForm.id, key: "loading_message_2", value: "Генерируем рекомендации..." },
-    { form_id: newForm.id, key: "loading_message_3", value: "Почти готово..." },
-    { form_id: newForm.id, key: "email_title", value: "Получите результаты" },
-    { form_id: newForm.id, key: "email_subtitle", value: "Введите email чтобы получить полный анализ" },
-    { form_id: newForm.id, key: "email_button", value: "Получить результат" },
-    { form_id: newForm.id, key: "email_placeholder", value: "your@email.com" },
-    { form_id: newForm.id, key: "result_title", value: "Ваш результат" },
-    { form_id: newForm.id, key: "result_form_text", value: "hello.smartresponse.com" },
-    { form_id: newForm.id, key: "success_title", value: "Готово!" },
-    { form_id: newForm.id, key: "success_message", value: "Ваш результат готов" },
-    { form_id: newForm.id, key: "share_button", value: "Поделиться" },
-    { form_id: newForm.id, key: "download_button", value: "Скачать" },
-  ]
-
-  await supabaseAdmin.from("form_content").insert(defaultContent)
 
   return { form: newForm }
 }

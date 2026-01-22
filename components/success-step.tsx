@@ -2,7 +2,7 @@
  * SuccessStep - Экран результата
  * 
  * Показывает сгенерированный результат с кнопками действий.
- * Использует настройки из form_content.
+ * Использует настройки из таблицы forms.
  */
 "use client"
 
@@ -62,32 +62,27 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
     initPdfMake()
   }, [])
 
-  // Загрузка контента формы
+  // Загрузка контента формы (теперь из таблицы forms)
   useEffect(() => {
     const fetchContent = async () => {
       if (!formId) return
       
       const supabase = createClient()
       const { data } = await supabase
-        .from("form_content")
-        .select("key, value")
-        .eq("form_id", formId)
-        .in("key", [
-          "result_title",
-          "result_download_text",
-          "result_share_text",
-          "result_restart_text",
-          "cta_text",
-          "button_text",
-          "button_url",
-        ])
+        .from("forms")
+        .select("result_title, share_button, download_button, cta_text, button_text, button_url")
+        .eq("id", formId)
+        .single()
 
-      if (data && data.length > 0) {
-        const contentMap: FormContent = {}
-        data.forEach((item) => {
-          (contentMap as Record<string, string>)[item.key] = item.value
+      if (data) {
+        setContent({
+          result_title: data.result_title || undefined,
+          result_download_text: data.download_button || undefined,
+          result_share_text: data.share_button || undefined,
+          cta_text: data.cta_text || undefined,
+          button_text: data.button_text || undefined,
+          button_url: data.button_url || undefined,
         })
-        setContent(contentMap)
       }
     }
 

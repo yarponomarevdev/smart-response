@@ -14,10 +14,50 @@ interface Form {
   isMain?: boolean
 }
 
-interface ContentItem {
+interface FormData {
   id: string
-  key: string
-  value: string
+  name: string
+  is_active: boolean
+  owner_id: string
+  // UI тексты
+  page_title: string | null
+  page_subtitle: string | null
+  email_title: string | null
+  email_subtitle: string | null
+  email_placeholder: string | null
+  url_placeholder: string | null
+  submit_button: string | null
+  email_button: string | null
+  share_button: string | null
+  download_button: string | null
+  disclaimer: string | null
+  // Loading messages
+  loading_messages: string[] | null
+  // Result
+  result_title: string | null
+  result_blur_text: string | null
+  result_form_text: string | null
+  success_title: string | null
+  success_message: string | null
+  // AI настройки
+  ai_system_prompt: string | null
+  ai_result_format: string | null
+  use_knowledge_base: boolean | null
+  knowledge_url: string | null
+  // Контакты
+  phone_enabled: boolean | null
+  phone_required: boolean | null
+  feedback_enabled: boolean | null
+  feedback_text: string | null
+  gradient_text: string | null
+  privacy_url: string | null
+  // CTA
+  cta_text: string | null
+  button_text: string | null
+  button_url: string | null
+  // Generation step
+  gen_title: string | null
+  gen_subtitle: string | null
 }
 
 interface FormContentData {
@@ -85,14 +125,15 @@ async function fetchEditorForms(userId: string): Promise<EditorFormsData> {
 }
 
 /**
- * Загрузка контента формы
+ * Загрузка контента формы (теперь из таблицы forms)
  */
 async function fetchFormContent(formId: string): Promise<FormContentData> {
   const supabase = createClient()
   const { data, error } = await supabase
-    .from("form_content")
+    .from("forms")
     .select("*")
-    .eq("form_id", formId)
+    .eq("id", formId)
+    .single()
 
   if (error || !data) {
     return {
@@ -103,40 +144,63 @@ async function fetchFormContent(formId: string): Promise<FormContentData> {
     }
   }
 
+  const form = data as FormData
+
+  // Конвертируем данные формы в формат content для совместимости
   const contentMap: Record<string, string> = {}
-  const messagesMap: Record<number, string> = {}
-  let prompt = ""
-  let format = "text"
+  
+  // UI тексты
+  if (form.page_title) contentMap.page_title = form.page_title
+  if (form.page_subtitle) contentMap.page_subtitle = form.page_subtitle
+  if (form.email_title) contentMap.email_title = form.email_title
+  if (form.email_subtitle) contentMap.email_subtitle = form.email_subtitle
+  if (form.email_placeholder) contentMap.email_placeholder = form.email_placeholder
+  if (form.url_placeholder) contentMap.url_placeholder = form.url_placeholder
+  if (form.submit_button) contentMap.submit_button = form.submit_button
+  if (form.email_button) contentMap.email_button = form.email_button
+  if (form.share_button) contentMap.share_button = form.share_button
+  if (form.download_button) contentMap.download_button = form.download_button
+  if (form.disclaimer) contentMap.disclaimer = form.disclaimer
+  
+  // Result
+  if (form.result_title) contentMap.result_title = form.result_title
+  if (form.result_blur_text) contentMap.result_blur_text = form.result_blur_text
+  if (form.result_form_text) contentMap.result_form_text = form.result_form_text
+  if (form.success_title) contentMap.success_title = form.success_title
+  if (form.success_message) contentMap.success_message = form.success_message
+  
+  // AI настройки
+  if (form.ai_result_format) contentMap.ai_result_format = form.ai_result_format
+  if (form.use_knowledge_base !== null) contentMap.use_knowledge_base = String(form.use_knowledge_base)
+  if (form.knowledge_url) contentMap.knowledge_url = form.knowledge_url
+  
+  // Контакты
+  if (form.phone_enabled !== null) contentMap.phone_enabled = String(form.phone_enabled)
+  if (form.phone_required !== null) contentMap.phone_required = String(form.phone_required)
+  if (form.feedback_enabled !== null) contentMap.feedback_enabled = String(form.feedback_enabled)
+  if (form.feedback_text) contentMap.feedback_text = form.feedback_text
+  if (form.gradient_text) contentMap.gradient_text = form.gradient_text
+  if (form.privacy_url) contentMap.privacy_url = form.privacy_url
+  
+  // CTA
+  if (form.cta_text) contentMap.cta_text = form.cta_text
+  if (form.button_text) contentMap.button_text = form.button_text
+  if (form.button_url) contentMap.button_url = form.button_url
+  
+  // Generation step
+  if (form.gen_title) contentMap.gen_title = form.gen_title
+  if (form.gen_subtitle) contentMap.gen_subtitle = form.gen_subtitle
 
-  data.forEach((item: ContentItem) => {
-    if (item.key.startsWith("loading_message_")) {
-      // Извлекаем числовой индекс из ключа (например, "loading_message_1" -> 1)
-      const index = parseInt(item.key.replace("loading_message_", ""), 10)
-      if (!isNaN(index)) {
-        messagesMap[index] = item.value
-      }
-    } else if (item.key === "ai_system_prompt") {
-      prompt = item.value
-    } else if (item.key === "ai_result_format") {
-      format = item.value
-      // Также добавляем в content для совместимости
-      contentMap[item.key] = item.value
-    } else {
-      contentMap[item.key] = item.value
-    }
-  })
-
-  // Сортируем сообщения по индексу и собираем в массив
-  const messages = Object.keys(messagesMap)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map(index => messagesMap[index])
+  // Loading messages (из JSONB массива)
+  const loadingMessages = Array.isArray(form.loading_messages) && form.loading_messages.length > 0
+    ? form.loading_messages
+    : ["Analyzing...", "Processing...", "Almost done..."]
 
   return {
     content: contentMap,
-    loadingMessages: messages.length > 0 ? messages : ["Analyzing...", "Processing...", "Almost done..."],
-    systemPrompt: prompt || "",
-    resultFormat: format,
+    loadingMessages,
+    systemPrompt: form.ai_system_prompt || "",
+    resultFormat: form.ai_result_format || "text",
   }
 }
 
@@ -167,7 +231,7 @@ export function useFormContent(formId: string | null) {
 }
 
 /**
- * Хук для сохранения контента формы
+ * Хук для сохранения контента формы (теперь в таблицу forms)
  */
 export function useSaveFormContent() {
   const queryClient = useQueryClient()
@@ -192,7 +256,7 @@ export function useSaveFormContent() {
       const { data: { user } } = await supabase.auth.getUser()
       const userEmail = user?.email || ""
 
-      // Защита от редактирования Main form - только hello@vasilkov.digital может её редактировать
+      // Защита от редактирования Main form
       if (formId === MAIN_FORM_ID && userEmail !== "hello@vasilkov.digital") {
         throw new Error("Нет прав на редактирование этой формы")
       }
@@ -208,31 +272,55 @@ export function useSaveFormContent() {
         throw new Error("Нет прав на редактирование этой формы")
       }
 
-      // Сохраняем основной контент
-      for (const [key, value] of Object.entries(content)) {
-        await supabase
-          .from("form_content")
-          .upsert({ form_id: formId, key, value }, { onConflict: "form_id,key" })
+      // Формируем объект обновления
+      const updateData: Record<string, unknown> = {
+        // UI тексты
+        page_title: content.page_title || null,
+        page_subtitle: content.page_subtitle || null,
+        email_title: content.email_title || null,
+        email_subtitle: content.email_subtitle || null,
+        email_placeholder: content.email_placeholder || null,
+        url_placeholder: content.url_placeholder || null,
+        submit_button: content.submit_button || null,
+        email_button: content.email_button || null,
+        share_button: content.share_button || null,
+        download_button: content.download_button || null,
+        disclaimer: content.disclaimer || null,
+        // Loading messages
+        loading_messages: loadingMessages,
+        // Result
+        result_title: content.result_title || null,
+        result_blur_text: content.result_blur_text || null,
+        result_form_text: content.result_form_text || null,
+        success_title: content.success_title || null,
+        success_message: content.success_message || null,
+        // AI настройки
+        ai_system_prompt: systemPrompt || null,
+        ai_result_format: resultFormat || "text",
+        use_knowledge_base: content.use_knowledge_base === "true",
+        knowledge_url: content.knowledge_url || null,
+        // Контакты
+        phone_enabled: content.phone_enabled === "true",
+        phone_required: content.phone_required === "true",
+        feedback_enabled: content.feedback_enabled === "true",
+        feedback_text: content.feedback_text || null,
+        gradient_text: content.gradient_text || null,
+        privacy_url: content.privacy_url || null,
+        // CTA
+        cta_text: content.cta_text || null,
+        button_text: content.button_text || null,
+        button_url: content.button_url || null,
+        // Generation step
+        gen_title: content.gen_title || null,
+        gen_subtitle: content.gen_subtitle || null,
       }
 
-      // Сохраняем сообщения загрузки
-      for (let i = 0; i < loadingMessages.length; i++) {
-        await supabase
-          .from("form_content")
-          .upsert(
-            { form_id: formId, key: `loading_message_${i + 1}`, value: loadingMessages[i] },
-            { onConflict: "form_id,key" }
-          )
-      }
+      const { error } = await supabase
+        .from("forms")
+        .update(updateData)
+        .eq("id", formId)
 
-      // Сохраняем AI настройки
-      await supabase
-        .from("form_content")
-        .upsert({ form_id: formId, key: "ai_system_prompt", value: systemPrompt }, { onConflict: "form_id,key" })
-
-      await supabase
-        .from("form_content")
-        .upsert({ form_id: formId, key: "ai_result_format", value: resultFormat }, { onConflict: "form_id,key" })
+      if (error) throw error
 
       return { success: true }
     },
@@ -242,4 +330,3 @@ export function useSaveFormContent() {
     },
   })
 }
-

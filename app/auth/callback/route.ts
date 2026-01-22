@@ -26,8 +26,9 @@ export async function GET(request: Request) {
         })
 
         // For regular users, create their first form
+        // Дефолтные значения контента устанавливаются через DEFAULT в БД
         if (role === "user") {
-          const { data: form } = await supabase
+          await supabase
             .from("forms")
             .insert({
               owner_id: data.user.id,
@@ -35,25 +36,10 @@ export async function GET(request: Request) {
               lead_limit: 20,
               lead_count: 0,
               is_active: true,
+              // Кастомизируем некоторые дефолты
+              page_subtitle: "Получите детальный анализ вашего сайта",
+              ai_system_prompt: "You are an expert consultant. Analyze the website and provide recommendations.",
             })
-            .select()
-            .single()
-
-          // Create default content for the form
-          if (form) {
-            const defaultContent = [
-              { form_id: form.id, key: "page_title", value: "Анализ сайта с помощью ИИ" },
-              { form_id: form.id, key: "page_subtitle", value: "Получите детальный анализ вашего сайта" },
-              { form_id: form.id, key: "submit_button", value: "Получить анализ" },
-              {
-                form_id: form.id,
-                key: "ai_system_prompt",
-                value: "You are an expert consultant. Analyze the website and provide recommendations.",
-              },
-              { form_id: form.id, key: "ai_result_format", value: "text" },
-            ]
-            await supabase.from("form_content").insert(defaultContent)
-          }
         }
       }
 

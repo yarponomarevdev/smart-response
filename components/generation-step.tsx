@@ -89,38 +89,33 @@ export function GenerationStep({
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
 
-  // Загрузка контента формы и сообщений
+  // Загрузка контента формы и сообщений (теперь из таблицы forms)
   useEffect(() => {
     const fetchContent = async () => {
       if (!formId) return
       
       const supabase = createClient()
       const { data } = await supabase
-        .from("form_content")
-        .select("key, value")
-        .eq("form_id", formId)
+        .from("forms")
+        .select("gen_title, gen_subtitle, cta_text, button_text, button_url, loading_messages")
+        .eq("id", formId)
+        .single()
 
-      if (data && data.length > 0) {
-        const contentMap: FormContent = {}
-        const loadedMessages: string[] = []
-        
-        data.forEach((item) => {
-          if (item.key.startsWith("loading_message_")) {
-            const index = parseInt(item.key.replace("loading_message_", ""), 10)
-            if (!isNaN(index) && item.value) {
-              loadedMessages[index - 1] = item.value
-            }
-          } else {
-            (contentMap as Record<string, string>)[item.key] = item.value
-          }
+      if (data) {
+        setContent({
+          gen_title: data.gen_title || undefined,
+          gen_subtitle: data.gen_subtitle || undefined,
+          cta_text: data.cta_text || undefined,
+          button_text: data.button_text || undefined,
+          button_url: data.button_url || undefined,
         })
         
-        setContent(contentMap)
-        
-        // Фильтруем пустые сообщения
-        const filteredMessages = loadedMessages.filter(msg => msg && msg.length > 0)
-        if (filteredMessages.length > 0) {
-          setMessages(filteredMessages)
+        // Loading messages теперь JSONB массив
+        if (Array.isArray(data.loading_messages) && data.loading_messages.length > 0) {
+          const filteredMessages = data.loading_messages.filter((msg: string) => msg && msg.length > 0)
+          if (filteredMessages.length > 0) {
+            setMessages(filteredMessages)
+          }
         }
       }
     }

@@ -66,19 +66,17 @@ export async function POST(request: NextRequest) {
         headerTitle = fields[0].field_label
       }
 
-      // Загружаем CTA настройки из form_content
-      const { data: contentData } = await supabase
-        .from("form_content")
-        .select("key, value")
-        .eq("form_id", formId)
-        .in("key", ["cta_text", "button_text", "button_url"])
+      // Загружаем CTA настройки из forms
+      const { data: formData } = await supabase
+        .from("forms")
+        .select("cta_text, button_text, button_url")
+        .eq("id", formId)
+        .single()
 
-      if (contentData && contentData.length > 0) {
-        contentData.forEach((item) => {
-          if (item.key === "cta_text") ctaText = item.value || ""
-          if (item.key === "button_text") buttonText = item.value || ""
-          if (item.key === "button_url") buttonUrl = item.value || ""
-        })
+      if (formData) {
+        ctaText = formData.cta_text || ""
+        buttonText = formData.button_text || ""
+        buttonUrl = formData.button_url || ""
       }
     }
 

@@ -249,18 +249,19 @@ export async function POST(req: Request) {
 
     const supabase = await createClient()
 
-    // Fetch ALL content settings from form_content
-    const { data: contentData, error: contentError } = await supabase
-      .from("form_content")
-      .select("key, value")
-      .eq("form_id", formId)
+    // Fetch form settings directly from forms table
+    const { data: formData, error: formError } = await supabase
+      .from("forms")
+      .select("*")
+      .eq("id", formId)
+      .single()
 
-    if (contentError) {
-      console.error("Ошибка запроса Supabase:", contentError)
+    if (formError || !formData) {
+      console.error("Ошибка запроса Supabase:", formError)
       return Response.json(
         {
           error: "Database error",
-          details: contentError.message || "Failed to fetch form content",
+          details: formError?.message || "Failed to fetch form",
         },
         { status: 500, headers: corsHeaders },
       )
@@ -333,19 +334,15 @@ export async function POST(req: Request) {
       }
     }
 
-    const getContent = (key: string, defaultValue: string) => {
-      return contentData?.find((c) => c.key === key)?.value || defaultValue
-    }
-
-    // Определяем формат результата
-    const resultFormat = getContent("ai_result_format", "text")
+    // Определяем формат результата (теперь напрямую из formData)
+    const resultFormat = formData.ai_result_format || "text"
 
     // Получаем индивидуальный промпт формы (может быть пустым)
-    const formPrompt = getContent("ai_system_prompt", "")
+    const formPrompt = formData.ai_system_prompt || ""
 
     // Проверяем, включена ли база знаний
-    const useKnowledgeBase = getContent("use_knowledge_base", "false") === "true"
-    const knowledgeUrl = getContent("knowledge_url", "")
+    const useKnowledgeBase = formData.use_knowledge_base === true
+    const knowledgeUrl = formData.knowledge_url || ""
 
     // Получаем контент из URL пользователя (если URL передан)
     const urlContent = normalizedMainUrl ? await fetchUrlContent(normalizedMainUrl) : ""

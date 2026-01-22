@@ -52,36 +52,31 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   // Элементы оформления из динамических полей
   const [layoutFields, setLayoutFields] = useState<FormField[]>([])
 
-  // Загрузка контента формы и динамических полей
+  // Загрузка контента формы и динамических полей (теперь из таблицы forms)
   useEffect(() => {
     const fetchData = async () => {
       if (!formId) return
       
       const supabase = createClient()
       
-      // Загружаем настройки формы контактов
+      // Загружаем настройки формы контактов напрямую из forms
       const { data } = await supabase
-        .from("form_content")
-        .select("key, value")
-        .eq("form_id", formId)
-        .in("key", [
-          "email_placeholder",
-          "phone_enabled",
-          "phone_placeholder",
-          "phone_required",
-          "feedback_enabled",
-          "feedback_text",
-          "privacy_url",
-          "email_button",
-          "gradient_text",
-        ])
+        .from("forms")
+        .select("email_placeholder, phone_enabled, phone_required, feedback_enabled, feedback_text, privacy_url, email_button, gradient_text")
+        .eq("id", formId)
+        .single()
 
-      if (data && data.length > 0) {
-        const contentMap: FormContent = {}
-        data.forEach((item) => {
-          (contentMap as Record<string, string>)[item.key] = item.value
+      if (data) {
+        setContent({
+          email_placeholder: data.email_placeholder || undefined,
+          phone_enabled: data.phone_enabled ? "true" : "false",
+          phone_required: data.phone_required ? "true" : "false",
+          feedback_enabled: data.feedback_enabled ? "true" : "false",
+          feedback_text: data.feedback_text || undefined,
+          privacy_url: data.privacy_url || undefined,
+          email_button: data.email_button || undefined,
+          gradient_text: data.gradient_text || undefined,
         })
-        setContent(contentMap)
       }
       
       // Загружаем динамические поля для элементов оформления
