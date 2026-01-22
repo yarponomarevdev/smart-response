@@ -235,33 +235,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Форматируем кастомные поля для включения в контекст
-    // Извлекаем image поля отдельно - они не должны попадать в текстовый контекст
-    const imageFieldKeys = new Set(imageFields.map(f => f.field_key))
-    let inputImages: Record<string, string> = {}
-    let customFieldsContext = ""
-    
-    if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
-      customFieldsContext = "\n\n--- Данные пользователя ---\n"
-      for (const [key, value] of Object.entries(customFields)) {
-        if (value !== undefined && value !== null && value !== "") {
-          // Исключаем image поля из текстового контекста
-          if (imageFieldKeys.has(key)) {
-            // Сохраняем base64 изображения отдельно
-            if (typeof value === "string" && value.startsWith("data:image/")) {
-              inputImages[key] = value
-            }
-          } else if (Array.isArray(value)) {
-            customFieldsContext += `- ${key}: ${value.join(", ")}\n`
-          } else if (typeof value === "boolean") {
-            customFieldsContext += `- ${key}: ${value ? "Да" : "Нет"}\n`
-          } else {
-            customFieldsContext += `- ${key}: ${value}\n`
-          }
-        }
-      }
-    }
-
     // Проверка наличия API ключа OpenAI
     if (!process.env.OPENAI_API_KEY) {
       console.error("OPENAI_API_KEY не установлен")
@@ -301,6 +274,33 @@ export async function POST(req: Request) {
 
     const urlFields = fieldsData?.filter(f => f.field_type === 'url') || []
     const imageFields = fieldsData?.filter(f => f.field_type === 'image') || []
+
+    // Форматируем кастомные поля для включения в контекст
+    // Извлекаем image поля отдельно - они не должны попадать в текстовый контекст
+    const imageFieldKeys = new Set(imageFields.map(f => f.field_key))
+    let inputImages: Record<string, string> = {}
+    let customFieldsContext = ""
+    
+    if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
+      customFieldsContext = "\n\n--- Данные пользователя ---\n"
+      for (const [key, value] of Object.entries(customFields)) {
+        if (value !== undefined && value !== null && value !== "") {
+          // Исключаем image поля из текстового контекста
+          if (imageFieldKeys.has(key)) {
+            // Сохраняем base64 изображения отдельно
+            if (typeof value === "string" && value.startsWith("data:image/")) {
+              inputImages[key] = value
+            }
+          } else if (Array.isArray(value)) {
+            customFieldsContext += `- ${key}: ${value.join(", ")}\n`
+          } else if (typeof value === "boolean") {
+            customFieldsContext += `- ${key}: ${value ? "Да" : "Нет"}\n`
+          } else {
+            customFieldsContext += `- ${key}: ${value}\n`
+          }
+        }
+      }
+    }
     
     // Process additional URL fields
     let additionalUrlsContext = ""

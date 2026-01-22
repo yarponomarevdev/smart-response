@@ -131,10 +131,11 @@ export function GenerationStep({
   // Функция генерации результата и создания лида
   const generateAndCreateLead = useCallback(async (): Promise<void> => {
     try {
-      // Защита от некорректного состояния флоу: без url/formId API всегда вернёт 400
-      if (!url || !formId) {
+      // Защита от некорректного состояния флоу: без formId API всегда вернёт 400
+      // URL опционален - форма может работать без него
+      if (!formId) {
         const message = t("errors.generationMissingData")
-        console.error("Отсутствуют обязательные поля на клиенте:", { url: Boolean(url), formId: Boolean(formId) })
+        console.error("Отсутствует обязательное поле formId")
         setError(message)
         setIsGenerating(false)
         onError?.(message)
