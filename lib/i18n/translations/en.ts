@@ -337,6 +337,138 @@ export const en: Translations = {
     mb: "MB",
   },
 
+  // Landing page
+  landing: {
+    nav: {
+      features: "Features",
+      howItWorks: "How It Works",
+      useCases: "Use Cases",
+    },
+    header: {
+      login: "Log In",
+      getStarted: "Get Started Free",
+    },
+    hero: {
+      title: "Build Forms That Think.",
+      subtitle: "SmartResponse.io creates AI-powered forms that adapt to user answers and generate personalized content. Turn leads into conversations.",
+      cta: "Try It Yourself – It's Free",
+    },
+    demo: {
+      selectGoal: "Select a goal",
+      generating: "AI is generating the form...",
+      submitPreview: "Submit",
+      goals: {
+        qualify: "Qualify leads",
+        quote: "Give a quote",
+        feedback: "Collect feedback",
+      },
+      forms: {
+        qualify: {
+          title: "Lead Qualification",
+          field1: "Company size (employees)",
+          field2: "Project budget",
+          field3: "Launch timeline",
+        },
+        quote: {
+          title: "Quote Calculator",
+          field1: "Service type",
+          field2: "Scope of work",
+          field3: "Additional options",
+        },
+        feedback: {
+          title: "Feedback Form",
+          field1: "How would you rate our service?",
+          field2: "What could we improve?",
+          field3: "Would you recommend to friends?",
+        },
+      },
+    },
+    howItWorks: {
+      title: "How the AI Form Engine Works",
+      step1: {
+        title: "1. Define Your Goal",
+        description: "Tell the AI what you need. It suggests the logic and structure.",
+      },
+      step2: {
+        title: "2. Watch It Adapt",
+        description: "The form changes questions and offers based on live answers.",
+      },
+      step3: {
+        title: "3. Get More Than Data",
+        description: "Receive qualified leads + auto-generated PDFs, emails, or summaries.",
+      },
+    },
+    features: {
+      title: "Why It's Not Just Another Form Builder",
+      adaptive: {
+        title: "Adaptive Logic",
+        description: "Questions change based on previous answers.",
+      },
+      output: {
+        title: "Multi-Format Output",
+        description: "Generate PDFs, texts, or images per submission.",
+      },
+      scoring: {
+        title: "Instant Lead Scoring",
+        description: "Leads are categorized as hot/warm/cold instantly.",
+      },
+      nocode: {
+        title: "No-Code Builder",
+        description: "Full visual editor, no programming needed.",
+      },
+    },
+    useCases: {
+      title: "Built for Your Role",
+      marketers: {
+        title: "For Marketers",
+        description: "Create ad-specific forms that increase lead quality from your traffic.",
+      },
+      product: {
+        title: "For Product Managers",
+        description: "Embed smart surveys to segment users and understand intent.",
+      },
+      founders: {
+        title: "For Founders",
+        description: "Add a functional 'Get a Quote' or onboarding tool without developers.",
+      },
+    },
+    cta: {
+      title: "Free & Unlimited During MVP",
+      subtitle: "We are in active development. Sign up now for full, free access. Provide feedback and shape the product.",
+      button: "Get Your Free Account",
+      login: "Already have an account? Log In",
+    },
+    faq: {
+      title: "Questions?",
+      q1: {
+        question: "How long will the MVP be free?",
+        answer: "The MVP will remain free until we officially launch paid plans. We will notify all users in advance of any pricing changes.",
+      },
+      q2: {
+        question: "What happens after the MVP?",
+        answer: "After the MVP, we will introduce pricing tiers with different limits. MVP users will receive special conditions and retain access to their created forms.",
+      },
+      q3: {
+        question: "How does the AI use my data?",
+        answer: "Your data is only used to generate responses within your form. We do not share data with third parties or use it for model training.",
+      },
+      q4: {
+        question: "Can I use it without coding skills?",
+        answer: "Yes! SmartResponse.io is a fully no-code solution. The visual editor allows you to create complex forms without writing a single line of code.",
+      },
+      q5: {
+        question: "Where do the collected leads go?",
+        answer: "All leads are stored in your dashboard. You can view, export to CSV, or set up email notifications for new submissions.",
+      },
+    },
+    footer: {
+      privacy: "Privacy",
+      terms: "Terms",
+      cta: "Build Your First AI Form",
+      copyright: "All rights reserved.",
+    },
+  },
+
   // Content Editor
   editor: {
     loadingContent: "Loading content...",

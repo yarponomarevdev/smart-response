@@ -13,9 +13,15 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Smart Response",
-  description: "Enter your website URL to get a personalized lead score and insights",
-  generator: "v0.app",
+  title: "SmartResponse.io — AI-Powered Adaptive Forms",
+  description: "Build forms that think. Create AI-powered forms that adapt to user answers and generate personalized content. Turn leads into conversations.",
+  generator: "Next.js",
+  keywords: ["AI forms", "adaptive forms", "lead generation", "no-code", "form builder", "smart forms"],
+  openGraph: {
+    title: "SmartResponse.io — Build Forms That Think",
+    description: "AI-powered forms that adapt to user answers and generate personalized content.",
+    type: "website",
+  },
   icons: {
     icon: [
       {

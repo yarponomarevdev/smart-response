@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/lib/i18n"
 import { useCurrentUser } from "@/lib/hooks/use-auth"
 import { useUpdateUserLanguage } from "@/lib/hooks/use-user-language"
+import { cn } from "@/lib/utils"
 
-export function LanguageToggle() {
+export function LanguageToggle({ className, ...props }: React.ComponentProps<typeof Button>) {
   const { language, setLanguage } = useTranslation()
   const { data: user } = useCurrentUser()
   const updateLanguageMutation = useUpdateUserLanguage()
@@ -40,8 +41,12 @@ export function LanguageToggle() {
   if (!mounted) {
     return (
       <Button 
-        className="h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors" 
+        className={cn(
+          "h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors",
+          className
+        )}
         disabled
+        {...props}
       >
         <span className="text-sm font-semibold">RU</span>
         <span className="sr-only">Переключить язык</span>
@@ -51,8 +56,12 @@ export function LanguageToggle() {
 
   return (
     <Button
-      className="h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors"
+      className={cn(
+        "h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors",
+        className
+      )}
       onClick={handleLanguageChange}
+      {...props}
     >
       <span className="text-sm font-semibold">
         {language.toUpperCase()}
