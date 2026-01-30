@@ -2,8 +2,19 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Accordion,
   AccordionContent,
@@ -81,6 +92,7 @@ const USE_CASE_ICONS = {
 
 export function LandingPage() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [selectedGoal, setSelectedGoal] = useState("qualify")
   const [isGenerating, setIsGenerating] = useState(false)
   const [showForm, setShowForm] = useState(true)
@@ -146,9 +158,8 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Логотип */}
-            <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-              <Sparkles className="h-6 w-6" />
-              <span>SmartResponse.io</span>
+            <Link href="/" className="font-semibold text-lg">
+              SmartResponse.io
             </Link>
 
             {/* Десктопная навигация */}
@@ -236,7 +247,7 @@ export function LandingPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+            <h1 className="text-[clamp(2rem,5vw,3.75rem)] leading-[1.1] font-bold tracking-tight mb-6 text-balance">
               {t("landing.hero.title")}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground mb-8">
@@ -287,19 +298,120 @@ export function LandingPage() {
                       <h3 className="font-semibold text-lg">
                         {t(DEMO_FORMS[selectedGoal].titleKey)}
                       </h3>
-                      <div className="space-y-3">
-                        {DEMO_FORMS[selectedGoal].fieldsKeys.map((fieldKey, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 text-sm text-muted-foreground"
-                          >
-                            <Check className="h-4 w-4 text-primary" />
-                            <span>{t(fieldKey)}</span>
-                          </div>
-                        ))}
+                      
+                      <div className="space-y-4">
+                        {selectedGoal === "qualify" && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.qualify.field1")}</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Выберите..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1-10">1-10</SelectItem>
+                                  <SelectItem value="11-50">11-50</SelectItem>
+                                  <SelectItem value="51-200">51-200</SelectItem>
+                                  <SelectItem value="201+">201+</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.qualify.field2")}</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Выберите..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="small">&lt; 100 000 ₽</SelectItem>
+                                  <SelectItem value="medium">100 000 - 500 000 ₽</SelectItem>
+                                  <SelectItem value="large">500 000+ ₽</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.qualify.field3")}</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Выберите..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="asap">Как можно скорее</SelectItem>
+                                  <SelectItem value="1month">В течение месяца</SelectItem>
+                                  <SelectItem value="3months">В течение 3 месяцев</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedGoal === "quote" && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.quote.field1")}</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Выберите..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="web">Веб-разработка</SelectItem>
+                                  <SelectItem value="mobile">Мобильное приложение</SelectItem>
+                                  <SelectItem value="design">Дизайн</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.quote.field2")}</Label>
+                              <Input placeholder="Например, 5 страниц" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.quote.field3")}</Label>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" className="rounded-full h-8">SEO</Button>
+                                <Button variant="outline" size="sm" className="rounded-full h-8">Копирайтинг</Button>
+                                <Button variant="outline" size="sm" className="rounded-full h-8">Поддержка</Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedGoal === "feedback" && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.feedback.field1")}</Label>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Button key={star} variant="ghost" size="icon" className="h-8 w-8 text-yellow-400 hover:text-yellow-500">
+                                    ★
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.feedback.field2")}</Label>
+                              <Textarea placeholder="Напишите ваш отзыв..." className="min-h-[80px]" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("landing.demo.forms.feedback.field3")}</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Выберите..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="yes">Да, конечно</SelectItem>
+                                  <SelectItem value="maybe">Возможно</SelectItem>
+                                  <SelectItem value="no">Нет</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div className="pt-4">
-                        <Button className="w-full rounded-full" disabled>
+                        <Button 
+                          className="w-full rounded-full" 
+                          onClick={() => router.push("/auth/register")}
+                        >
                           {t("landing.demo.submitPreview")}
                         </Button>
                       </div>
@@ -483,9 +595,8 @@ export function LandingPage() {
       <footer className="border-t py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2 font-semibold">
-              <Sparkles className="h-5 w-5" />
-              <span>SmartResponse.io</span>
+            <div className="font-semibold">
+              SmartResponse.io
             </div>
 
             <nav className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
