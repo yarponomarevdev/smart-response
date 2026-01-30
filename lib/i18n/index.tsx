@@ -20,15 +20,35 @@ const translations: Record<Language, Translations> = {
   en,
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Всегда начинаем с "en" для совместимости SSR/гидратации
-  const [language, setLanguageState] = useState<Language>("en")
+export function LanguageProvider({ children, defaultLanguage }: { children: React.ReactNode; defaultLanguage?: Language }) {
+  // Для форм: используем defaultLanguage напрямую, без изменений
+  // Для админки: начинаем с "en" для совместимости SSR/гидратации
+  const [language, setLanguageState] = useState<Language>(defaultLanguage || "en")
   const [mounted, setMounted] = useState(false)
+  
+  // Для форм не вызываем useCurrentUser (экономия запросов)
+  const shouldFetchUser = !defaultLanguage
   const { data: user } = useCurrentUser()
 
+  // Для форм: defaultLanguage имеет абсолютный приоритет, не перезаписывается
+  useEffect(() => {
+    if (defaultLanguage) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[LanguageProvider] Setting language from defaultLanguage:", defaultLanguage)
+      }
+      setLanguageState(defaultLanguage)
+    }
+  }, [defaultLanguage])
+
   // После монтирования компонента загружаем язык из localStorage или настроек пользователя
+  // Только если defaultLanguage не передан (т.е. не форма)
   useEffect(() => {
     setMounted(true)
+    
+    // Если передан defaultLanguage, не загружаем из localStorage/БД (для форм)
+    if (defaultLanguage) {
+      return
+    }
     
     if (user) {
       // Если пользователь авторизован, приоритет у настроек из БД
@@ -49,11 +69,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [user?.language]) // Зависимость только от языка пользователя, а не от всего объекта user
+  }, [user?.language, defaultLanguage]) // Зависимость только от языка пользователя, а не от всего объекта user
 
   // Синхронизируем изменения языка пользователя после монтирования
+  // Только если defaultLanguage не передан (т.е. не форма)
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || defaultLanguage) return
     
     if (user) {
       const userLanguage = (user as any).language as Language | undefined
@@ -91,7 +112,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener("storage", handleStorageChange)
       }
     }
-  }, [user?.language, mounted, user])
+  }, [user?.language, mounted, user, defaultLanguage])
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
@@ -132,6 +153,13 @@ export function useTranslation() {
   const context = useContext(LanguageContext)
   if (!context) {
     throw new Error("useTranslation must be used within LanguageProvider")
+  }
+  
+  // Для отладки: логируем текущий язык
+  if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
+    useEffect(() => {
+      console.log("[useTranslation] Current language:", context.language)
+    }, [context.language])
   }
 
   // Кэш для результатов переводов (в рамках одного рендера компонента)

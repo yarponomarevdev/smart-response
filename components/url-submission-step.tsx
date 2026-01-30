@@ -95,13 +95,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
     // Проверяем наличие полей
     if (dynamicFields.length === 0) {
-      setError("Форма не настроена")
+      setError(t("errors.formNotConfigured"))
       return
     }
 
     // Проверяем обязательные поля
     if (!validateRequiredFields()) {
-      setError("Заполните все обязательные поля")
+      setError(t("errors.fillRequiredFields"))
       return
     }
 
@@ -144,7 +144,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
       .limit(1)
 
     if (formError || !forms || forms.length === 0) {
-      setError("Форма не найдена")
+      setError(t("errors.formNotFound"))
       setIsLoading(false)
       return
     }
@@ -152,7 +152,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     const form = forms[0]
 
     if (!form.is_active) {
-      setError("Форма временно недоступна")
+      setError(t("errors.formUnavailable"))
       setIsLoading(false)
       return
     }
@@ -244,7 +244,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
               disabled={isLoading}
             >
               <SelectTrigger className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border">
-                <SelectValue placeholder="Выберите..." />
+                <SelectValue placeholder={t("common.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {field.options?.map((option) => (
@@ -351,7 +351,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
                 <div className="flex items-center gap-2 truncate">
                   <Upload className="h-4 w-4 shrink-0" />
                   <span className="truncate">
-                    {fileNames[field.field_key] || field.placeholder || "Выберите изображение..."}
+                    {fileNames[field.field_key] || field.placeholder || t("common.selectImage")}
                   </span>
                 </div>
                 {fileNames[field.field_key] && (
@@ -438,8 +438,8 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-in fade-in duration-500">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Форма не готова</h1>
-          <p className="text-muted-foreground">В этой форме пока нет полей для заполнения.</p>
+          <h1 className="text-2xl font-bold">{t("errors.formNotReady")}</h1>
+          <p className="text-muted-foreground">{t("errors.cannotPublishEmptyForm")}</p>
         </div>
       </div>
     )
@@ -467,7 +467,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         
         {/* Кнопка отправки формы */}
         <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
-          {isLoading ? "Обработка..." : "Продолжить"}
+          {isLoading ? t("common.processing") : t("common.continue")}
         </Button>
       </form>
     </div>

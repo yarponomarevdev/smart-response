@@ -228,3 +228,10 @@ export async function updateFormRespondentEmailSetting(userId: string, formId: s
 export async function updateFormTheme(userId: string, formId: string, theme: "light" | "dark") {
   return updateFormField(userId, formId, "theme", theme, "Ошибка обновления темы")
 }
+
+/**
+ * Обновляет язык системных сообщений формы
+ */
+export async function updateFormLanguage(userId: string, formId: string, language: "ru" | "en") {
+  return updateFormField(userId, formId, "language", language, "Ошибка обновления языка")
+}

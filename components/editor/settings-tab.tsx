@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { useUpdateFormNotification, useUpdateFormRespondentEmail, useUpdateFormTheme } from "@/lib/hooks/use-forms"
+import { useUpdateFormNotification, useUpdateFormRespondentEmail, useUpdateFormTheme, useUpdateFormLanguage } from "@/lib/hooks/use-forms"
 import { useAutoSaveFormName } from "@/lib/hooks/use-autosave"
 import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
 import { toast } from "sonner"
@@ -31,6 +31,7 @@ interface FormData {
   notify_on_new_lead: boolean
   send_email_to_respondent: boolean
   theme: "light" | "dark"
+  language: "ru" | "en"
 }
 
 /**
@@ -40,7 +41,7 @@ async function fetchFormData(formId: string): Promise<FormData> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from("forms")
-    .select("id, name, notify_on_new_lead, send_email_to_respondent, theme")
+    .select("id, name, notify_on_new_lead, send_email_to_respondent, theme, language")
     .eq("id", formId)
     .single()
 
@@ -56,11 +57,13 @@ export function SettingsTab({ formId }: SettingsTabProps) {
   const [notifyOnNewLead, setNotifyOnNewLead] = useState(true)
   const [sendEmailToRespondent, setSendEmailToRespondent] = useState(true)
   const [theme, setTheme] = useState<"light" | "dark">("light")
+  const [language, setLanguage] = useState<"ru" | "en">("ru")
   const queryClient = useQueryClient()
 
   const updateNotificationMutation = useUpdateFormNotification()
   const updateRespondentEmailMutation = useUpdateFormRespondentEmail()
   const updateThemeMutation = useUpdateFormTheme()
+  const updateLanguageMutation = useUpdateFormLanguage()
 
   // Загружаем данные формы
   const { data: formData, isLoading, error } = useQuery({
@@ -83,6 +86,7 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       setNotifyOnNewLead(formData.notify_on_new_lead ?? true)
       setSendEmailToRespondent(formData.send_email_to_respondent ?? true)
       setTheme(formData.theme ?? "light")
+      setLanguage(formData.language ?? "ru")
     }
   }, [formData])
 
@@ -146,6 +150,19 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       toast.success(t("editor.settingsTab.themeChanged").replace("{theme}", themeNames[newTheme]))
     } catch (err) {
       toast.error(t("editor.settingsTab.themeUpdateError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
+    }
+  }
+
+  const handleLanguageChange = async (newLanguage: "ru" | "en") => {
+    if (!formId) return
+
+    try {
+      await updateLanguageMutation.mutateAsync({ formId, value: newLanguage })
+      setLanguage(newLanguage)
+      const languageNames = { ru: t("editor.settingsTab.languageRussian"), en: t("editor.settingsTab.languageEnglish") }
+      toast.success(t("editor.settingsTab.languageChanged").replace("{language}", languageNames[newLanguage]))
+    } catch (err) {
+      toast.error(t("editor.settingsTab.languageUpdateError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
     }
   }
 
@@ -223,6 +240,33 @@ export function SettingsTab({ formId }: SettingsTabProps) {
             <SelectContent>
               <SelectItem value="light">{t("editor.settingsTab.themeLight")}</SelectItem>
               <SelectItem value="dark">{t("editor.settingsTab.themeDark")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-border p-4 sm:p-6 bg-[#f4f4f4] dark:bg-muted">
+        <div className="space-y-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="language" className="text-base sm:text-lg font-medium">{t("editor.settingsTab.formLanguage")}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t("editor.settingsTab.formLanguageDescription")}
+            </p>
+          </div>
+          <Select
+            value={language}
+            onValueChange={(value) => handleLanguageChange(value as "ru" | "en")}
+            disabled={updateLanguageMutation.isPending}
+          >
+            <SelectTrigger 
+              id="language"
+              className="h-12 sm:h-[70px] rounded-[18px] bg-white dark:bg-background border-border text-base sm:text-lg"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ru">{t("editor.settingsTab.languageRussian")}</SelectItem>
+              <SelectItem value="en">{t("editor.settingsTab.languageEnglish")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

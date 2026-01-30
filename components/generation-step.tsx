@@ -235,7 +235,7 @@ export function GenerationStep({
         throw new Error(
           extractErrorMessageFromPayload(
             data,
-            "Не удалось сгенерировать результат (некорректный формат ответа сервера)",
+            t("errors.generationFailed"),
           ),
         )
       }
@@ -294,7 +294,7 @@ export function GenerationStep({
         </div>
         <div className="text-center space-y-2">
           <h3 className="text-base sm:text-lg font-semibold text-destructive">
-            {isLimitError ? "Достигнут лимит использований" : "Произошла ошибка"}
+            {isLimitError ? t("errors.usageLimitReached") : t("errors.errorOccurred")}
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-md px-4">{error}</p>
         </div>
@@ -303,7 +303,7 @@ export function GenerationStep({
             onClick={() => window.location.href = '/auth/register'}
             className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
           >
-            Зарегистрироваться
+            {t("common.signup")}
           </Button>
         ) : (
           <Button 
@@ -313,7 +313,7 @@ export function GenerationStep({
             className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
           >
             <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-            {isRetrying ? 'Повторяем...' : 'Попробовать снова'}
+            {isRetrying ? t("errors.retrying") : t("errors.tryAgain")}
           </Button>
         )}
       </div>

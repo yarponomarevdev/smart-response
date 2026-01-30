@@ -337,6 +337,49 @@ export async function updateUserPassword(
 }
 
 /**
+ * Получает тему пользователя
+ */
+export async function getUserTheme(userId: string): Promise<{ theme: string | null; error?: string }> {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("theme")
+    .eq("id", userId)
+    .single()
+
+  if (error) {
+    console.error("Ошибка получения темы пользователя:", error)
+    return { theme: null, error: error.message }
+  }
+
+  return { theme: data?.theme || null }
+}
+
+/**
+ * Обновляет тему пользователя
+ */
+export async function updateUserTheme(
+  userId: string,
+  theme: string
+): Promise<{ success: boolean; error?: string }> {
+  // Валидация темы
+  if (!["light", "dark", "system"].includes(theme)) {
+    return { success: false, error: "Недопустимое значение темы" }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ theme })
+    .eq("id", userId)
+
+  if (error) {
+    console.error("Ошибка обновления темы пользователя:", error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+/**
  * Экспортирует всех пользователей в CSV формат (только для суперадминов)
  */
 export async function exportUsersToCSV(): Promise<{ csv: string } | { error: string }> {

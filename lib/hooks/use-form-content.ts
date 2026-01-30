@@ -47,6 +47,7 @@ interface FormData {
   // Контакты
   phone_enabled: boolean | null
   phone_required: boolean | null
+  phone_placeholder: string | null
   feedback_enabled: boolean | null
   feedback_text: string | null
   gradient_text: string | null
@@ -177,6 +178,7 @@ async function fetchFormContent(formId: string): Promise<FormContentData> {
   // Контакты
   if (form.phone_enabled !== null) contentMap.phone_enabled = String(form.phone_enabled)
   if (form.phone_required !== null) contentMap.phone_required = String(form.phone_required)
+  if (form.phone_placeholder) contentMap.phone_placeholder = form.phone_placeholder
   if (form.feedback_enabled !== null) contentMap.feedback_enabled = String(form.feedback_enabled)
   if (form.feedback_text) contentMap.feedback_text = form.feedback_text
   if (form.gradient_text) contentMap.gradient_text = form.gradient_text

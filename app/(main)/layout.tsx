@@ -7,7 +7,7 @@ import { QueryProvider } from "@/components/query-provider"
 import { LanguageProvider } from "@/lib/i18n"
 import { Toaster } from "@/components/ui/toaster"
 import { UpdateNotification } from "@/components/update-notification"
-import "./globals.css"
+import "../globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })

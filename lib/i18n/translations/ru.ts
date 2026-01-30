@@ -23,6 +23,10 @@ export const ru = {
     login: "Вход",
     signup: "Регистрация",
     signupShort: "Регистр.",
+    continue: "Продолжить",
+    processing: "Обработка...",
+    selectPlaceholder: "Выберите...",
+    selectImage: "Выберите изображение...",
   },
 
   // Админ панель
@@ -121,6 +125,16 @@ export const ru = {
     urlRequired: "Введите URL",
     urlInvalid: "Введите корректный URL",
     generationMissingData: "Не хватает данных для генерации (URL или ID формы). Вернитесь назад и заполните URL.",
+    formNotConfigured: "Форма не настроена",
+    fillRequiredFields: "Заполните все обязательные поля",
+    formNotFound: "Форма не найдена",
+    formUnavailable: "Форма временно недоступна",
+    formNotReady: "Форма не готова",
+    generationFailed: "Не удалось сгенерировать результат (некорректный формат ответа сервера)",
+    usageLimitReached: "Достигнут лимит использований",
+    errorOccurred: "Произошла ошибка",
+    retrying: "Повторяем...",
+    tryAgain: "Попробовать снова",
   },
 
   // Уведомления
@@ -536,6 +550,12 @@ export const ru = {
       themeChanged: "Тема изменена на \"{theme}\"",
       updateError: "Ошибка обновления настройки",
       themeUpdateError: "Ошибка обновления темы",
+      formLanguage: "Язык системных сообщений",
+      formLanguageDescription: "Выберите язык для системных ошибок и сообщений формы",
+      languageRussian: "Русский",
+      languageEnglish: "English",
+      languageChanged: "Язык изменён на \"{language}\"",
+      languageUpdateError: "Ошибка обновления языка",
     },
     toast: {
       published: "Форма опубликована!",

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
-import { createUserForm, deleteUserForm, canCreateMoreForms, updateFormNotificationSetting, updateFormRespondentEmailSetting, updateFormTheme } from "@/app/actions/forms"
+import { createUserForm, deleteUserForm, canCreateMoreForms, updateFormNotificationSetting, updateFormRespondentEmailSetting, updateFormTheme, updateFormLanguage } from "@/app/actions/forms"
 import { useCurrentUser } from "./use-auth"
 
 interface Form {
@@ -284,4 +284,9 @@ export const useUpdateFormRespondentEmail = createUpdateFormSettingHook(updateFo
  * Хук для обновления темы формы
  */
 export const useUpdateFormTheme = createUpdateFormSettingHook(updateFormTheme)
+
+/**
+ * Хук для обновления языка системных сообщений формы
+ */
+export const useUpdateFormLanguage = createUpdateFormSettingHook(updateFormLanguage)
 

@@ -25,6 +25,10 @@ export const en: Translations = {
     login: "Login",
     signup: "Sign Up",
     signupShort: "Sign Up",
+    continue: "Continue",
+    processing: "Processing...",
+    selectPlaceholder: "Select...",
+    selectImage: "Select image...",
   },
 
   // Admin panel
@@ -123,6 +127,16 @@ export const en: Translations = {
     urlRequired: "Enter a URL",
     urlInvalid: "Enter a valid URL",
     generationMissingData: "Missing data for generation (URL or form ID). Go back and enter the URL.",
+    formNotConfigured: "Form is not configured",
+    fillRequiredFields: "Fill in all required fields",
+    formNotFound: "Form not found",
+    formUnavailable: "Form is temporarily unavailable",
+    formNotReady: "Form is not ready",
+    generationFailed: "Failed to generate result (incorrect server response format)",
+    usageLimitReached: "Usage limit reached",
+    errorOccurred: "An error occurred",
+    retrying: "Retrying...",
+    tryAgain: "Try again",
   },
 
   // Notifications
@@ -538,6 +552,12 @@ export const en: Translations = {
       themeChanged: "Theme changed to \"{theme}\"",
       updateError: "Error updating setting",
       themeUpdateError: "Error updating theme",
+      formLanguage: "System Messages Language",
+      formLanguageDescription: "Choose language for system errors and messages in the form",
+      languageRussian: "Русский",
+      languageEnglish: "English",
+      languageChanged: "Language changed to \"{language}\"",
+      languageUpdateError: "Error updating language",
     },
     toast: {
       published: "Form published!",
