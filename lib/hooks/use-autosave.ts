@@ -342,3 +342,164 @@ export function useAutoSaveBoolean({
 
   return { value, onChange, status }
 }
+
+interface UseAutoSaveArrayOptions {
+  formId: string | null
+  fieldKey: string
+  initialValue: string[]
+  debounceMs?: number
+}
+
+/**
+ * Хук для автосохранения массива строк (например, loading_messages) в таблицу forms
+ * Каждый элемент массива имеет свой статус для лучшего UX
+ */
+export function useAutoSaveArray({
+  formId,
+  fieldKey,
+  initialValue,
+  debounceMs = 500,
+}: UseAutoSaveArrayOptions) {
+  const [values, setValues] = useState<string[]>(initialValue)
+  const [statuses, setStatuses] = useState<AutoSaveStatus[]>(initialValue.map(() => "idle"))
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const statusTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>(initialValue.map(() => null))
+  const initialValueRef = useRef(initialValue)
+  const formIdRef = useRef(formId)
+  const isInitializedRef = useRef(false)
+  const activeIndexRef = useRef<number | null>(null)
+  const queryClient = useQueryClient()
+
+  // Сброс состояния при смене формы
+  useEffect(() => {
+    if (formId !== formIdRef.current) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      statusTimeoutRefs.current.forEach(ref => {
+        if (ref) clearTimeout(ref)
+      })
+      statusTimeoutRefs.current = initialValue.map(() => null)
+      setStatuses(initialValue.map(() => "idle"))
+      formIdRef.current = formId
+      isInitializedRef.current = false
+    }
+  }, [formId, initialValue])
+
+  // Обновляем значения когда приходит новый initialValue
+  useEffect(() => {
+    if (timeoutRef.current) return
+
+    if (JSON.stringify(initialValue) !== JSON.stringify(initialValueRef.current) || !isInitializedRef.current) {
+      setValues(initialValue)
+      setStatuses(initialValue.map(() => "idle"))
+      statusTimeoutRefs.current = initialValue.map(() => null)
+      initialValueRef.current = initialValue
+      isInitializedRef.current = true
+    }
+  }, [initialValue])
+
+  // Очистка таймаутов при размонтировании
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      statusTimeoutRefs.current.forEach(ref => {
+        if (ref) clearTimeout(ref)
+      })
+    }
+  }, [])
+
+  const saveArray = useCallback(async (newValues: string[], changedIndex: number) => {
+    if (!formId || formId !== formIdRef.current) return
+
+    // Устанавливаем статус "saving" только для измененного поля
+    setStatuses(prev => {
+      const newStatuses = [...prev]
+      newStatuses[changedIndex] = "saving"
+      return newStatuses
+    })
+    
+    try {
+      const supabase = createClient()
+      
+      // Сохраняем массив как JSONB
+      const { error } = await supabase
+        .from("forms")
+        .update({ [fieldKey]: newValues })
+        .eq("id", formId)
+
+      if (error) throw error
+
+      if (formId !== formIdRef.current) return
+
+      // Инвалидируем кэш
+      await queryClient.invalidateQueries({ queryKey: ["formContent", formId] })
+
+      // Устанавливаем статус "saved" только для измененного поля
+      setStatuses(prev => {
+        const newStatuses = [...prev]
+        newStatuses[changedIndex] = "saved"
+        return newStatuses
+      })
+      
+      // Таймаут для сброса статуса в "idle"
+      if (statusTimeoutRefs.current[changedIndex]) {
+        clearTimeout(statusTimeoutRefs.current[changedIndex]!)
+      }
+      statusTimeoutRefs.current[changedIndex] = setTimeout(() => {
+        if (formId === formIdRef.current) {
+          setStatuses(prev => {
+            const newStatuses = [...prev]
+            newStatuses[changedIndex] = "idle"
+            return newStatuses
+          })
+        }
+      }, 2000)
+    } catch (err) {
+      if (formId !== formIdRef.current) return
+
+      console.error("Ошибка автосохранения массива:", err)
+      
+      // Устанавливаем статус "error" только для измененного поля
+      setStatuses(prev => {
+        const newStatuses = [...prev]
+        newStatuses[changedIndex] = "error"
+        return newStatuses
+      })
+      
+      // Таймаут для сброса статуса в "idle"
+      if (statusTimeoutRefs.current[changedIndex]) {
+        clearTimeout(statusTimeoutRefs.current[changedIndex]!)
+      }
+      statusTimeoutRefs.current[changedIndex] = setTimeout(() => {
+        if (formId === formIdRef.current) {
+          setStatuses(prev => {
+            const newStatuses = [...prev]
+            newStatuses[changedIndex] = "idle"
+            return newStatuses
+          })
+        }
+      }, 3000)
+    }
+  }, [formId, fieldKey, queryClient])
+
+  const onChangeAt = useCallback((index: number, newValue: string) => {
+    const newValues = [...values]
+    newValues[index] = newValue
+    setValues(newValues)
+    activeIndexRef.current = index
+    
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    
+    timeoutRef.current = setTimeout(() => {
+      saveArray(newValues, index)
+    }, debounceMs)
+  }, [values, saveArray, debounceMs])
+
+  const getStatusAt = useCallback((index: number): AutoSaveStatus => {
+    return statuses[index] || "idle"
+  }, [statuses])
+
+  return { values, onChangeAt, getStatusAt }
+}

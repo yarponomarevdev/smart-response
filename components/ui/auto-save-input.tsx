@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Check, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/i18n"
 import type { AutoSaveStatus } from "@/lib/hooks/use-autosave"
 
 interface SaveStatusIndicatorProps {
@@ -16,6 +17,8 @@ interface SaveStatusIndicatorProps {
  * Индикатор статуса сохранения
  */
 export function SaveStatusIndicator({ status, className }: SaveStatusIndicatorProps) {
+  const { t } = useTranslation()
+  
   if (status === "idle") return null
 
   return (
@@ -31,17 +34,17 @@ export function SaveStatusIndicator({ status, className }: SaveStatusIndicatorPr
       {status === "saving" && (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Сохранение...</span>
+          <span>{t("common.saving")}</span>
         </>
       )}
       {status === "saved" && (
         <>
           <Check className="h-4 w-4" />
-          <span>Сохранено</span>
+          <span>{t("common.saved")}</span>
         </>
       )}
       {status === "error" && (
-        <span>Ошибка сохранения</span>
+        <span>{t("common.saveError")}</span>
       )}
     </div>
   )

@@ -5,6 +5,8 @@ export const en: Translations = {
   common: {
     save: "Save",
     saving: "Saving...",
+    saved: "Saved",
+    saveError: "Save error",
     cancel: "Cancel",
     delete: "Delete",
     edit: "Edit",

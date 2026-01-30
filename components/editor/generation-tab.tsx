@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-save-input"
-import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
+import { useAutoSaveField, useAutoSaveBoolean, useAutoSaveArray } from "@/lib/hooks/use-autosave"
 import { Label } from "@/components/ui/label"
 import { useKnowledgeFiles, useUploadKnowledgeFile, useDeleteKnowledgeFile, formatFileSize } from "@/lib/hooks/use-knowledge-files"
 import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File, ImageIcon } from "lucide-react"
@@ -49,23 +49,13 @@ export function GenerationTab({
     debounceMs: 800, // Чуть больше debounce для большого текста
   })
 
-  // Автосохранение loading messages
-  const loadingMessage1 = useAutoSaveField({
+  // Автосохранение loading messages (массив)
+  const loadingMessages = useAutoSaveArray({
     formId,
-    fieldKey: "loading_message_1",
-    initialValue: initialLoadingMessages[0] || "",
-  })
-
-  const loadingMessage2 = useAutoSaveField({
-    formId,
-    fieldKey: "loading_message_2",
-    initialValue: initialLoadingMessages[1] || "",
-  })
-
-  const loadingMessage3 = useAutoSaveField({
-    formId,
-    fieldKey: "loading_message_3",
-    initialValue: initialLoadingMessages[2] || "",
+    fieldKey: "loading_messages",
+    initialValue: initialLoadingMessages.length >= 3 
+      ? initialLoadingMessages.slice(0, 3)
+      : [...initialLoadingMessages, ...Array(3 - initialLoadingMessages.length).fill("")],
   })
 
   // Автосохранение ссылки на базу знаний
@@ -94,8 +84,6 @@ export function GenerationTab({
   const { data: files = [], isLoading: filesLoading } = useKnowledgeFiles(formId)
   const uploadFile = useUploadKnowledgeFile()
   const deleteFile = useDeleteKnowledgeFile()
-
-  const loadingFields = [loadingMessage1, loadingMessage2, loadingMessage3]
 
   // Состояние для кнопки "Улучшить с AI"
   const [isImproving, setIsImproving] = useState(false)
@@ -363,18 +351,18 @@ export function GenerationTab({
 
         {/* Три поля в ряд */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {loadingFields.map((field, index) => (
+          {loadingMessages.values.map((value, index) => (
             <AutoSaveFieldWrapper
               key={index}
               label={`${t("editor.generationTab.field")} ${index + 1}`}
               labelFor={`loading_${index}`}
-              status={field.status}
+              status={loadingMessages.getStatusAt(index)}
             >
               <Input
                 id={`loading_${index}`}
-                value={field.value}
-                onChange={(e) => field.onChange(e.target.value)}
-                placeholder={index === 0 ? "Просто" : index === 1 ? "Вкусно" : "Быстро"}
+                value={value}
+                onChange={(e) => loadingMessages.onChangeAt(index, e.target.value)}
+                placeholder={index === 0 ? "Анализируем сайт..." : index === 1 ? "Генерируем рекомендации..." : "Почти готово..."}
                 className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
               />
             </AutoSaveFieldWrapper>

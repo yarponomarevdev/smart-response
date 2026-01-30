@@ -3,6 +3,8 @@ export const ru = {
   common: {
     save: "Сохранить",
     saving: "Сохранение...",
+    saved: "Сохранено",
+    saveError: "Ошибка сохранения",
     cancel: "Отмена",
     delete: "Удалить",
     edit: "Редактировать",
