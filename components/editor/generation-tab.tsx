@@ -261,24 +261,18 @@ export function GenerationTab({
           labelFor="system_prompt"
           status={systemPrompt.status}
         >
-          <div className="flex items-center justify-end mb-2">
+          <div className="flex items-center justify-end mb-2 gap-3">
+            <span className="text-sm text-muted-foreground">
+              {t("editor.generationTab.improveWithAIComingSoon")}
+            </span>
             <Button
               variant="default"
               onClick={handleImprovePrompt}
-              disabled={isImproving || !systemPrompt.value.trim()}
-              className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[30px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base"
+              disabled={true}
+              className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[30px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base opacity-50 cursor-not-allowed"
             >
-              {isImproving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("editor.generationTab.improving")}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  {t("editor.generationTab.improveWithAI")}
-                </>
-              )}
+              <Sparkles className="h-4 w-4" />
+              {t("editor.generationTab.improveWithAI")}
             </Button>
           </div>
           <Textarea
@@ -509,7 +503,14 @@ export function GenerationTab({
 
         {/* Ссылка */}
         <AutoSaveFieldWrapper
-          label={t("editor.generationTab.link")}
+          label={
+            <span className="flex items-center gap-2">
+              {t("editor.generationTab.link")}
+              <span className="text-sm text-muted-foreground font-normal">
+                ({t("editor.generationTab.linkComingSoon")})
+              </span>
+            </span>
+          }
           labelFor="knowledge_url"
           status={knowledgeUrl.status}
         >
@@ -518,7 +519,8 @@ export function GenerationTab({
             value={knowledgeUrl.value}
             onChange={(e) => knowledgeUrl.onChange(e.target.value)}
             placeholder={t("editor.generationTab.linkPlaceholder")}
-            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
+            disabled={true}
+            className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6 opacity-60 cursor-not-allowed"
           />
         </AutoSaveFieldWrapper>
       </div>

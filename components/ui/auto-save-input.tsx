@@ -110,7 +110,7 @@ export const AutoSaveTextarea = forwardRef<HTMLTextAreaElement, AutoSaveTextarea
 AutoSaveTextarea.displayName = "AutoSaveTextarea"
 
 interface AutoSaveFieldWrapperProps {
-  label: string
+  label: React.ReactNode
   labelFor?: string
   status: AutoSaveStatus
   children: React.ReactNode

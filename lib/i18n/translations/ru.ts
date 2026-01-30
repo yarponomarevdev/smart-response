@@ -392,6 +392,8 @@ export const ru = {
       deleteFile: "Удалить этот файл?",
       link: "Ссылка",
       linkPlaceholder: "https://example.com/data",
+      linkComingSoon: "Скоро",
+      improveWithAIComingSoon: "Скоро",
       fileLimit: "Достигнут лимит файлов ({max})",
       unsupportedFormat: "Файл \"{name}\" имеет неподдерживаемый формат. Разрешены: {formats}",
       resultFormat: "Формат результата:",

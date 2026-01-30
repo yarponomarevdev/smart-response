@@ -394,6 +394,8 @@ export const en: Translations = {
       deleteFile: "Delete this file?",
       link: "Link",
       linkPlaceholder: "https://example.com/data",
+      linkComingSoon: "Coming Soon",
+      improveWithAIComingSoon: "Coming Soon",
       fileLimit: "File limit reached ({max})",
       unsupportedFormat: "File \"{name}\" has an unsupported format. Allowed: {formats}",
       resultFormat: "Result format:",
