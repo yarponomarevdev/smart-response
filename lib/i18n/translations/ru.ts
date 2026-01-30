@@ -385,7 +385,7 @@ export const ru = {
       uploadFile: "Загрузить файл",
       uploading: "Загрузка...",
       dragFilesHere: "или перетащите файлы сюда",
-      fileFormats: "PDF, DOCX, DOC, TXT, MD, CSV, JSON • до 10MB • макс. {max} файлов",
+      fileFormats: "PDF, DOCX, TXT, CSV, JSON, PNG, JPEG, WebP, GIF, HEIC • до 10MB • макс. {max} файлов",
       loadingFiles: "Загрузка файлов...",
       noFiles: "Файлы не загружены",
       uploaded: "Загружено: {count} / {max}",

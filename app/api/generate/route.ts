@@ -1,7 +1,37 @@
 import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
-import { extractTextFromFile } from "@/lib/file-parser"
+import { extractTextFromFile, isImageFile } from "@/lib/file-parser"
 import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
+
+// Интерфейс для результата базы знаний с поддержкой изображений
+interface KnowledgeBaseResult {
+  textContent: string
+  images: Array<{ fileName: string; base64: string; mimeType: string }>
+}
+
+// Динамический импорт heic-convert для конвертации HEIC в JPEG
+async function getHeicConvert() {
+  const heicModule = await import("heic-convert")
+  return heicModule.default || heicModule
+}
+
+/**
+ * Конвертирует HEIC изображение в JPEG
+ */
+async function convertHeicToJpeg(buffer: Buffer): Promise<{ buffer: Buffer; mimeType: string }> {
+  try {
+    const convert = await getHeicConvert()
+    const outputBuffer = await convert({
+      buffer,
+      format: "JPEG",
+      quality: 0.9,
+    })
+    return { buffer: Buffer.from(outputBuffer), mimeType: "image/jpeg" }
+  } catch (error) {
+    console.error("Ошибка конвертации HEIC:", error)
+    throw new Error("Не удалось конвертировать HEIC изображение")
+  }
+}
 
 export const maxDuration = 300
 
@@ -132,12 +162,18 @@ async function fetchUrlContent(url: string): Promise<string> {
 }
 
 /**
- * Загружает и извлекает текст из файлов базы знаний
+ * Загружает и извлекает контент из файлов базы знаний
+ * Возвращает текстовый контент и изображения отдельно для multimodal API
  */
 async function getKnowledgeBaseContent(
   supabase: Awaited<ReturnType<typeof createClient>>,
   formId: string
-): Promise<string> {
+): Promise<KnowledgeBaseResult> {
+  const result: KnowledgeBaseResult = {
+    textContent: "",
+    images: [],
+  }
+
   try {
     // Получаем список файлов
     const { data: files, error } = await supabase
@@ -147,7 +183,7 @@ async function getKnowledgeBaseContent(
       .order("created_at", { ascending: true })
 
     if (error || !files || files.length === 0) {
-      return ""
+      return result
     }
 
     const fileContents: string[] = []
@@ -165,28 +201,55 @@ async function getKnowledgeBaseContent(
           continue
         }
 
-        // Извлекаем текст из файла
         const arrayBuffer = await fileData.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const text = await extractTextFromFile(buffer, file.file_type, file.file_name)
+        let buffer = Buffer.from(arrayBuffer)
+        let mimeType = file.file_type
 
-        if (text) {
-          // Не обрезаем файлы - используем полный текст
-          fileContents.push(`--- Файл: ${file.file_name} ---\n${text}`)
+        // Проверяем, является ли файл изображением
+        if (isImageFile(file.file_type, file.file_name)) {
+          // Конвертируем HEIC в JPEG (OpenAI не поддерживает HEIC)
+          if (file.file_type === "image/heic" || file.file_name.toLowerCase().endsWith(".heic")) {
+            try {
+              const converted = await convertHeicToJpeg(buffer)
+              buffer = converted.buffer
+              mimeType = converted.mimeType
+              console.log(`HEIC файл ${file.file_name} конвертирован в JPEG`)
+            } catch (convertError) {
+              console.error(`Ошибка конвертации HEIC ${file.file_name}:`, convertError)
+              continue
+            }
+          }
+
+          // Кодируем изображение в base64
+          const base64 = buffer.toString("base64")
+          result.images.push({
+            fileName: file.file_name,
+            base64,
+            mimeType,
+          })
+          console.log(`Изображение ${file.file_name} добавлено в контекст базы знаний`)
+        } else {
+          // Извлекаем текст из файла
+          const text = await extractTextFromFile(buffer, file.file_type, file.file_name)
+
+          if (text) {
+            // Не обрезаем файлы - используем полный текст
+            fileContents.push(`--- Файл: ${file.file_name} ---\n${text}`)
+          }
         }
       } catch (fileError) {
         console.error(`Ошибка обработки файла ${file.file_name}:`, fileError)
       }
     }
 
-    if (fileContents.length === 0) {
-      return ""
+    if (fileContents.length > 0) {
+      result.textContent = fileContents.join("\n\n")
     }
 
-    return fileContents.join("\n\n")
+    return result
   } catch (error) {
     console.error("Ошибка получения базы знаний:", error)
-    return ""
+    return result
   }
 }
 
@@ -349,10 +412,12 @@ export async function POST(req: Request) {
 
     // Формируем контекст базы знаний
     let knowledgeBaseContext = ""
+    let knowledgeBaseImages: Array<{ fileName: string; base64: string; mimeType: string }> = []
     
     if (useKnowledgeBase) {
-      // Получаем контент из файлов базы знаний
-      const filesContent = await getKnowledgeBaseContent(supabase, formId)
+      // Получаем контент из файлов базы знаний (текст и изображения раздельно)
+      const knowledgeBaseResult = await getKnowledgeBaseContent(supabase, formId)
+      knowledgeBaseImages = knowledgeBaseResult.images
       
       // Получаем контент из ссылки базы знаний
       let knowledgeUrlContent = ""
@@ -372,10 +437,15 @@ export async function POST(req: Request) {
         }
       }
 
-      // Объединяем контент базы знаний
-      const knowledgeParts = [filesContent, knowledgeUrlContent].filter(Boolean)
+      // Объединяем текстовый контент базы знаний
+      const knowledgeParts = [knowledgeBaseResult.textContent, knowledgeUrlContent].filter(Boolean)
       if (knowledgeParts.length > 0) {
         knowledgeBaseContext = `\n\n=== БАЗА ЗНАНИЙ ===\n${knowledgeParts.join("\n\n")}\n=== КОНЕЦ БАЗЫ ЗНАНИЙ ===`
+      }
+      
+      // Логируем количество изображений в базе знаний
+      if (knowledgeBaseImages.length > 0) {
+        console.log(`База знаний содержит ${knowledgeBaseImages.length} изображение(й)`)
       }
     }
 
@@ -817,17 +887,49 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
         return completion?.choices?.[0]?.message?.content || ""
       }
 
+      // Тип для multimodal content
+      type MessageContent = string | Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } }
+      >
+
       /**
        * Делает запрос к OpenAI и возвращает JSON completion.
+       * Поддерживает multimodal content (текст + изображения)
        */
-      const callOpenAiChat = async (params: { systemPrompt: string; userMessage: string }) => {
-        const { systemPrompt, userMessage } = params
+      const callOpenAiChat = async (params: { 
+        systemPrompt: string
+        userMessage: string
+        images?: Array<{ fileName: string; base64: string; mimeType: string }>
+      }) => {
+        const { systemPrompt, userMessage, images = [] } = params
+
+        // Формируем content для user message
+        let userContent: MessageContent
+        
+        if (images.length > 0) {
+          // Multimodal: текст + изображения
+          userContent = [
+            { type: "text" as const, text: userMessage },
+            ...images.map(img => ({
+              type: "image_url" as const,
+              image_url: {
+                url: `data:${img.mimeType};base64,${img.base64}`,
+                detail: "auto" as const,
+              },
+            })),
+          ]
+          console.log(`Отправка multimodal запроса с ${images.length} изображениями из базы знаний`)
+        } else {
+          // Только текст
+          userContent = userMessage
+        }
 
         const requestBody = {
           model: textModel,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
+            { role: "user", content: userContent },
           ],
           // Безлимит на токены выхода - используем максимум модели
         }
@@ -894,7 +996,12 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
 
 Please provide your analysis and recommendations.`
 
-      const firstAttempt = await callOpenAiChat({ systemPrompt: textSystemPrompt, userMessage })
+      // Передаём изображения из базы знаний для multimodal запроса
+      const firstAttempt = await callOpenAiChat({ 
+        systemPrompt: textSystemPrompt, 
+        userMessage,
+        images: knowledgeBaseImages,
+      })
       if (!firstAttempt.ok) {
         return Response.json(firstAttempt.payload, { status: firstAttempt.status, headers: corsHeaders })
       }

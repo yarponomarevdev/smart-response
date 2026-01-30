@@ -387,7 +387,7 @@ export const en: Translations = {
       uploadFile: "Upload File",
       uploading: "Uploading...",
       dragFilesHere: "or drag files here",
-      fileFormats: "PDF, DOCX, DOC, TXT, MD, CSV, JSON • up to 10MB • max {max} files",
+      fileFormats: "PDF, DOCX, TXT, CSV, JSON, PNG, JPEG, WebP, GIF, HEIC • up to 10MB • max {max} files",
       loadingFiles: "Loading files...",
       noFiles: "No files uploaded",
       uploaded: "Uploaded: {count} / {max}",

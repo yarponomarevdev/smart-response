@@ -15,6 +15,7 @@ const MAX_FILES_PER_FORM = 10
 
 // Разрешённые MIME типы
 const ALLOWED_MIME_TYPES = [
+  // Документы
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/msword",
@@ -22,6 +23,13 @@ const ALLOWED_MIME_TYPES = [
   "text/markdown",
   "text/csv",
   "application/json",
+  // Изображения
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+  "image/heic",
 ]
 
 /**
@@ -98,6 +106,15 @@ export async function POST(req: Request) {
       return Response.json({ error: "file и formId обязательны" }, { status: 400 })
     }
 
+    // Получаем информацию о пользователе (включая роль)
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+    
+    const isSuperadmin = userData?.role === "superadmin"
+
     // Проверяем, что пользователь владелец формы
     const { data: form } = await supabase.from("forms").select("owner_id").eq("id", formId).single()
 
@@ -118,23 +135,29 @@ export async function POST(req: Request) {
       )
     }
 
-    // Проверяем размер файла (1 МБ)
-    if (file.size > MAX_FILE_SIZE) {
+    // Максимальный размер файла: 10 МБ для superadmin, 1 МБ для остальных
+    const maxFileSize = isSuperadmin ? 10 * 1024 * 1024 : MAX_FILE_SIZE
+    const maxFileSizeMB = isSuperadmin ? 10 : 1
+
+    // Проверяем размер файла
+    if (file.size > maxFileSize) {
       return Response.json(
-        { error: `Файл слишком большой. Максимальный размер: 1 МБ` },
+        { error: `Файл слишком большой. Максимальный размер: ${maxFileSizeMB} МБ` },
         { status: 400 }
       )
     }
 
-    // Проверяем лимит хранилища пользователя
-    const { canUpload, currentUsage, limit } = await checkStorageLimit(user.id, file.size)
-    if (!canUpload && limit !== null) {
-      const currentMB = Math.round(currentUsage / 1024 / 1024 * 10) / 10
-      const limitMB = Math.round(limit / 1024 / 1024)
-      return Response.json(
-        { error: `Превышен лимит хранилища (${currentMB}/${limitMB} МБ). Удалите ненужные файлы или обратитесь к администратору.` },
-        { status: 400 }
-      )
+    // Проверяем лимит хранилища пользователя (superadmin - без лимита)
+    if (!isSuperadmin) {
+      const { canUpload, currentUsage, limit } = await checkStorageLimit(user.id, file.size)
+      if (!canUpload && limit !== null) {
+        const currentMB = Math.round(currentUsage / 1024 / 1024 * 10) / 10
+        const limitMB = Math.round(limit / 1024 / 1024)
+        return Response.json(
+          { error: `Превышен лимит хранилища (${currentMB}/${limitMB} МБ). Удалите ненужные файлы или обратитесь к администратору.` },
+          { status: 400 }
+        )
+      }
     }
 
     // Проверяем тип файла
@@ -143,7 +166,7 @@ export async function POST(req: Request) {
 
     if (!isAllowedType) {
       return Response.json(
-        { error: "Неподдерживаемый тип файла. Разрешены: PDF, DOCX, DOC, TXT, MD, CSV, JSON" },
+        { error: "Неподдерживаемый тип файла. Разрешены: PDF, DOCX, DOC, TXT, MD, CSV, JSON, PNG, JPEG, WebP, GIF, HEIC" },
         { status: 400 }
       )
     }

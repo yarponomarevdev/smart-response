@@ -1,7 +1,20 @@
 /**
  * Парсер файлов для извлечения текста из различных форматов
- * Поддерживает: PDF, DOCX, TXT, MD, CSV, JSON
+ * Поддерживает: PDF, DOCX, TXT, MD, CSV, JSON, а также изображения (PNG, JPEG, WebP, GIF, HEIC)
  */
+
+// MIME-типы изображений
+const IMAGE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+]
+
+// Расширения изображений
+const IMAGE_EXTENSIONS = [".png", ".jpeg", ".jpg", ".webp", ".gif", ".heic"]
 
 // Динамические импорты для CommonJS модулей
 async function getPdfParse() {
@@ -203,6 +216,18 @@ function formatJsonToText(data: unknown, indent = 0): string {
 }
 
 /**
+ * Проверяет, является ли файл изображением
+ */
+export function isImageFile(mimeType: string, fileName: string): boolean {
+  if (IMAGE_MIME_TYPES.includes(mimeType)) {
+    return true
+  }
+
+  const lowerFileName = fileName.toLowerCase()
+  return IMAGE_EXTENSIONS.some((ext) => lowerFileName.endsWith(ext))
+}
+
+/**
  * Проверяет, поддерживается ли тип файла
  */
 export function isSupportedFileType(mimeType: string, fileName: string): boolean {
@@ -214,9 +239,10 @@ export function isSupportedFileType(mimeType: string, fileName: string): boolean
     "text/markdown",
     "text/csv",
     "application/json",
+    ...IMAGE_MIME_TYPES,
   ]
 
-  const supportedExtensions = [".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".json"]
+  const supportedExtensions = [".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".json", ...IMAGE_EXTENSIONS]
 
   if (supportedMimeTypes.includes(mimeType)) {
     return true
@@ -255,6 +281,22 @@ export function getFileTypeLabel(mimeType: string, fileName: string): string {
   }
   if (mimeType === "text/plain" || lowerFileName.endsWith(".txt")) {
     return "Текст"
+  }
+  // Изображения
+  if (mimeType === "image/png" || lowerFileName.endsWith(".png")) {
+    return "PNG"
+  }
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg" || lowerFileName.endsWith(".jpeg") || lowerFileName.endsWith(".jpg")) {
+    return "JPEG"
+  }
+  if (mimeType === "image/webp" || lowerFileName.endsWith(".webp")) {
+    return "WebP"
+  }
+  if (mimeType === "image/gif" || lowerFileName.endsWith(".gif")) {
+    return "GIF"
+  }
+  if (mimeType === "image/heic" || lowerFileName.endsWith(".heic")) {
+    return "HEIC"
   }
 
   return "Файл"

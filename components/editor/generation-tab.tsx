@@ -14,7 +14,7 @@ import { AutoSaveFieldWrapper, SaveStatusIndicator } from "@/components/ui/auto-
 import { useAutoSaveField, useAutoSaveBoolean } from "@/lib/hooks/use-autosave"
 import { Label } from "@/components/ui/label"
 import { useKnowledgeFiles, useUploadKnowledgeFile, useDeleteKnowledgeFile, formatFileSize } from "@/lib/hooks/use-knowledge-files"
-import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File } from "lucide-react"
+import { Loader2, Sparkles, Upload, X, FileText, FileSpreadsheet, FileJson, File, ImageIcon } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 
 interface GenerationTabProps {
@@ -27,8 +27,11 @@ interface GenerationTabProps {
 // Максимальное количество файлов
 const MAX_FILES = 10
 
-// Разрешённые расширения файлов
-const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".json"]
+// Разрешённые расширения файлов (документы + изображения)
+const ALLOWED_EXTENSIONS = [
+  ".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".json",
+  ".png", ".jpeg", ".jpg", ".webp", ".gif", ".heic"
+]
 
 export function GenerationTab({
   formId,
@@ -236,6 +239,13 @@ export function GenerationTab({
         return <FileSpreadsheet className="h-4 w-4" />
       case "json":
         return <FileJson className="h-4 w-4" />
+      case "png":
+      case "jpeg":
+      case "jpg":
+      case "webp":
+      case "gif":
+      case "heic":
+        return <ImageIcon className="h-4 w-4" />
       default:
         return <File className="h-4 w-4" />
     }
