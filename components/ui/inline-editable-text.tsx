@@ -17,6 +17,8 @@ interface InlineEditableTextProps {
   className?: string
   inputClassName?: string
   disabled?: boolean
+  maxLength?: number
+  showCharCount?: boolean
 }
 
 export function InlineEditableText({
@@ -27,6 +29,8 @@ export function InlineEditableText({
   className,
   inputClassName,
   disabled = false,
+  maxLength,
+  showCharCount = false,
 }: InlineEditableTextProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
@@ -98,22 +102,30 @@ export function InlineEditableText({
 
   if (isEditing) {
     return (
-      <div className="relative flex items-center min-w-0 flex-1 max-w-full">
-        <Input
-          ref={inputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={isSaving}
-          className={cn(
-            "h-7 py-0 px-2 text-sm w-full",
-            inputClassName
+      <div className="flex flex-col gap-1 min-w-0 flex-1 max-w-full">
+        <div className="relative flex items-center min-w-0 flex-1 max-w-full">
+          <Input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={isSaving}
+            maxLength={maxLength}
+            className={cn(
+              "h-7 py-0 px-2 text-sm w-full",
+              inputClassName
+            )}
+          />
+          {isSaving && (
+            <Loader2 className="absolute right-2 h-3 w-3 animate-spin text-muted-foreground" />
           )}
-        />
-        {isSaving && (
-          <Loader2 className="absolute right-2 h-3 w-3 animate-spin text-muted-foreground" />
+        </div>
+        {showCharCount && maxLength && (
+          <div className="text-xs text-muted-foreground px-1">
+            {editValue.length}/{maxLength}
+          </div>
         )}
       </div>
     )
@@ -132,7 +144,7 @@ export function InlineEditableText({
     >
       <span className="block min-w-0 truncate">{value || emptyText}</span>
       {!disabled && (
-        <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+        <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
       )}
     </span>
   )

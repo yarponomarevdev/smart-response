@@ -193,6 +193,7 @@ export const ru = {
     noFormsYet: "Форм пока нет",
     noFormsDescription: "Создайте форму для сбора лидов",
     createForm: "Создать форму",
+    clickToEdit: "Нажмите, чтобы изменить название",
     active: "Активна",
     inactive: "Неактивна",
     created: "Создана",
@@ -222,6 +223,7 @@ export const ru = {
     },
     toast: {
       created: "Форма создана!",
+      updated: "Форма обновлена!",
       deleted: "Форма удалена!",
       linkCopied: "Ссылка скопирована!",
       codeCopied: "Код для встраивания скопирован!",

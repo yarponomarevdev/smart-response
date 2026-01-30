@@ -18,12 +18,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
+import { InlineEditableText } from "@/components/ui/inline-editable-text"
 import { toast } from "sonner"
 import {
   useUserForms,
   useCreateForm,
   useDeleteForm,
   useToggleFormActive,
+  useUpdateFormName,
 } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 
@@ -51,6 +53,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   const createFormMutation = useCreateForm()
   const deleteFormMutation = useDeleteForm()
   const toggleActiveMutation = useToggleFormActive()
+  const updateFormNameMutation = useUpdateFormName()
 
   // Локальное состояние для UI
   const [error, setError] = useState<string | null>(null)
@@ -151,6 +154,26 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
     setShowDeleteDialog(true)
   }
 
+  const handleFormNameUpdate = async (formId: string, newName: string) => {
+    if (!newName.trim()) {
+      throw new Error(t("forms.toast.nameError"))
+    }
+    if (newName.length > 30) {
+      throw new Error(t("forms.toast.nameError"))
+    }
+    
+    try {
+      await updateFormNameMutation.mutateAsync({
+        formId,
+        name: newName.trim()
+      })
+      toast.success(t("forms.toast.updated"))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errors.savingFailed"))
+      throw err
+    }
+  }
+
   // Нет форм - показываем приглашение создать
   if (forms.length === 0) {
     return (
@@ -232,7 +255,18 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                   </Badge>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base sm:text-lg truncate">{form.name}</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">
+                    <InlineEditableText
+                      value={form.name}
+                      onSave={(newValue) => handleFormNameUpdate(form.id, newValue)}
+                      placeholder={t("forms.createDialog.namePlaceholder")}
+                      emptyText={t("forms.clickToEdit")}
+                      className="font-semibold"
+                      inputClassName="h-8 text-base sm:text-lg font-semibold"
+                      maxLength={30}
+                      showCharCount={true}
+                    />
+                  </CardTitle>
                   <CardDescription className="text-xs font-mono truncate">
                     {form.id}
                   </CardDescription>

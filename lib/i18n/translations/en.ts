@@ -195,6 +195,7 @@ export const en: Translations = {
     noFormsYet: "No forms yet",
     noFormsDescription: "Create a form to collect leads",
     createForm: "Create Form",
+    clickToEdit: "Click to edit name",
     active: "Active",
     inactive: "Inactive",
     created: "Created",
@@ -224,6 +225,7 @@ export const en: Translations = {
     },
     toast: {
       created: "Form created!",
+      updated: "Form updated!",
       deleted: "Form deleted!",
       linkCopied: "Link copied!",
       codeCopied: "Embed code copied!",
