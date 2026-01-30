@@ -163,6 +163,7 @@ export function useDeleteForm() {
  */
 export function useUpdateFormName() {
   const queryClient = useQueryClient()
+  const { data: user } = useCurrentUser()
 
   return useMutation({
     mutationFn: async ({ formId, name }: { formId: string; name: string }) => {
@@ -173,11 +174,36 @@ export function useUpdateFormName() {
         .eq("id", formId)
       
       if (error) throw new Error(error.message)
+      return { formId, name }
     },
-    onSuccess: () => {
-      // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
+    onMutate: async ({ formId, name }) => {
+      // Отменяем все текущие запросы для этих данных
+      await queryClient.cancelQueries({ queryKey: ["forms", user?.id] })
+      
+      // Сохраняем предыдущее состояние для отката при ошибке
+      const previousData = queryClient.getQueryData<UserFormsData>(["forms", user?.id])
+      
+      // Оптимистично обновляем данные
+      if (previousData) {
+        queryClient.setQueryData<UserFormsData>(["forms", user?.id], {
+          ...previousData,
+          forms: previousData.forms.map(form => 
+            form.id === formId ? { ...form, name } : form
+          )
+        })
+      }
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      // При ошибке откатываем изменения
+      if (context?.previousData) {
+        queryClient.setQueryData(["forms", user?.id], context.previousData)
+      }
+    },
+    onSettled: () => {
+      // После завершения (успех или ошибка) инвалидируем кэш
       queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
-      // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
       queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
     },
   })
