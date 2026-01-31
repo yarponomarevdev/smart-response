@@ -20,7 +20,7 @@ marked.setOptions({
 interface CreateLeadParams {
   formId: string
   email: string
-  url: string
+  url?: string | null
   resultText: string
   resultImageUrl: string | null
   customFields?: Record<string, unknown>
@@ -29,7 +29,7 @@ interface CreateLeadParams {
 interface SendOwnerNotificationParams {
   formId: string
   leadEmail: string
-  url: string
+  url?: string | null
   resultText: string
   resultImageUrl: string | null
   parentPageUrl?: string
@@ -118,7 +118,7 @@ function generateOwnerNotificationHTML({
 }: {
   formName: string
   leadEmail: string
-  url: string
+  url?: string | null
   resultText: string
   resultImageUrl: string | null
   parentPageUrl?: string
