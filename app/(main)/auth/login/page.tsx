@@ -50,10 +50,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4">
-      <div className="fixed top-4 right-4 z-50 flex gap-2">
-        <LanguageToggle />
-        <ThemeToggle />
+    <div className="flex min-h-screen w-full items-center justify-center px-4 sm:px-6 md:px-[10%] lg:px-0 py-4 relative">
+      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-50">
+        <Link href="/" className="font-semibold text-lg hover:opacity-80 transition-opacity">
+          SmartResponse.io
+        </Link>
+      </div>
+      <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 flex gap-2">
+        <LanguageToggle className="h-9 w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
+        <ThemeToggle className="h-9 w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
       </div>
       <div className="w-full max-w-7xl mx-auto grid grid-cols-12 gap-4">
         <div className="col-span-12 sm:col-span-10 sm:col-start-2 md:col-start-5 md:col-span-4">
