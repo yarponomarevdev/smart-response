@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import type React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -98,6 +100,21 @@ export function LandingPage() {
   const [showForm, setShowForm] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<string>("")
+
+  // Обработчик клика на кнопку "Войти"
+  const handleLoginClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      // Если пользователь уже авторизован, переходим в админку
+      router.push("/admin")
+    } else {
+      // Если не авторизован, переходим на страницу логина
+      router.push("/auth/login")
+    }
+  }
   
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
 
@@ -187,11 +204,14 @@ export function LandingPage() {
                 <ThemeToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
               </div>
               
-              <Link href="/auth/login" className="hidden sm:block">
-                <Button variant="ghost" size="sm">
-                  {t("landing.header.login")}
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleLoginClick}
+                className="hidden sm:block"
+              >
+                {t("landing.header.login")}
+              </Button>
               
               <Link href="/auth/register">
                 <Button size="sm" className="rounded-full">
@@ -228,11 +248,14 @@ export function LandingPage() {
               <div className="flex items-center gap-2 pt-4 border-t">
                 <LanguageToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
                 <ThemeToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
-                <Link href="/auth/login" className="ml-auto">
-                  <Button variant="outline" size="sm">
-                    {t("landing.header.login")}
-                  </Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleLoginClick}
+                  className="ml-auto"
+                >
+                  {t("landing.header.login")}
+                </Button>
               </div>
             </div>
           </div>
@@ -549,15 +572,14 @@ export function LandingPage() {
                   {t("landing.cta.button")}
                 </Button>
               </Link>
-              <Link href="/auth/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full text-base px-8 w-full sm:w-auto"
-                >
-                  {t("landing.cta.login")}
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full text-base px-8 w-full sm:w-auto"
+                onClick={handleLoginClick}
+              >
+                {t("landing.cta.login")}
+              </Button>
             </div>
           </div>
         </div>
