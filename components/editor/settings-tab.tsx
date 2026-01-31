@@ -173,9 +173,9 @@ export function SettingsTab({ formId }: SettingsTabProps) {
       {/* Основные настройки */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Основные настройки</CardTitle>
+          <CardTitle className="text-xl">{t("editor.settingsTab.basicSettings")}</CardTitle>
           <CardDescription>
-            Управляйте базовыми параметрами отображения вашей формы
+            {t("editor.settingsTab.basicSettingsDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -259,10 +259,10 @@ export function SettingsTab({ formId }: SettingsTabProps) {
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Уведомления
+            {t("editor.settingsTab.notificationsTitle")}
           </CardTitle>
           <CardDescription>
-            Настройте отправку писем при заполнении формы
+            {t("editor.settingsTab.notificationsDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

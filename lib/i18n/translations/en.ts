@@ -39,6 +39,7 @@ export const en: Translations = {
       superadminDescription: "Manage main form, create forms and view all users",
       userDescription: "Manage your form and leads",
       menu: "Menu",
+      backToLanding: "Back to Landing",
     },
     tabs: {
       dashboard: "Dashboard",
@@ -667,6 +668,10 @@ export const en: Translations = {
       noForm: "Form not selected",
       loadingSettings: "Loading settings...",
       loadingError: "Error loading settings",
+      basicSettings: "Basic Settings",
+      basicSettingsDescription: "Manage basic display settings for your form",
+      notificationsTitle: "Notifications",
+      notificationsDescription: "Configure email notifications for form submissions",
       formName: "Form Name",
       formNamePlaceholder: "My Form",
       charactersLeft: "{count} characters",

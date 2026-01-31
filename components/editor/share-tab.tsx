@@ -88,7 +88,7 @@ export function ShareTab({ formId }: ShareTabProps) {
               )}
             </Button>
             <Button
-              variant="outline"
+              variant="default" // Changed from outline to default (primary)
               size="icon"
               className="shrink-0"
               asChild

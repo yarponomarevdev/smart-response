@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { LogOut, Menu } from "lucide-react"
+import Link from "next/link"
+import { LogOut, Menu, Home } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -159,14 +160,15 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="min-h-screen bg-background">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               {/* Бургер-меню для мобильных */}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="md:hidden">
+                  <Button variant="ghost" size="icon" className="md:hidden">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
@@ -176,107 +178,209 @@ export function AdminDashboard() {
                   </SheetHeader>
                   <nav className="mt-6 flex flex-col gap-2">
                     {renderMenuItems()}
+                    {isSuperAdmin && (
+                      <Link
+                        href="/"
+                        className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-left transition-colors hover:bg-accent"
+                      >
+                        <Home className="h-4 w-4" />
+                        <span>{t("admin.panel.backToLanding")}</span>
+                      </Link>
+                    )}
                   </nav>
                 </SheetContent>
               </Sheet>
-              <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
+              <h1 className="text-xl font-bold">{panelTitle}</h1>
             </div>
+
             <div className="flex items-center gap-2">
-              <LanguageToggle />
-              <ThemeToggle />
-              <Button onClick={handleLogout} className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border text-sm sm:text-base transition-colors">
-                <LogOut className="mr-1 sm:mr-2 h-4 w-4" />
+              {isSuperAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="hidden sm:flex"
+                >
+                  <Link href="/">
+                    <Home className="mr-2 h-4 w-4" />
+                    <span>{t("admin.panel.backToLanding")}</span>
+                  </Link>
+                </Button>
+              )}
+              <LanguageToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
+              <ThemeToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleLogout} 
+                className="hidden sm:flex"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>{t("common.logout")}</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={handleLogout} 
+                className="sm:hidden"
+              >
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>
-          <p className="text-sm sm:text-base text-muted-foreground">{panelDescription}</p>
         </div>
+      </header>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          {/* Десктоп меню */}
-          <TabsList className="hidden md:flex flex-wrap h-auto border-b border-border p-0 gap-6">
+      <main className="pt-24 pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-2">
+            <p className="text-sm sm:text-base text-muted-foreground">{panelDescription}</p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+            {/* Десктоп меню */}
+            <TabsList className="hidden md:flex flex-wrap h-auto border-b border-border p-0 gap-6 bg-transparent">
+              {isSuperAdmin ? (
+                <>
+                  <TabsTrigger 
+                    value="dashboard"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.dashboard")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="editor"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.editor")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="leads"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.leads")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="users"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.users")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="integrations" 
+                    disabled 
+                    className="relative data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-0 pb-2 opacity-50 cursor-not-allowed"
+                  >
+                    {t("admin.tabs.integrations")}
+                    <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                      {t("admin.tabs.comingSoon")}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="system"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.settings")}
+                  </TabsTrigger>
+                </>
+              ) : (
+                <>
+                  <TabsTrigger 
+                    value="dashboard"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.dashboard")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="editor"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.editor")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="leads"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.leads")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="integrations" 
+                    disabled 
+                    className="relative data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-0 pb-2 opacity-50 cursor-not-allowed"
+                  >
+                    {t("admin.tabs.integrations")}
+                    <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                      {t("admin.tabs.comingSoon")}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="balance"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.balance")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="settings"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.settings")}
+                  </TabsTrigger>
+                </>
+              )}
+            </TabsList>
+
             {isSuperAdmin ? (
               <>
-                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
-                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
-                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
-                <TabsTrigger value="users">{t("admin.tabs.users")}</TabsTrigger>
-                <TabsTrigger value="integrations" disabled className="relative">
-                  {t("admin.tabs.integrations")}
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                    {t("admin.tabs.comingSoon")}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="system">{t("admin.tabs.settings")}</TabsTrigger>
+                <TabsContent value="dashboard" className="space-y-4">
+                  <FormsManager onOpenEditor={(formId) => {
+                    setEditorFormId(formId)
+                    setActiveTab("editor")
+                  }} />
+                </TabsContent>
+                <TabsContent value="editor" className="space-y-4">
+                  <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
+                </TabsContent>
+                <TabsContent value="leads" className="space-y-4">
+                  <LeadsView />
+                </TabsContent>
+                <TabsContent value="users" className="space-y-4">
+                  <UsersTable />
+                </TabsContent>
+                <TabsContent value="integrations" className="space-y-4">
+                  {/* Скоро */}
+                </TabsContent>
+                <TabsContent value="system" className="space-y-4">
+                  <SystemSettingsEditor />
+                </TabsContent>
               </>
             ) : (
               <>
-                <TabsTrigger value="dashboard">{t("admin.tabs.dashboard")}</TabsTrigger>
-                <TabsTrigger value="editor">{t("admin.tabs.editor")}</TabsTrigger>
-                <TabsTrigger value="leads">{t("admin.tabs.leads")}</TabsTrigger>
-                <TabsTrigger value="integrations" disabled className="relative">
-                  {t("admin.tabs.integrations")}
-                  <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                    {t("admin.tabs.comingSoon")}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="balance">{t("admin.tabs.balance")}</TabsTrigger>
-                <TabsTrigger value="settings">{t("admin.tabs.settings")}</TabsTrigger>
+                <TabsContent value="dashboard" className="space-y-4">
+                  <FormsManager onOpenEditor={(formId) => {
+                    setEditorFormId(formId)
+                    setActiveTab("editor")
+                  }} />
+                </TabsContent>
+                <TabsContent value="editor" className="space-y-4">
+                  <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
+                </TabsContent>
+                <TabsContent value="leads" className="space-y-4">
+                  <LeadsView />
+                </TabsContent>
+                <TabsContent value="integrations" className="space-y-4">
+                  {/* Скоро */}
+                </TabsContent>
+                <TabsContent value="balance" className="space-y-4">
+                  <BalanceTab />
+                </TabsContent>
+                <TabsContent value="settings" className="space-y-4">
+                  <UserSettingsEditor />
+                </TabsContent>
               </>
             )}
-          </TabsList>
-
-          {isSuperAdmin ? (
-            <>
-              <TabsContent value="dashboard" className="space-y-4">
-                <FormsManager onOpenEditor={(formId) => {
-                  setEditorFormId(formId)
-                  setActiveTab("editor")
-                }} />
-              </TabsContent>
-              <TabsContent value="editor" className="space-y-4">
-                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
-              </TabsContent>
-              <TabsContent value="leads" className="space-y-4">
-                <LeadsView />
-              </TabsContent>
-              <TabsContent value="users" className="space-y-4">
-                <UsersTable />
-              </TabsContent>
-              <TabsContent value="integrations" className="space-y-4">
-                {/* Скоро */}
-              </TabsContent>
-              <TabsContent value="system" className="space-y-4">
-                <SystemSettingsEditor />
-              </TabsContent>
-            </>
-          ) : (
-            <>
-              <TabsContent value="dashboard" className="space-y-4">
-                <FormsManager onOpenEditor={(formId) => {
-                  setEditorFormId(formId)
-                  setActiveTab("editor")
-                }} />
-              </TabsContent>
-              <TabsContent value="editor" className="space-y-4">
-                <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
-              </TabsContent>
-              <TabsContent value="leads" className="space-y-4">
-                <LeadsView />
-              </TabsContent>
-              <TabsContent value="integrations" className="space-y-4">
-                {/* Скоро */}
-              </TabsContent>
-              <TabsContent value="balance" className="space-y-4">
-                <BalanceTab />
-              </TabsContent>
-              <TabsContent value="settings" className="space-y-4">
-                <UserSettingsEditor />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
+          </Tabs>
+        </div>
+      </main>
     </div>
   )
 }

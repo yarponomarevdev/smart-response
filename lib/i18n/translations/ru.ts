@@ -37,6 +37,7 @@ export const ru = {
       superadminDescription: "Управление главной формой, создание форм и просмотр всех пользователей",
       userDescription: "Управление вашей формой и лидами",
       menu: "Меню",
+      backToLanding: "На лендинг",
     },
     tabs: {
       dashboard: "Дашборд",
@@ -665,6 +666,10 @@ export const ru = {
       noForm: "Форма не выбрана",
       loadingSettings: "Загрузка настроек...",
       loadingError: "Ошибка загрузки настроек",
+      basicSettings: "Основные настройки",
+      basicSettingsDescription: "Управляйте базовыми параметрами отображения вашей формы",
+      notificationsTitle: "Уведомления",
+      notificationsDescription: "Настройте отправку писем при заполнении формы",
       formName: "Название формы",
       formNamePlaceholder: "Моя форма",
       charactersLeft: "{count} символов",
