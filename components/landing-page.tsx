@@ -262,12 +262,13 @@ export function LandingPage() {
         )}
       </header>
 
-      {/* Hero Section */}
-      <section
-        id="hero"
-        ref={(el) => { sectionRefs.current["hero"] = el }}
-        className="pt-24 pb-16 sm:pt-32 sm:pb-24"
-      >
+      <main>
+        {/* Hero Section */}
+        <section
+          id="hero"
+          ref={(el) => { sectionRefs.current["hero"] = el }}
+          className="pt-24 pb-16 sm:pt-32 sm:pb-24"
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h1 className="text-[clamp(2rem,5vw,3.75rem)] leading-[1.1] font-bold tracking-tight mb-6 text-balance">
@@ -318,9 +319,9 @@ export function LandingPage() {
                     </div>
                   ) : showForm ? (
                     <div className="space-y-4 animate-in fade-in duration-500">
-                      <h3 className="font-semibold text-lg">
+                      <h2 className="font-semibold text-lg">
                         {t(DEMO_FORMS[selectedGoal].titleKey)}
-                      </h3>
+                      </h2>
                       
                       <div className="space-y-4">
                         {selectedGoal === "qualify" && (
@@ -660,6 +661,7 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+      </main>
     </div>
   )
 }
