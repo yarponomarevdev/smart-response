@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -156,6 +157,9 @@ export function FieldForm({
           <DialogTitle>
             {initialData?.id ? t("editor.fieldForm.editField") : t("editor.fieldForm.newField")}: {FIELD_TYPE_LABELS[fieldType]}
           </DialogTitle>
+          <DialogDescription>
+            {initialData?.id ? t("editor.fieldForm.editFieldDescription") : t("editor.fieldForm.newFieldDescription")}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

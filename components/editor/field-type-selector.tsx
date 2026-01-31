@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -113,6 +114,9 @@ export function FieldTypeSelector({ open, onOpenChange, onSelect }: FieldTypeSel
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("editor.fieldTypeSelector.title")}</DialogTitle>
+          <DialogDescription>
+            {t("editor.fieldTypeSelector.description")}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           {/* Элементы оформления */}

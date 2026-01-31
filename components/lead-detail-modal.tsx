@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -194,6 +195,9 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                 {getStatusLabel(status)}
               </Badge>
             </DialogTitle>
+            <DialogDescription>
+              {t("leads.detail.description")}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4">

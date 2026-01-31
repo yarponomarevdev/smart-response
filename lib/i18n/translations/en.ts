@@ -302,6 +302,7 @@ export const en: Translations = {
       openInNewTab: "Open in new tab",
       formData: "Form Data",
       integrationSite: "Integration Site",
+      description: "View and edit detailed information about the lead",
     },
     moreFields: "more",
     deleteDialog: {
@@ -614,12 +615,15 @@ export const en: Translations = {
     },
     fieldTypeSelector: {
       title: "Choose field type:",
+      description: "Select a field type to add to the form",
       layoutCategory: "Design elements",
       inputCategory: "Input fields",
     },
     fieldForm: {
       editField: "Edit",
       newField: "New Field",
+      editFieldDescription: "Modify form field parameters",
+      newFieldDescription: "Configure new form field parameters",
       disclaimerLabel: "Disclaimer Text",
       headingLabel: "Heading Text",
       fieldNameLabel: "Field Name",

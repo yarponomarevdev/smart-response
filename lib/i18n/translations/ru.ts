@@ -300,6 +300,7 @@ export const ru = {
       openInNewTab: "Открыть в новой вкладке",
       formData: "Данные формы",
       integrationSite: "Сайт интеграции",
+      description: "Просмотр и редактирование детальной информации о лиде",
     },
     moreFields: "ещё",
     deleteDialog: {
@@ -612,12 +613,15 @@ export const ru = {
     },
     fieldTypeSelector: {
       title: "Выберите тип поля:",
+      description: "Выберите тип поля для добавления в форму",
       layoutCategory: "Элементы оформления",
       inputCategory: "Поля ввода",
     },
     fieldForm: {
       editField: "Редактировать",
       newField: "Новое поле",
+      editFieldDescription: "Измените параметры поля формы",
+      newFieldDescription: "Настройте параметры нового поля формы",
       disclaimerLabel: "Текст дисклеймера",
       headingLabel: "Текст заголовка",
       fieldNameLabel: "Название поля",
