@@ -532,7 +532,7 @@ export const en: Translations = {
       generationHint: "*text appears as a slideshow during response generation",
       field: "Field",
       additionalSettings: "Additional Settings",
-      useKnowledgeBase: "Use Knowledge Base",
+      useKnowledgeBase: "Add Knowledge Base",
       knowledgeBase: "Knowledge Base / Other Data",
       uploadFile: "Upload File",
       uploading: "Uploading...",
