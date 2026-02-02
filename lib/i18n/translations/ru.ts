@@ -194,6 +194,8 @@ export const ru = {
     noFormsYet: "Форм пока нет",
     noFormsDescription: "Создайте форму для сбора лидов",
     createForm: "Создать форму",
+    creating: "Создание...",
+    defaultName: "Новая форма",
     clickToEdit: "Нажмите, чтобы изменить название",
     active: "Активна",
     inactive: "Неактивна",
