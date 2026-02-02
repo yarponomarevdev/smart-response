@@ -26,7 +26,7 @@ import {
 import { Trash2, ExternalLink, Mail, Phone, Calendar, FileText, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import type { Lead, LeadStatus } from "@/lib/hooks/use-leads"
+import type { Lead, LeadStatus, FormField } from "@/lib/hooks/use-leads"
 import { useUpdateLead, useDeleteLead } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -34,6 +34,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 interface LeadDetailModalProps {
   lead: Lead | null
   formName?: string
+  formFields: FormField[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -47,8 +48,8 @@ const statusColors: Record<LeadStatus, string> = {
 // Служебные поля, которые не нужно показывать в списке
 const HIDDEN_FIELDS = ['phone', 'requestFeedback']
 
-// Форматирование ключа: "field_name" -> "Field name"
-const formatKey = (key: string, t: (key: string) => string): string => {
+// Форматирование ключа: использует label из метаданных полей или fallback на форматирование
+const formatKey = (key: string, t: (key: string) => string, formFields: FormField[], formId: string | null): string => {
   // Специальные ключи с понятными названиями
   const keyMap: Record<string, string> = {
     email: 'Email',
@@ -58,6 +59,13 @@ const formatKey = (key: string, t: (key: string) => string): string => {
   }
   if (keyMap[key]) return keyMap[key]
   
+  // Ищем метаданные поля в formFields
+  if (formId) {
+    const field = formFields.find(f => f.form_id === formId && f.field_id === key)
+    if (field?.label) return field.label
+  }
+  
+  // Fallback: форматируем ключ
   return key
     .replace(/_/g, ' ')
     .replace(/([A-Z])/g, ' $1')
@@ -80,7 +88,7 @@ const isUrl = (value: unknown): boolean => {
   return value.startsWith('http://') || value.startsWith('https://')
 }
 
-export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDetailModalProps) {
+export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange }: LeadDetailModalProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const updateLeadMutation = useUpdateLead()
@@ -280,7 +288,7 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                   <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {formDataEntries.map(([key, value]) => (
                       <div key={key} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">{formatKey(key, t)}</Label>
+                        <Label className="text-xs text-muted-foreground">{formatKey(key, t, formFields, lead.form_id)}</Label>
                         {key === 'email' ? (
                           <a
                             href={`mailto:${value}`}

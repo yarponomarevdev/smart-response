@@ -243,10 +243,11 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
       {/* Список форм */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {forms.map((form) => {
+          const isTemporary = form.id.startsWith("temp-")
           return (
             <Card 
               key={form.id} 
-              className="relative overflow-hidden"
+              className={`relative overflow-hidden ${isTemporary ? "opacity-70" : ""}`}
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start gap-2 mb-2">
@@ -256,38 +257,46 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-base sm:text-lg">
-                    <InlineEditableText
-                      value={form.name}
-                      onSave={(newValue) => handleFormNameUpdate(form.id, newValue)}
-                      placeholder={t("forms.createDialog.namePlaceholder")}
-                      emptyText={t("forms.clickToEdit")}
-                      className="font-semibold"
-                      inputClassName="h-8 text-base sm:text-lg font-semibold"
-                      maxLength={30}
-                      showCharCount={true}
-                    />
+                    {isTemporary ? (
+                      <span className="font-semibold">{form.name}</span>
+                    ) : (
+                      <InlineEditableText
+                        value={form.name}
+                        onSave={(newValue) => handleFormNameUpdate(form.id, newValue)}
+                        placeholder={t("forms.createDialog.namePlaceholder")}
+                        emptyText={t("forms.clickToEdit")}
+                        className="font-semibold"
+                        inputClassName="h-8 text-base sm:text-lg font-semibold"
+                        maxLength={30}
+                        showCharCount={true}
+                      />
+                    )}
                   </CardTitle>
                   <CardDescription className="text-xs font-mono truncate">
-                    {form.id}
+                    {form.id.startsWith("temp-") ? (
+                      <span className="text-muted-foreground/50 animate-pulse">Генерация ключа...</span>
+                    ) : (
+                      form.id
+                    )}
                   </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 {/* Действия */}
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onOpenEditor?.(form.id)} className="text-xs sm:text-sm h-8 sm:h-9">
+                  <Button variant="outline" size="sm" onClick={() => onOpenEditor?.(form.id)} disabled={isTemporary} className="text-xs sm:text-sm h-8 sm:h-9">
                     <FileEdit className="h-3 w-3 mr-1" />
                     <span>{t("forms.editor")}</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
+                  <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} disabled={isTemporary} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Copy className="h-3 w-3 mr-1" />
                     <span>{t("forms.link")}</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")} className="text-xs sm:text-sm h-8 sm:h-9">
+                  <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")} disabled={isTemporary} className="text-xs sm:text-sm h-8 sm:h-9">
                     <ExternalLink className="h-3 w-3 mr-1" />
                     <span>{t("forms.open")}</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
+                  <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)} disabled={isTemporary} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Code2 className="h-3 w-3 mr-1" />
                     <span>{t("forms.code")}</span>
                   </Button>
@@ -298,10 +307,12 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => toggleFormActive(form)}
-                    disabled={toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id}
+                    disabled={isTemporary || (toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id)}
                     className="text-xs sm:text-sm h-8 sm:h-9"
                   >
-                    {toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id ? (
+                    {isTemporary ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       form.is_active ? t("forms.disable") : t("forms.enable")
@@ -312,6 +323,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
                     size="sm" 
                     className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 sm:h-9"
                     onClick={() => openDeleteDialog(form)}
+                    disabled={isTemporary}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>

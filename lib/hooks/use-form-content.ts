@@ -326,9 +326,9 @@ export function useSaveFormContent() {
 
       return { success: true }
     },
-    onSuccess: (_, variables) => {
-      // Инвалидируем кэш контента этой формы
-      queryClient.invalidateQueries({ queryKey: ["formContent", variables.formId] })
+    onSettled: (_, __, variables) => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["formContent", variables.formId] })
     },
   })
 }

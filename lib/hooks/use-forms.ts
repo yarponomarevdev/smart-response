@@ -114,6 +114,7 @@ export function useUserForms() {
 
 /**
  * Хук для создания новой формы
+ * Использует optimistic update для мгновенного отображения новой формы в UI
  */
 export function useCreateForm() {
   const queryClient = useQueryClient()
@@ -126,10 +127,48 @@ export function useCreateForm() {
       if (result.error) throw new Error(result.error)
       return result.form
     },
-    onSuccess: () => {
-      // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
-      // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
+    onMutate: async (formName) => {
+      if (!user) return { previousData: undefined }
+      
+      // Отменяем текущие запросы чтобы не перезаписали optimistic update
+      await queryClient.cancelQueries({ queryKey: ["forms", user.id] })
+      
+      const previousData = queryClient.getQueryData<UserFormsData>(["forms", user.id])
+      
+      // Optimistic: добавляем временную форму в начало списка
+      if (previousData) {
+        const optimisticForm: Form = {
+          id: `temp-${Date.now()}`,
+          name: formName || "Моя форма",
+          is_active: false,
+          lead_count: 0,
+          lead_limit: 20,
+          created_at: new Date().toISOString(),
+          owner_id: user.id,
+          actual_lead_count: 0,
+        }
+        
+        queryClient.setQueryData<UserFormsData>(["forms", user.id], {
+          ...previousData,
+          forms: [optimisticForm, ...previousData.forms],
+          limitInfo: previousData.limitInfo ? {
+            ...previousData.limitInfo,
+            currentCount: previousData.limitInfo.currentCount + 1,
+          } : null,
+        })
+      }
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousData && user) {
+        queryClient.setQueryData(["forms", user.id], context.previousData)
+      }
+    },
+    onSettled: () => {
+      // После завершения принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["forms"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
     },
   })
@@ -137,6 +176,7 @@ export function useCreateForm() {
 
 /**
  * Хук для удаления формы
+ * Использует optimistic update для мгновенного удаления формы из UI
  */
 export function useDeleteForm() {
   const queryClient = useQueryClient()
@@ -147,12 +187,43 @@ export function useDeleteForm() {
       if (!user) throw new Error("Пользователь не авторизован")
       const result = await deleteUserForm(user.id, formId)
       if (result.error) throw new Error(result.error)
-      return result
+      return { formId }
     },
-    onSuccess: () => {
-      // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
-      // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
+    onMutate: async (formId) => {
+      if (!user) return { previousData: undefined }
+      
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({ queryKey: ["forms", user.id] })
+      
+      const previousData = queryClient.getQueryData<UserFormsData>(["forms", user.id])
+      
+      // Optimistic: удаляем форму из списка
+      if (previousData) {
+        const deletedForm = previousData.forms.find(f => f.id === formId)
+        const deletedLeadCount = deletedForm?.actual_lead_count || 0
+        
+        queryClient.setQueryData<UserFormsData>(["forms", user.id], {
+          ...previousData,
+          forms: previousData.forms.filter(form => form.id !== formId),
+          totalLeads: previousData.totalLeads - deletedLeadCount,
+          limitInfo: previousData.limitInfo ? {
+            ...previousData.limitInfo,
+            currentCount: Math.max(0, previousData.limitInfo.currentCount - 1),
+          } : null,
+        })
+      }
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousData && user) {
+        queryClient.setQueryData(["forms", user.id], context.previousData)
+      }
+    },
+    onSettled: () => {
+      // После завершения принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["forms"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
     },
   })
@@ -202,8 +273,8 @@ export function useUpdateFormName() {
       }
     },
     onSettled: () => {
-      // После завершения (успех или ошибка) инвалидируем кэш
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
+      // После завершения принудительно обновляем данные
+      queryClient.refetchQueries({ queryKey: ["forms"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
     },
   })
@@ -269,6 +340,7 @@ export function useToggleFormActive() {
 
 /**
  * Фабрика хуков для обновления настроек формы
+ * Использует refetchQueries для мгновенного обновления UI
  */
 function createUpdateFormSettingHook<T>(
   updateFn: (userId: string, formId: string, value: T) => Promise<{ success?: boolean; error?: string }>
@@ -284,13 +356,11 @@ function createUpdateFormSettingHook<T>(
         if (result.error) throw new Error(result.error)
         return result
       },
-      onSuccess: () => {
-        // Инвалидируем кэш форм (все запросы, начинающиеся с ["forms"])
-        queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
-        // Инвалидируем кэш форм для редактора (все запросы, начинающиеся с ["editorForms"])
-        queryClient.invalidateQueries({ queryKey: ["editorForms"], exact: false })
-        // Инвалидируем кэш настроек формы
-        queryClient.invalidateQueries({ queryKey: ["formSettings"], exact: false })
+      onSettled: () => {
+        // Принудительно обновляем данные с сервера
+        queryClient.refetchQueries({ queryKey: ["forms"], exact: false })
+        queryClient.refetchQueries({ queryKey: ["editorForms"], exact: false })
+        queryClient.refetchQueries({ queryKey: ["formSettings"], exact: false })
       },
     })
   }

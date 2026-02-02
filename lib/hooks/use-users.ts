@@ -84,9 +84,9 @@ export function useUpdateUserQuotas() {
         queryClient.setQueryData(["users"], context.previousUsers)
       }
     },
-    // После успеха перезагружаем данные для синхронизации
+    // После успеха принудительно перезагружаем данные
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
+      queryClient.refetchQueries({ queryKey: ["users"] })
     },
   })
 }

@@ -39,6 +39,7 @@ export function useFormFields(formId: string | null) {
 
 /**
  * Хук для создания/обновления поля формы
+ * Использует optimistic update для мгновенного обновления UI
  */
 export function useSaveFormField() {
   const queryClient = useQueryClient()
@@ -61,9 +62,70 @@ export function useSaveFormField() {
       }
       return result
     },
-    onSuccess: (_, variables) => {
-      // Инвалидируем кэш полей формы
-      queryClient.invalidateQueries({
+    onMutate: async ({ formId, fieldData }) => {
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({
+        queryKey: [FORM_FIELDS_KEY, formId],
+      })
+
+      const previousFields = queryClient.getQueryData<{ fields: FormField[] }>([
+        FORM_FIELDS_KEY,
+        formId,
+      ])
+
+      // Optimistic: обновляем или добавляем поле
+      if (previousFields) {
+        const existingFieldIndex = fieldData.id
+          ? previousFields.fields.findIndex((f) => f.id === fieldData.id)
+          : -1
+
+        let updatedFields: FormField[]
+        
+        if (existingFieldIndex >= 0) {
+          // Обновляем существующее поле
+          updatedFields = previousFields.fields.map((f, i) =>
+            i === existingFieldIndex
+              ? { ...f, ...fieldData, form_id: formId }
+              : f
+          )
+        } else {
+          // Добавляем новое поле
+          const tempField: FormField = {
+            id: `temp-${Date.now()}`,
+            form_id: formId,
+            field_id: fieldData.field_id || `field-${Date.now()}`,
+            field_type: fieldData.field_type,
+            label: fieldData.label,
+            placeholder: fieldData.placeholder || null,
+            required: fieldData.required ?? false,
+            options: fieldData.options || null,
+            display_order: previousFields.fields.length,
+            created_at: new Date().toISOString(),
+            heading_text: fieldData.heading_text || null,
+            disclaimer_text: fieldData.disclaimer_text || null,
+          }
+          updatedFields = [...previousFields.fields, tempField]
+        }
+
+        queryClient.setQueryData([FORM_FIELDS_KEY, formId], {
+          fields: updatedFields,
+        })
+      }
+
+      return { previousFields }
+    },
+    onError: (_err, variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousFields) {
+        queryClient.setQueryData(
+          [FORM_FIELDS_KEY, variables.formId],
+          context.previousFields
+        )
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({
         queryKey: [FORM_FIELDS_KEY, variables.formId],
       })
     },
@@ -72,6 +134,7 @@ export function useSaveFormField() {
 
 /**
  * Хук для удаления поля формы
+ * Использует optimistic update для мгновенного удаления из UI
  */
 export function useDeleteFormField() {
   const queryClient = useQueryClient()
@@ -94,9 +157,38 @@ export function useDeleteFormField() {
       }
       return result
     },
-    onSuccess: (_, variables) => {
-      // Инвалидируем кэш полей формы
-      queryClient.invalidateQueries({
+    onMutate: async ({ formId, fieldId }) => {
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({
+        queryKey: [FORM_FIELDS_KEY, formId],
+      })
+
+      const previousFields = queryClient.getQueryData<{ fields: FormField[] }>([
+        FORM_FIELDS_KEY,
+        formId,
+      ])
+
+      // Optimistic: удаляем поле из списка
+      if (previousFields) {
+        queryClient.setQueryData([FORM_FIELDS_KEY, formId], {
+          fields: previousFields.fields.filter((f) => f.id !== fieldId),
+        })
+      }
+
+      return { previousFields }
+    },
+    onError: (_err, variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousFields) {
+        queryClient.setQueryData(
+          [FORM_FIELDS_KEY, variables.formId],
+          context.previousFields
+        )
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({
         queryKey: [FORM_FIELDS_KEY, variables.formId],
       })
     },
@@ -167,9 +259,9 @@ export function useReorderFormFields() {
         )
       }
     },
-    // После успеха синхронизируем с сервером (на случай, если порядок изменился)
+    // После успеха принудительно синхронизируем с сервером
     onSettled: (_, __, variables) => {
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: [FORM_FIELDS_KEY, variables.formId],
       })
     },
