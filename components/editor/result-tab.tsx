@@ -37,6 +37,17 @@ export function ResultTab({ formId, content }: ResultTabProps) {
     initialValue: content.button_url || "",
   })
 
+  // Валидация и нормализация URL
+  const handleButtonUrlBlur = () => {
+    const url = buttonUrl.value.trim()
+    if (!url) return
+    
+    // Если URL не начинается с http:// или https://, добавляем https://
+    if (!url.match(/^https?:\/\//i)) {
+      buttonUrl.onChange(`https://${url}`)
+    }
+  }
+
   return (
     <div className="space-y-8 sm:space-y-10">
       {/* CTA блок */}
@@ -81,8 +92,10 @@ export function ResultTab({ formId, content }: ResultTabProps) {
         >
           <Input
             id="result_button_url"
+            type="url"
             value={buttonUrl.value}
             onChange={(e) => buttonUrl.onChange(e.target.value)}
+            onBlur={handleButtonUrlBlur}
             placeholder={t("editor.resultTab.buttonLinkPlaceholder")}
             className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
           />
