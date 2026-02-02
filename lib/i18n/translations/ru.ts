@@ -557,7 +557,7 @@ export const ru = {
     },
     dynamicFieldsTab: {
       title: "Поля формы",
-      description: "Добавьте заголовки (H1, H2, H3), поля ввода, дисклеймер и кнопку продолжения",
+      description: "Добавьте поля ввода для сбора данных от пользователей",
       noFields: "Нет добавленных полей",
       addField: "Добавить поле",
       selectForm: "Выберите форму для управления полями",
@@ -576,6 +576,24 @@ export const ru = {
         delete: "Удалить",
         deleting: "Удаление...",
       },
+    },
+    staticLayoutFields: {
+      title: "Элементы оформления",
+      description: "Настройте заголовок, подзаголовок, текст и дисклеймер формы. Все поля необязательны.",
+      selectForm: "Выберите форму для управления элементами оформления",
+      heading: "Заголовок",
+      headingPlaceholder: "Введите основной заголовок формы",
+      subheading: "Подзаголовок",
+      subheadingPlaceholder: "Введите подзаголовок формы",
+      bodyText: "Текст",
+      bodyTextPlaceholder: "Введите дополнительный текст или описание",
+      disclaimer: "Дисклеймер",
+      disclaimerPlaceholder: "Бесплатно • Занимает 30 секунд",
+      optional: "(необязательно)",
+      save: "Сохранить",
+      saving: "Сохранение...",
+      saved: "Элементы оформления сохранены",
+      saveError: "Ошибка сохранения элементов оформления",
     },
     fieldTypes: {
       text: "Текст",
@@ -616,8 +634,6 @@ export const ru = {
     fieldTypeSelector: {
       title: "Выберите тип поля:",
       description: "Выберите тип поля для добавления в форму",
-      layoutCategory: "Элементы оформления",
-      inputCategory: "Поля ввода",
     },
     fieldForm: {
       editField: "Редактировать",

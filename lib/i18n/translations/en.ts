@@ -559,7 +559,7 @@ export const en: Translations = {
     },
     dynamicFieldsTab: {
       title: "Form Fields",
-      description: "Add headings (H1, H2, H3), input fields, disclaimer and continue button",
+      description: "Add input fields to collect data from users",
       noFields: "No fields added",
       addField: "Add Field",
       selectForm: "Select a form to manage fields",
@@ -578,6 +578,24 @@ export const en: Translations = {
         delete: "Delete",
         deleting: "Deleting...",
       },
+    },
+    staticLayoutFields: {
+      title: "Layout Elements",
+      description: "Configure heading, subheading, text, and disclaimer for your form. All fields are optional.",
+      selectForm: "Select a form to manage layout elements",
+      heading: "Heading",
+      headingPlaceholder: "Enter main form heading",
+      subheading: "Subheading",
+      subheadingPlaceholder: "Enter form subheading",
+      bodyText: "Body Text",
+      bodyTextPlaceholder: "Enter additional text or description",
+      disclaimer: "Disclaimer",
+      disclaimerPlaceholder: "Free • Takes 30 seconds",
+      optional: "(optional)",
+      save: "Save",
+      saving: "Saving...",
+      saved: "Layout elements saved",
+      saveError: "Error saving layout elements",
     },
     fieldTypes: {
       text: "Text",
@@ -618,8 +636,6 @@ export const en: Translations = {
     fieldTypeSelector: {
       title: "Choose field type:",
       description: "Select a field type to add to the form",
-      layoutCategory: "Design elements",
-      inputCategory: "Input fields",
     },
     fieldForm: {
       editField: "Edit",

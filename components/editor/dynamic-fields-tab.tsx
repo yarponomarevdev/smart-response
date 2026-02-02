@@ -7,7 +7,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, ListPlus } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ import {
 import { FieldTypeSelector } from "./field-type-selector"
 import { FieldForm } from "./field-form"
 import { FieldListItem } from "./field-list-item"
+import { StaticLayoutFields } from "./static-layout-fields"
 import {
   useFormFields,
   useSaveFormField,
@@ -48,6 +50,15 @@ import {
 } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 import type { FieldType } from "@/app/actions/form-fields"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { createClient } from "@/lib/supabase/client"
+
+type StaticFields = {
+  static_heading?: string | null
+  static_subheading?: string | null
+  static_body_text?: string | null
+  static_disclaimer?: string | null
+}
 
 interface DynamicFieldsTabProps {
   formId: string | null
@@ -55,6 +66,8 @@ interface DynamicFieldsTabProps {
 
 export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  
   // Состояние диалогов
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [showFieldForm, setShowFieldForm] = useState(false)
@@ -72,6 +85,25 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   const reorderFieldsMutation = useReorderFormFields()
 
   const fields = fieldsData?.fields || []
+
+  // Загрузка статичных полей оформления
+  const { data: staticFieldsData } = useQuery({
+    queryKey: ["staticLayoutFields", formId],
+    queryFn: async () => {
+      if (!formId) return null
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("forms")
+        .select("static_heading, static_subheading, static_body_text, static_disclaimer")
+        .eq("id", formId)
+        .single()
+      
+      if (error) throw error
+      return data as StaticFields
+    },
+    enabled: !!formId,
+    staleTime: 5 * 60 * 1000,
+  })
 
   // Настройка сенсоров для drag-and-drop
   const sensors = useSensors(
@@ -220,57 +252,70 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-2xl">
-      <div>
-        <h3 className="text-2xl sm:text-3xl font-bold mb-2">{t("editor.dynamicFieldsTab.title")}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t("editor.dynamicFieldsTab.description")}
-        </p>
-      </div>
+    <div className="space-y-6 max-w-4xl mr-auto pb-10">
+      {/* Статичные поля оформления */}
+      <StaticLayoutFields
+        formId={formId}
+        initialData={staticFieldsData || undefined}
+      />
 
-      {/* Список полей */}
-      {fields.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={fields.map((f) => f.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-3 sm:space-y-4">
-              {fields.map((field) => (
-                <FieldListItem
-                  key={field.id}
-                  id={field.id}
-                  field={field}
-                  onEdit={() => handleEditField(field)}
-                  onDelete={() => handleDeleteClick(field)}
-                  onFieldUpdate={handleFieldUpdate}
-                />
-              ))}
+      {/* Динамические поля формы */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <ListPlus className="h-5 w-5" />
+            {t("editor.dynamicFieldsTab.title")}
+          </CardTitle>
+          <CardDescription>
+            {t("editor.dynamicFieldsTab.description")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Список полей */}
+          {fields.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={fields.map((f) => f.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3 sm:space-y-4">
+                  {fields.map((field) => (
+                    <FieldListItem
+                      key={field.id}
+                      id={field.id}
+                      field={field}
+                      onEdit={() => handleEditField(field)}
+                      onDelete={() => handleDeleteClick(field)}
+                      onFieldUpdate={handleFieldUpdate}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+              {t("editor.dynamicFieldsTab.noFields")}
             </div>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-          {t("editor.dynamicFieldsTab.noFields")}
-        </div>
-      )}
+          )}
 
-      {/* Кнопка добавления */}
-      <Button
-        onClick={handleAddField}
-        className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
-      >
-        <Plus className="h-5 w-5 mr-2" />
-        {t("editor.dynamicFieldsTab.addField")}
-      </Button>
+          {/* Кнопка добавления */}
+          <Button
+            onClick={handleAddField}
+            className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            {t("editor.dynamicFieldsTab.addField")}
+          </Button>
 
-      <p className="text-sm sm:text-base text-muted-foreground font-light">
-        {t("editor.formDataTab.minOneField")}
-      </p>
+          <p className="text-sm sm:text-base text-muted-foreground font-light">
+            {t("editor.formDataTab.minOneField")}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Диалог выбора типа поля */}
       <FieldTypeSelector

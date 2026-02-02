@@ -235,3 +235,34 @@ export async function updateFormTheme(userId: string, formId: string, theme: "li
 export async function updateFormLanguage(userId: string, formId: string, language: "ru" | "en") {
   return updateFormField(userId, formId, "language", language, "Ошибка обновления языка")
 }
+
+/**
+ * Обновляет статичные поля оформления формы
+ */
+export interface StaticLayoutFields {
+  static_heading?: string | null
+  static_subheading?: string | null
+  static_body_text?: string | null
+  static_disclaimer?: string | null
+}
+
+export async function updateStaticLayoutFields(
+  userId: string,
+  formId: string,
+  fields: StaticLayoutFields
+): Promise<{ success: boolean } | { error: string }> {
+  const ownershipCheck = await verifyFormOwnership(userId, formId)
+  if (ownershipCheck.error) return ownershipCheck
+
+  const { error } = await supabaseAdmin
+    .from("forms")
+    .update(fields)
+    .eq("id", formId)
+
+  if (error) {
+    console.error("Ошибка обновления статичных полей оформления:", error)
+    return { error: "Ошибка обновления полей оформления: " + error.message }
+  }
+
+  return { success: true }
+}
