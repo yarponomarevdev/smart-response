@@ -51,6 +51,14 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   
   // Элементы оформления из динамических полей
   const [layoutFields, setLayoutFields] = useState<FormField[]>([])
+  
+  // Статические элементы оформления
+  const [staticLayout, setStaticLayout] = useState<{
+    heading?: string | null
+    subheading?: string | null
+    bodyText?: string | null
+    disclaimer?: string | null
+  }>({})
 
   // Загрузка контента формы и динамических полей (теперь из таблицы forms)
   useEffect(() => {
@@ -59,10 +67,10 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
       
       const supabase = createClient()
       
-      // Загружаем настройки формы контактов напрямую из forms
+      // Загружаем настройки формы контактов и статические элементы напрямую из forms
       const { data } = await supabase
         .from("forms")
-        .select("email_placeholder, phone_enabled, phone_required, feedback_enabled, feedback_text, privacy_url, email_button, gradient_text")
+        .select("email_placeholder, phone_enabled, phone_required, feedback_enabled, feedback_text, privacy_url, email_button, gradient_text, static_heading, static_subheading, static_body_text, static_disclaimer, phone_placeholder")
         .eq("id", formId)
         .single()
 
@@ -70,12 +78,20 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
         setContent({
           email_placeholder: data.email_placeholder || undefined,
           phone_enabled: data.phone_enabled ? "true" : "false",
+          phone_placeholder: data.phone_placeholder || undefined,
           phone_required: data.phone_required ? "true" : "false",
           feedback_enabled: data.feedback_enabled ? "true" : "false",
           feedback_text: data.feedback_text || undefined,
           privacy_url: data.privacy_url || undefined,
           email_button: data.email_button || undefined,
           gradient_text: data.gradient_text || undefined,
+        })
+        
+        setStaticLayout({
+          heading: data.static_heading,
+          subheading: data.static_subheading,
+          bodyText: data.static_body_text,
+          disclaimer: data.static_disclaimer,
         })
       }
       
@@ -165,6 +181,27 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4 max-w-2xl mx-auto">
+      {/* Статические элементы оформления */}
+      {(staticLayout.heading || staticLayout.subheading || staticLayout.bodyText) && (
+        <div className="space-y-2 sm:space-y-3">
+          {staticLayout.heading && (
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight text-balance">
+              {staticLayout.heading}
+            </h1>
+          )}
+          {staticLayout.subheading && (
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight text-balance">
+              {staticLayout.subheading}
+            </h2>
+          )}
+          {staticLayout.bodyText && (
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground text-balance">
+              {staticLayout.bodyText}
+            </p>
+          )}
+        </div>
+      )}
+      
       {/* Элементы оформления из динамических полей */}
       {layoutFields.length > 0 && (
         <div className="space-y-2 sm:space-y-3">
@@ -271,6 +308,13 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           )}
 
           {submitError && <p className="text-sm text-destructive text-left">{submitError}</p>}
+          
+          {/* Статический дисклеймер перед кнопкой */}
+          {staticLayout.disclaimer && (
+            <p className="text-xs sm:text-sm text-muted-foreground text-center">
+              {staticLayout.disclaimer}
+            </p>
+          )}
           
           <Button 
             type="submit" 

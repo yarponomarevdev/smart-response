@@ -38,10 +38,36 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   const [dynamicFields, setDynamicFields] = useState<FormField[]>([])
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
   const [fileNames, setFileNames] = useState<Record<string, string>>({})
+  
+  // Статические элементы оформления
+  const [staticLayout, setStaticLayout] = useState<{
+    heading?: string | null
+    subheading?: string | null
+    bodyText?: string | null
+    disclaimer?: string | null
+  }>({})
 
   useEffect(() => {
     const fetchFields = async () => {
       setContentLoading(true)
+
+      const supabase = createClient()
+
+      // Загружаем статические элементы оформления
+      const { data: formData } = await supabase
+        .from("forms")
+        .select("static_heading, static_subheading, static_body_text, static_disclaimer")
+        .eq("id", effectiveFormId)
+        .single()
+
+      if (formData) {
+        setStaticLayout({
+          heading: formData.static_heading,
+          subheading: formData.static_subheading,
+          bodyText: formData.static_body_text,
+          disclaimer: formData.static_disclaimer,
+        })
+      }
 
       // Загружаем динамические поля
       const fieldsResult = await getFormFields(effectiveFormId)
@@ -449,6 +475,25 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         
+        {/* Статические элементы оформления */}
+        {staticLayout.heading && (
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance text-center">
+            {staticLayout.heading}
+          </h1>
+        )}
+        
+        {staticLayout.subheading && (
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-balance text-center">
+            {staticLayout.subheading}
+          </h2>
+        )}
+        
+        {staticLayout.bodyText && (
+          <p className="text-base sm:text-lg text-muted-foreground text-balance max-w-xl text-center">
+            {staticLayout.bodyText}
+          </p>
+        )}
+        
         {/* Все поля в порядке как в редакторе */}
         {dynamicFields.map((field) => {
           // Layout поля (заголовки, дисклеймер, кнопка) рендерятся как есть
@@ -464,6 +509,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         })}
 
         {error && <p className="text-sm text-destructive text-left">{error}</p>}
+        
+        {/* Статический дисклеймер перед кнопкой */}
+        {staticLayout.disclaimer && (
+          <p className="text-xs sm:text-sm text-muted-foreground text-center">
+            {staticLayout.disclaimer}
+          </p>
+        )}
         
         {/* Кнопка отправки формы */}
         <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">
