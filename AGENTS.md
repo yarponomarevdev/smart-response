@@ -250,5 +250,3 @@ supabase/                # Database migration SQL files
 - Regular users can only access their own data
 - Public form submission does NOT require authentication
 - File uploads validated for size and type before storage
-
-Co-Authored-By: Warp <agent@warp.dev>
