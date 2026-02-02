@@ -215,7 +215,7 @@ export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange
               <div className="space-y-1">
                 <Label className="text-xs">{t("leads.table.status")}</Label>
                 <Select value={status} onValueChange={(v) => handleStatusChange(v as LeadStatus)}>
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger className="h-8 text-sm focus:ring-0 focus:ring-offset-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
