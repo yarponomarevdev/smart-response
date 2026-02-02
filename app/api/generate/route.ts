@@ -676,10 +676,11 @@ export async function POST(req: Request) {
         }
 
         if (textSystemPrompt) {
-          // Формируем user message с контекстом для генерации текста
-          const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}
+          // Инструкция для генерации описания результата
+          const resultDescriptionInstruction = `На основе всего предоставленного контекста создай краткое описание ГОТОВОГО РЕЗУЛЬТАТА (2-4 предложения). Опиши что получилось, какие ключевые характеристики имеет результат, для чего он подходит. Пиши как презентацию завершённой работы для клиента. НЕ пиши технические инструкции, промпты или описание процесса создания.`
 
-Provide a brief explanatory text to accompany the generated image. Keep it concise and relevant.`
+          // Формируем user message с контекстом для генерации текста
+          const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}${resultDescriptionInstruction}`
 
           try {
             // Используем AI SDK generateText для текста к изображению

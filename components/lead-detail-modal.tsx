@@ -227,7 +227,10 @@ export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-5xl w-[95vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden sm:rounded-xl">
+        <DialogContent 
+          className="sm:max-w-5xl w-[95vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden sm:rounded-xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader className="p-6 border-b shrink-0 bg-background z-10">
             <div className="flex items-start justify-between gap-4 pr-8">
               <div className="space-y-1">
