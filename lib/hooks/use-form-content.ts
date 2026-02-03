@@ -332,3 +332,24 @@ export function useSaveFormContent() {
     },
   })
 }
+
+/**
+ * Хук для получения статуса публикации формы
+ */
+export function useFormPublishStatus(formId: string | null) {
+  return useQuery({
+    queryKey: ["formPublishStatus", formId],
+    queryFn: async () => {
+      if (!formId) return null
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("forms")
+        .select("is_active")
+        .eq("id", formId)
+        .single()
+      return data?.is_active ?? false
+    },
+    enabled: !!formId,
+    staleTime: 5 * 60 * 1000,
+  })
+}

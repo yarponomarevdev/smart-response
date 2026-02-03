@@ -193,10 +193,12 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
                     value={feedbackText.value}
                     onChange={(e) => feedbackText.onChange(e.target.value)}
                     placeholder={t("editor.contactsTab.feedbackPlaceholder")}
-                    className="h-10 border-none bg-transparent text-base sm:text-lg px-0"
+                    className="h-[41px] rounded-[12px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base px-4 pr-24"
                   />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <SaveStatusIndicator status={feedbackText.status} />
+                  </div>
                 </div>
-                <SaveStatusIndicator status={feedbackText.status} />
               </div>
             )}
           </div>

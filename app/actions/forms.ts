@@ -79,6 +79,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
   }
 
   // Создаём форму с дефолтными значениями (все настройки теперь в колонках forms)
+  // ВАЖНО: is_active: false - форма изначально неопубликована
   const { data: newForm, error: formError } = await supabaseAdmin
     .from("forms")
     .insert({
@@ -86,7 +87,7 @@ export async function createUserForm(userId: string, userEmail: string, formName
       name: formName || "Моя форма",
       lead_limit: 20,
       lead_count: 0,
-      is_active: false,
+      is_active: false, // Форма создаётся неопубликованной
       // Дефолтные значения для контента (остальные берутся из DEFAULT в БД)
       page_subtitle: "Получите детальный анализ вашего сайта за 30 секунд",
       disclaimer: "Бесплатно • Занимает 30 секунд",
@@ -265,4 +266,38 @@ export async function updateStaticLayoutFields(
   }
 
   return { success: true }
+}
+
+/**
+ * Переключает статус публикации формы (is_active)
+ */
+export async function toggleFormPublishStatus(userId: string, formId: string) {
+  const ownershipCheck = await verifyFormOwnership(userId, formId)
+  if (ownershipCheck.error) return ownershipCheck
+
+  // Получаем текущий статус
+  const { data: form } = await supabaseAdmin
+    .from("forms")
+    .select("is_active")
+    .eq("id", formId)
+    .single()
+
+  if (!form) {
+    return { error: "Форма не найдена" }
+  }
+
+  // Переключаем статус
+  const newStatus = !form.is_active
+
+  const { error } = await supabaseAdmin
+    .from("forms")
+    .update({ is_active: newStatus })
+    .eq("id", formId)
+
+  if (error) {
+    console.error("Ошибка переключения статуса публикации:", error)
+    return { error: "Ошибка изменения статуса: " + error.message }
+  }
+
+  return { success: true, is_active: newStatus }
 }

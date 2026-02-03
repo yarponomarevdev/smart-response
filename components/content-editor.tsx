@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { useEditorForms, useFormContent, useCurrentUser } from "@/lib/hooks"
-import { useToggleFormActive } from "@/lib/hooks/use-forms"
 import {
   FormDataTab,
   ContactsTab,
@@ -54,7 +53,6 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   
   // React Query хуки
   const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
-  const toggleActiveMutation = useToggleFormActive()
 
   // Локальное состояние
   const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
@@ -113,25 +111,6 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     setSelectedFormId(formId)
   }
 
-  const handlePublish = async () => {
-    if (!selectedFormId) return
-
-    try {
-      // Проверяем и активируем форму, если она не активна
-      const selectedForm = forms.find(f => f.id === selectedFormId)
-      if (selectedForm && !selectedForm.is_active) {
-        await toggleActiveMutation.mutateAsync({ 
-          formId: selectedFormId, 
-          currentIsActive: false 
-        })
-        toast.success(t("editor.toast.published"))
-      } else {
-        toast.info(t("editor.toast.alreadyPublished"))
-      }
-    } catch (err) {
-      toast.error(t("editor.toast.publishError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
-    }
-  }
 
   const handleContinue = () => {
     const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
@@ -394,17 +373,9 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
           {activeTab === "result" && (
             <>
               <Button
-                onClick={handlePublish}
-                disabled={toggleActiveMutation.isPending || contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
-              >
-                {toggleActiveMutation.isPending ? t("editor.publishing") : t("editor.saveAndPublish")}
-              </Button>
-              <Button
                 onClick={handleGoToShare}
-                variant="outline"
                 disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
               >
                 {t("editor.share")}
               </Button>
@@ -421,14 +392,23 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
           {/* Вкладка "Поделиться" */}
           {activeTab === "share" && (
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              disabled={contentLoading}
-              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-            >
-              {t("editor.goBack")}
-            </Button>
+            <>
+              <Button
+                onClick={() => setActiveTab("settings")}
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
+              >
+                {t("editor.tabs.settings")}
+              </Button>
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={contentLoading}
+                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
+              >
+                {t("editor.goBack")}
+              </Button>
+            </>
           )}
 
           {/* Вкладка "Настройки" */}
