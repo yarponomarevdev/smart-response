@@ -24,6 +24,7 @@ export interface Lead {
 interface Form {
   id: string
   name: string
+  feedback_text?: string
 }
 
 export interface FormField {
@@ -61,7 +62,7 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
   if (isSuperAdmin) {
     const { data: allForms } = await supabase
       .from("forms")
-      .select("id, name")
+      .select("id, name, feedback_text")
       .order("created_at", { ascending: false })
 
     const { data: allLeads } = await supabase
@@ -107,7 +108,7 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
   // Загружаем все формы пользователя
   const { data: userForms } = await supabase
     .from("forms")
-    .select("id, name")
+    .select("id, name, feedback_text")
     .eq("owner_id", userId)
     .order("created_at", { ascending: false })
 

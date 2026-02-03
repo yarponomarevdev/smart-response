@@ -33,17 +33,18 @@ interface SendOwnerNotificationParams {
   resultText: string
   resultImageUrl: string | null
   parentPageUrl?: string
+  requestFeedback?: boolean
 }
 
 /**
  * Отправляет email уведомление владельцу формы о новом лиде
  */
-async function sendOwnerNotification({ formId, leadEmail, url, resultText, resultImageUrl, parentPageUrl }: SendOwnerNotificationParams) {
+async function sendOwnerNotification({ formId, leadEmail, url, resultText, resultImageUrl, parentPageUrl, requestFeedback }: SendOwnerNotificationParams) {
   try {
     // Получаем данные формы
     const { data: form, error: formError } = await supabaseAdmin
       .from("forms")
-      .select("name, owner_id, notify_on_new_lead")
+      .select("name, owner_id, notify_on_new_lead, feedback_text")
       .eq("id", formId)
       .single()
 
@@ -92,6 +93,8 @@ async function sendOwnerNotification({ formId, leadEmail, url, resultText, resul
         resultText,
         resultImageUrl,
         parentPageUrl,
+        requestFeedback,
+        feedbackText: form.feedback_text,
       }),
     })
 
@@ -115,6 +118,8 @@ function generateOwnerNotificationHTML({
   resultText,
   resultImageUrl,
   parentPageUrl,
+  requestFeedback,
+  feedbackText,
 }: {
   formName: string
   leadEmail: string
@@ -122,6 +127,8 @@ function generateOwnerNotificationHTML({
   resultText: string
   resultImageUrl: string | null
   parentPageUrl?: string
+  requestFeedback?: boolean
+  feedbackText?: string
 }) {
   const htmlContent = resultText ? marked(resultText) : ""
   const dashboardUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://smartresponse.vercel.app"
@@ -166,6 +173,14 @@ function generateOwnerNotificationHTML({
                             <a href="mailto:${leadEmail}" style="color: #60a5fa; text-decoration: none;">${leadEmail}</a>
                           </td>
                         </tr>
+                        ${requestFeedback ? `
+                        <tr>
+                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 80px;">${feedbackText || "Обратная связь"}:</td>
+                          <td style="padding: 8px 0; color: #ffffff; font-size: 14px; font-weight: 500;">
+                            Да
+                          </td>
+                        </tr>
+                        ` : ""}
                         ${parentPageUrl ? `
                         <tr>
                           <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 160px;">Сайт интеграции:</td>
@@ -382,6 +397,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
 
   // Отправляем уведомление владельцу формы (асинхронно, не блокируем ответ)
   const parentPageUrl = customFields?.parent_page_url as string | undefined
+  const requestFeedback = customFields?.requestFeedback as boolean | undefined
   sendOwnerNotification({
     formId,
     leadEmail: email,
@@ -389,6 +405,7 @@ export async function createLead({ formId, email, url, resultText, resultImageUr
     resultText,
     resultImageUrl,
     parentPageUrl,
+    requestFeedback,
   }).catch((error) => {
     console.error("[Уведомление] Не удалось отправить уведомление владельцу:", error)
   })

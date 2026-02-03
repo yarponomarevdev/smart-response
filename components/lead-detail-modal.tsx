@@ -35,6 +35,7 @@ interface LeadDetailModalProps {
   lead: Lead | null
   formName?: string
   formFields: FormField[]
+  feedbackText?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -46,16 +47,17 @@ const statusColors: Record<LeadStatus, string> = {
 }
 
 // Служебные поля, которые не нужно показывать в списке
-const HIDDEN_FIELDS = ['phone', 'requestFeedback']
+const HIDDEN_FIELDS = ['phone']
 
 // Форматирование ключа: использует label из метаданных полей или fallback на форматирование
-const formatKey = (key: string, t: (key: string) => string, formFields: FormField[], formId: string | null): string => {
+const formatKey = (key: string, t: (key: string) => string, formFields: FormField[], formId: string | null, feedbackText?: string): string => {
   // Специальные ключи с понятными названиями
   const keyMap: Record<string, string> = {
     email: 'Email',
     phone: t("leads.detail.phone"),
     url: 'URL',
     parent_page_url: t("leads.detail.integrationSite"),
+    requestFeedback: feedbackText || "Обратная связь",
   }
   if (keyMap[key]) return keyMap[key]
   
@@ -88,7 +90,7 @@ const isUrl = (value: unknown): boolean => {
   return value.startsWith('http://') || value.startsWith('https://')
 }
 
-export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange }: LeadDetailModalProps) {
+export function LeadDetailModal({ lead, formName, formFields, feedbackText, open, onOpenChange }: LeadDetailModalProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const updateLeadMutation = useUpdateLead()
@@ -218,6 +220,11 @@ export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange
     Object.entries(lead.custom_fields)
       .filter(([key]) => !HIDDEN_FIELDS.includes(key) && key !== 'parent_page_url')
       .forEach(([key, value]) => {
+        // Для requestFeedback показываем только если true
+        if (key === 'requestFeedback' && value !== true) {
+          return
+        }
+        
         if (value !== null && value !== undefined && value !== '') {
           formDataEntries.push([key, value])
         }
@@ -321,7 +328,7 @@ export function LeadDetailModal({ lead, formName, formFields, open, onOpenChange
                     {formDataEntries.map(([key, value]) => (
                       <div key={key} className="group">
                         <dt className="text-xs text-muted-foreground mb-1">
-                          {formatKey(key, t, formFields, lead.form_id)}
+                          {formatKey(key, t, formFields, lead.form_id, feedbackText)}
                         </dt>
                         <dd className="text-sm font-medium break-words leading-relaxed">
                           {key === 'email' ? (

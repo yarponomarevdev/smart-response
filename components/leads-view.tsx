@@ -384,6 +384,7 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
         lead={selectedLead}
         formName={selectedLead ? getFormName(selectedLead.form_id) : undefined}
         formFields={formFields}
+        feedbackText={selectedLead ? forms.find(f => f.id === selectedLead.form_id)?.feedback_text : undefined}
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
