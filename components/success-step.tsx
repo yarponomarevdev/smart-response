@@ -165,6 +165,29 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
       shareTextContent = stripMarkdown(result.text || "")
     }
 
+    // Попытка поделиться файлом и текстом через Web Share API
+    if (navigator.share && window.isSecureContext && result.imageUrl) {
+      try {
+        const response = await fetch(result.imageUrl, { mode: 'cors' })
+        const blob = await response.blob()
+        const file = new File([blob], "image.png", { type: blob.type })
+        
+        const shareData = {
+          title: resultTitle,
+          text: shareTextContent,
+          files: [file]
+        }
+
+        if (navigator.canShare && navigator.canShare(shareData)) {
+          await navigator.share(shareData)
+          return // Успешно поделились
+        }
+      } catch (error) {
+        console.warn("Не удалось поделиться изображением:", error)
+        // Продолжаем выполнение для фоллбэка на текст
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(shareTextContent)
       setCopied(true)
