@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { getFormFields, type FormField } from "@/app/actions/form-fields"
 import { cn } from "@/lib/utils"
@@ -285,33 +285,96 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
       case "multiselect":
         const selectedValues = (value as string[]) || []
+        // Проверяем, есть ли хотя бы одна опция с картинкой
+        const hasImages = field.options?.some((option) => option.image)
+        
         return (
           <div key={field.id} className="space-y-2">
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
             </Label>
-            <div className="space-y-2 p-4 border rounded-lg bg-card">
-              {field.options?.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`${field.field_key}-${option.value}`}
-                    checked={selectedValues.includes(option.value)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        handleFieldChange(field.field_key, [...selectedValues, option.value])
-                      } else {
-                        handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
-                      }
-                    }}
-                    disabled={isLoading}
-                  />
-                  <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            
+            {/* Если есть картинки — отображаем карточки в сетке */}
+            {hasImages ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {field.options?.map((option) => {
+                  const isSelected = selectedValues.includes(option.value)
+                  
+                  const toggleOption = () => {
+                    if (isLoading) return
+                    if (isSelected) {
+                      handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
+                    } else {
+                      handleFieldChange(field.field_key, [...selectedValues, option.value])
+                    }
+                  }
+                  
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={toggleOption}
+                      disabled={isLoading}
+                      className={cn(
+                        "border rounded-lg p-3 transition-colors text-left",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50",
+                        isLoading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {option.image && (
+                        <div className="relative w-full aspect-square mb-2 rounded overflow-hidden">
+                          <img
+                            src={option.image}
+                            alt={option.label}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {/* Визуальный индикатор вместо Checkbox (чтобы избежать вложенных button) */}
+                        <div
+                          className={cn(
+                            "h-4 w-4 shrink-0 rounded-none border border-primary flex items-center justify-center transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background"
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </div>
+                        <span className="text-sm">{option.label}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              // Если картинок нет — стандартный список чекбоксов
+              <div className="space-y-2 p-4 border rounded-lg bg-card">
+                {field.options?.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${field.field_key}-${option.value}`}
+                      checked={selectedValues.includes(option.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleFieldChange(field.field_key, [...selectedValues, option.value])
+                        } else {
+                          handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
+                        }
+                      }}
+                      disabled={isLoading}
+                    />
+                    <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
 

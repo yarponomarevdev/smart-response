@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 import { extractTextFromFile, isImageFile } from "@/lib/file-parser"
 import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
-import { streamText, generateText, generateImage } from "ai"
+import { generateText, generateImage } from "ai"
 import { openai } from "@/lib/ai/openai"
 
 // Интерфейс для результата базы знаний с поддержкой изображений
@@ -798,15 +798,14 @@ Please provide your analysis and recommendations.`
             image: `data:${img.mimeType};base64,${img.base64}`,
           })),
         ]
-        console.log(`Отправка multimodal запроса с ${knowledgeBaseImages.length} изображениями из базы знаний`)
       } else {
         // Только текст
         userContent = userMessage
       }
 
       try {
-        // Используем AI SDK streamText для стриминга ответа
-        const result = streamText({
+        // Используем generateText вместо streamText для надёжности с multimodal
+        const { text: generatedText } = await generateText({
           model: openai(textModel),
           system: textSystemPrompt,
           messages: [
@@ -817,16 +816,22 @@ Please provide your analysis and recommendations.`
           ],
         })
 
-        // Возвращаем стриминговый ответ с CORS заголовками
-        return result.toTextStreamResponse({
-          headers: corsHeaders,
-        })
-      } catch (streamError: unknown) {
-        console.error("Ошибка стриминга от AI SDK:", streamError)
+        return Response.json(
+          {
+            success: true,
+            result: {
+              type: "text",
+              text: generatedText || "",
+            },
+          },
+          { headers: corsHeaders },
+        )
+      } catch (genError: unknown) {
+        console.error("Ошибка генерации текста от AI SDK:", genError)
         return Response.json(
           {
             error: "Ошибка генерации текста",
-            details: streamError instanceof Error ? streamError.message : "Unknown streaming error",
+            details: genError instanceof Error ? genError.message : "Unknown generation error",
           },
           { status: 500, headers: corsHeaders },
         )

@@ -8,7 +8,6 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
-import { useCompletion } from "@ai-sdk/react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, RefreshCw } from "lucide-react"
@@ -86,8 +85,6 @@ export function GenerationStep({
     "Обрабатываем информацию...",
     "Генерируем результат...",
   ])
-  const [streamedText, setStreamedText] = useState<string>("")
-  const [isTextGeneration, setIsTextGeneration] = useState<boolean | null>(null)
   
   // Контент формы
   const [content, setContent] = useState<FormContent>({})
@@ -99,90 +96,6 @@ export function GenerationStep({
   onCompleteRef.current = onComplete
   // Флаг для предотвращения повторного создания лида
   const leadCreatedRef = useRef(false)
-
-  // AI SDK useCompletion для стриминга текста
-  const {
-    completion,
-    complete,
-    isLoading: isStreamLoading,
-    error: streamError,
-  } = useCompletion({
-    api: "/api/generate",
-    body: {
-      url,
-      formId,
-      customFields,
-    },
-    onFinish: async (_prompt: string, completionText: string) => {
-      // Стриминг завершён, создаём лид и вызываем onComplete
-      if (leadCreatedRef.current) return
-      leadCreatedRef.current = true
-      
-      try {
-        // Создаём лид с данными контактов
-        const extendedCustomFields = {
-          ...customFields,
-          ...(contactData.phone ? { phone: contactData.phone } : {}),
-          ...(contactData.feedback !== undefined ? { requestFeedback: contactData.feedback } : {}),
-        }
-
-        const leadResponse = await createLead({
-          formId,
-          email: contactData.email,
-          url,
-          resultText: completionText,
-          resultImageUrl: null,
-          customFields: extendedCustomFields,
-        })
-
-        if (leadResponse.error) {
-          console.error("Не удалось создать лид:", leadResponse.error)
-        }
-
-        // Отправляем email асинхронно
-        if (sendEmailToRespondent) {
-          const emailApiUrl = typeof window !== "undefined" 
-            ? `${window.location.origin}/api/send-email` 
-            : "/api/send-email"
-          
-          fetch(emailApiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: contactData.email,
-              resultText: completionText,
-              resultImageUrl: null,
-              resultType: "text",
-              url,
-              formId,
-            }),
-          }).catch((err) => {
-            console.error("Ошибка отправки email:", err)
-          })
-        }
-
-        setIsGenerating(false)
-        onCompleteRef.current({ type: "text", text: completionText })
-      } catch (err) {
-        console.error("Ошибка после стриминга:", err)
-        setError(err instanceof Error ? err.message : "Ошибка создания лида")
-        setIsGenerating(false)
-      }
-    },
-    onError: (err: Error) => {
-      console.error("Ошибка стриминга:", err)
-      setError(err.message || "Ошибка генерации")
-      setIsGenerating(false)
-      onError?.(err.message || "Ошибка генерации")
-    },
-  })
-
-  // Обновляем streamedText при изменении completion
-  useEffect(() => {
-    if (completion) {
-      setStreamedText(completion)
-    }
-  }, [completion])
 
   // Загрузка контента формы и сообщений (теперь из таблицы forms)
   useEffect(() => {
@@ -206,10 +119,6 @@ export function GenerationStep({
           ai_result_format: data.ai_result_format || "text",
         })
         
-        // Определяем тип генерации
-        const format = data.ai_result_format || "text"
-        setIsTextGeneration(format === "text")
-        
         // Loading messages теперь JSONB массив
         if (Array.isArray(data.loading_messages) && data.loading_messages.length > 0) {
           const filteredMessages = data.loading_messages.filter((msg: string) => msg && msg.length > 0)
@@ -223,8 +132,8 @@ export function GenerationStep({
     fetchContent()
   }, [formId])
 
-  // Функция генерации для изображений (JSON ответ)
-  const generateImageResult = useCallback(async (): Promise<void> => {
+  // Функция генерации для всех форматов (JSON ответ)
+  const generateResult = useCallback(async (): Promise<void> => {
     try {
       if (!formId) {
         const message = t("errors.generationMissingData")
@@ -347,56 +256,39 @@ export function GenerationStep({
     }
   }, [url, formId, customFields, contactData, sendEmailToRespondent, onError, t])
 
+  // УДАЛЕНО: useCompletion для стриминга - теперь используем generateResult для всех форматов
+
   // Ротация сообщений (только если нет стриминга текста)
   useEffect(() => {
-    if (error || !isGenerating || streamedText) return
+    if (error || !isGenerating) return
     
     const messageInterval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length)
     }, 2000)
 
     return () => clearInterval(messageInterval)
-  }, [messages.length, error, isGenerating, streamedText])
+  }, [messages.length, error, isGenerating])
 
-  // Запуск генерации при монтировании и когда определён тип генерации
+  // Запуск генерации при монтировании
   useEffect(() => {
     if (hasStartedRef.current) return
-    if (isTextGeneration === null) return // Ждём определения типа
     
     hasStartedRef.current = true
     leadCreatedRef.current = false
     
-    if (isTextGeneration) {
-      // Для текста используем стриминг через useCompletion
-      complete("")
-    } else {
-      // Для изображений используем JSON fetch
-      generateImageResult()
-    }
-  }, [isTextGeneration, complete, generateImageResult])
+    // Используем одну функцию для всех форматов (text, image, image_with_text)
+    generateResult()
+  }, [generateResult])
 
   // Обработчик повторной попытки
   const handleRetry = () => {
     setIsRetrying(true)
     setError(null)
-    setStreamedText("")
     hasStartedRef.current = false
     leadCreatedRef.current = false
     
-    if (isTextGeneration) {
-      complete("")
-    } else {
-      generateImageResult()
-    }
+    generateResult()
   }
-
-  // Обработка ошибки от стриминга
-  useEffect(() => {
-    if (streamError) {
-      setError(streamError.message || "Ошибка генерации")
-      setIsGenerating(false)
-    }
-  }, [streamError])
 
   // Извлекаем настройки из content
   const genTitle = content.gen_title || "Генерируем ваш результат"
@@ -430,12 +322,12 @@ export function GenerationStep({
         ) : (
           <Button 
             onClick={handleRetry} 
-            disabled={isRetrying || isStreamLoading}
+            disabled={isRetrying || isGenerating}
             variant="outline"
             className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
           >
-            <RefreshCw className={`h-4 w-4 ${isRetrying || isStreamLoading ? 'animate-spin' : ''}`} />
-            {isRetrying || isStreamLoading ? t("errors.retrying") : t("errors.tryAgain")}
+            <RefreshCw className={`h-4 w-4 ${isRetrying || isGenerating ? 'animate-spin' : ''}`} />
+            {isRetrying || isGenerating ? t("errors.retrying") : t("errors.tryAgain")}
           </Button>
         )}
       </div>
@@ -494,17 +386,10 @@ export function GenerationStep({
           
           {/* Overlay с текстом - показывает стриминг или сообщение загрузки */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px] p-4">
-            {streamedText ? (
-              // Показываем стримящийся текст
-              <div className="text-white text-sm sm:text-base text-left overflow-y-auto max-h-full w-full">
-                <p className="whitespace-pre-wrap">{streamedText.slice(0, 500)}{streamedText.length > 500 ? "..." : ""}</p>
-              </div>
-            ) : (
-              // Показываем сообщение загрузки
-              <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
-                {messages[messageIndex]}
-              </p>
-            )}
+            {/* Показываем сообщение загрузки */}
+            <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
+              {messages[messageIndex]}
+            </p>
           </div>
         </div>
       </div>

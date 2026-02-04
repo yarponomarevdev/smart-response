@@ -329,6 +329,7 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         open={showFieldForm}
         onOpenChange={setShowFieldForm}
         fieldType={selectedFieldType}
+        formId={formId}
         initialData={
           editingField
             ? {
