@@ -61,19 +61,19 @@ export function StaticLayoutFields({ formId, initialData }: StaticLayoutFieldsPr
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <LayoutTemplate className="h-5 w-5" />
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <LayoutTemplate className="h-4 w-4" />
           {t("editor.staticLayoutFields.title")}
-          <span className="text-muted-foreground text-sm font-normal ml-1">
+          <span className="text-muted-foreground text-xs font-normal ml-auto">
             {t("editor.staticLayoutFields.optional")}
           </span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           {t("editor.staticLayoutFields.description")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {/* Заголовок (H1) */}
         <AutoSaveFieldWrapper
           label={t("editor.staticLayoutFields.heading")}
@@ -85,7 +85,7 @@ export function StaticLayoutFields({ formId, initialData }: StaticLayoutFieldsPr
             value={heading.value}
             onChange={(e) => heading.onChange(e.target.value)}
             placeholder={t("editor.staticLayoutFields.headingPlaceholder")}
-            className="text-lg"
+            className="h-9"
           />
         </AutoSaveFieldWrapper>
 
@@ -100,6 +100,7 @@ export function StaticLayoutFields({ formId, initialData }: StaticLayoutFieldsPr
             value={subheading.value}
             onChange={(e) => subheading.onChange(e.target.value)}
             placeholder={t("editor.staticLayoutFields.subheadingPlaceholder")}
+            className="h-9"
           />
         </AutoSaveFieldWrapper>
 
@@ -114,7 +115,8 @@ export function StaticLayoutFields({ formId, initialData }: StaticLayoutFieldsPr
             value={bodyText.value}
             onChange={(e) => bodyText.onChange(e.target.value)}
             placeholder={t("editor.staticLayoutFields.bodyTextPlaceholder")}
-            rows={3}
+            rows={2}
+            className="min-h-[60px] resize-none"
           />
         </AutoSaveFieldWrapper>
 
@@ -130,6 +132,7 @@ export function StaticLayoutFields({ formId, initialData }: StaticLayoutFieldsPr
             onChange={(e) => disclaimer.onChange(e.target.value)}
             placeholder={t("editor.staticLayoutFields.disclaimerPlaceholder")}
             rows={2}
+            className="min-h-[60px] resize-none"
           />
         </AutoSaveFieldWrapper>
       </CardContent>

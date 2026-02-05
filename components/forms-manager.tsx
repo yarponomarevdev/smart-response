@@ -59,7 +59,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   
   // Диалоги
   const [showEmbedDialog, setShowEmbedDialog] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null)
   
   // Текущая форма для редактирования
   const [selectedForm, setSelectedForm] = useState<Form | null>(null)
@@ -98,14 +98,11 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
     }
   }
 
-  const handleDeleteForm = async () => {
-    if (!selectedForm) return
-
+  const handleDelete = async (formId: string) => {
     try {
-      await deleteFormMutation.mutateAsync(selectedForm.id)
-      setShowDeleteDialog(false)
-      setSelectedForm(null)
+      await deleteFormMutation.mutateAsync(formId)
       toast.success(t("forms.toast.deleted"))
+      setShowConfirmDelete(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.savingFailed"))
     }
@@ -139,11 +136,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
   const openEmbedDialog = (form: Form) => {
     setSelectedForm(form)
     setShowEmbedDialog(true)
-  }
-
-  const openDeleteDialog = (form: Form) => {
-    setSelectedForm(form)
-    setShowDeleteDialog(true)
   }
 
   const handleFormNameUpdate = async (formId: string, newName: string) => {
@@ -216,25 +208,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
             }
           </p>
         </div>
-        {(limitInfo?.canCreate || isUnlimited) && (
-          <Button 
-            onClick={handleCreateForm} 
-            disabled={createFormMutation.isPending}
-            className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base w-full sm:w-auto"
-          >
-            {createFormMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("forms.creating")}
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("forms.createForm")}
-              </>
-            )}
-          </Button>
-        )}
       </div>
 
       {error && (
@@ -288,82 +261,128 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
           
           return (
             <Card key={form.id} className="relative overflow-hidden transition-all duration-200">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <Badge variant={form.is_active ? "default" : "secondary"} className="shrink-0 text-xs whitespace-nowrap">
-                    {form.is_active ? t("forms.active") : t("forms.inactive")}
-                  </Badge>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base sm:text-lg">
-                    <InlineEditableText
-                      value={form.name}
-                      onSave={(newValue) => handleFormNameUpdate(form.id, newValue)}
-                      placeholder={t("forms.createDialog.namePlaceholder")}
-                      emptyText={t("forms.clickToEdit")}
-                      className="font-semibold"
-                      inputClassName="h-8 text-base sm:text-lg font-semibold"
-                      maxLength={30}
-                      showCharCount={true}
-                    />
-                  </CardTitle>
-                  <CardDescription className="text-xs font-mono truncate">
-                    {form.id}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                {/* Действия */}
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onOpenEditor?.(form.id)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <FileEdit className="h-3 w-3 mr-1" />
-                    <span>{t("forms.editor")}</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <Copy className="h-3 w-3 mr-1" />
-                    <span>{t("forms.link")}</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    <span>{t("forms.open")}</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <Code2 className="h-3 w-3 mr-1" />
-                    <span>{t("forms.code")}</span>
-                  </Button>
-                </div>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <Badge variant={form.is_active ? "default" : "secondary"} className="shrink-0 text-xs whitespace-nowrap">
+                        {form.is_active ? t("forms.active") : t("forms.inactive")}
+                      </Badge>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base sm:text-lg">
+                        <InlineEditableText
+                          value={form.name}
+                          onSave={(newValue) => handleFormNameUpdate(form.id, newValue)}
+                          placeholder={t("forms.createDialog.namePlaceholder")}
+                          emptyText={t("forms.clickToEdit")}
+                          className="font-semibold"
+                          inputClassName="h-8 text-base sm:text-lg font-semibold"
+                          maxLength={30}
+                          showCharCount={true}
+                        />
+                      </CardTitle>
+                      <CardDescription className="text-xs font-mono truncate">
+                        {form.id}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    {/* Действия */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => onOpenEditor?.(form.id)} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <FileEdit className="h-3 w-3 mr-1" />
+                        <span>{t("forms.editor")}</span>
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => copyFormLink(form)} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <Copy className="h-3 w-3 mr-1" />
+                        <span>{t("forms.link")}</span>
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open(`/form/${form.id}`, "_blank")} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        <span>{t("forms.open")}</span>
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => openEmbedDialog(form)} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <Code2 className="h-3 w-3 mr-1" />
+                        <span>{t("forms.code")}</span>
+                      </Button>
+                    </div>
 
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => toggleFormActive(form)}
-                    disabled={toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id}
-                    className="text-xs sm:text-sm h-8 sm:h-9"
-                  >
-                    {toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      form.is_active ? t("forms.disable") : t("forms.enable")
-                    )}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 sm:h-9"
-                    onClick={() => openDeleteDialog(form)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => toggleFormActive(form)}
+                        disabled={toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id}
+                        className="text-xs sm:text-sm h-8 sm:h-9"
+                      >
+                        {toggleActiveMutation.isPending && toggleActiveMutation.variables?.formId === form.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          form.is_active ? t("forms.disable") : t("forms.enable")
+                        )}
+                      </Button>
+                      {showConfirmDelete === form.id ? (
+                        <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 sm:h-9 px-2 text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowConfirmDelete(null)}
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 sm:h-9 px-2"
+                            onClick={() => handleDelete(form.id)}
+                            disabled={deleteFormMutation.isPending}
+                          >
+                            {deleteFormMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              t("common.delete")
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 sm:h-9"
+                          onClick={() => setShowConfirmDelete(form.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
 
-                <p className="text-xs text-muted-foreground">
-                  {t("forms.created")}: {new Date(form.created_at).toLocaleDateString()}
-                </p>
-              </CardContent>
-            </Card>
+                    <p className="text-xs text-muted-foreground">
+                      {t("forms.created")}: {new Date(form.created_at).toLocaleDateString()}
+                    </p>
+                  </CardContent>
+                </Card>
           )
         })}
+        {(limitInfo?.canCreate || isUnlimited) && (
+          <button
+            onClick={handleCreateForm}
+            disabled={createFormMutation.isPending}
+            className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-accent/50 transition-all duration-200 min-h-[250px] group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {createFormMutation.isPending ? (
+              <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
+            ) : (
+              <>
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-background transition-colors">
+                  <Plus className="h-6 w-6 text-muted-foreground group-hover:text-foreground" />
+                </div>
+                <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                  {t("forms.createForm")}
+                </span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Диалог встраивания */}
@@ -393,40 +412,7 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
         </DialogContent>
       </Dialog>
 
-      {/* Диалог удаления */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">{t("forms.deleteDialog.title")}</DialogTitle>
-            <DialogDescription className="text-sm">
-              {t("forms.deleteDialog.description").replace("{name}", selectedForm?.name || "")}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 flex-col sm:flex-row">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="w-full sm:w-auto h-10 sm:h-11">
-              {t("common.cancel")}
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteForm}
-              disabled={deleteFormMutation.isPending}
-              className="w-full sm:w-auto h-10 sm:h-11"
-            >
-              {deleteFormMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("common.delete")}...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.delete")}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Диалог удаления удален, так как используется inline подтверждение */}
     </div>
   )
 }

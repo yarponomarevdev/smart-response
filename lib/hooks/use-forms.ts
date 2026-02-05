@@ -42,7 +42,7 @@ async function fetchUserForms(userId: string): Promise<UserFormsData> {
     .from("forms")
     .select("*")
     .eq("owner_id", userId)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: true })
 
   if (!userForms || userForms.length === 0) {
     const limitInfo = await canCreateMoreForms(userId)
@@ -150,7 +150,7 @@ export function useCreateForm() {
         
         queryClient.setQueryData<UserFormsData>(["forms", user.id], {
           ...previousData,
-          forms: [optimisticForm, ...previousData.forms],
+          forms: [...previousData.forms, optimisticForm],
           limitInfo: previousData.limitInfo ? {
             ...previousData.limitInfo,
             currentCount: previousData.limitInfo.currentCount + 1,

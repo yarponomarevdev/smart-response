@@ -162,7 +162,7 @@ export function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               {/* Бургер-меню для мобильных */}
@@ -231,7 +231,7 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <main className="pt-24 pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="pt-24 pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 sm:space-y-8">
           <div className="space-y-2">
             <p className="text-sm sm:text-base text-muted-foreground">{panelDescription}</p>

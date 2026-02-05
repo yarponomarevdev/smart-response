@@ -5,10 +5,16 @@
  */
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Loader2, ListPlus } from "lucide-react"
+import { Plus, Loader2, ListPlus, Type, Link, List, ListChecks, CheckSquare, Image } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +42,6 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { FieldTypeSelector } from "./field-type-selector"
 import { FieldForm } from "./field-form"
 import { FieldListItem } from "./field-list-item"
 import { StaticLayoutFields } from "./static-layout-fields"
@@ -69,9 +74,42 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   const queryClient = useQueryClient()
   
   // Состояние диалогов
-  const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [showFieldForm, setShowFieldForm] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // Список типов полей
+  const FIELD_TYPES = useMemo(() => [
+    {
+      type: "text" as FieldType,
+      label: t("editor.fieldTypes.text"),
+      icon: <Type className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "url" as FieldType,
+      label: t("editor.fieldTypes.url"),
+      icon: <Link className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "select" as FieldType,
+      label: t("editor.fieldTypes.select"),
+      icon: <List className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "multiselect" as FieldType,
+      label: t("editor.fieldTypes.multiselect"),
+      icon: <ListChecks className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "checkbox" as FieldType,
+      label: t("editor.fieldTypes.checkbox"),
+      icon: <CheckSquare className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "image" as FieldType,
+      label: t("editor.fieldTypes.image"),
+      icon: <Image className="h-4 w-4 mr-2" />,
+    },
+  ], [t])
 
   // Текущее редактируемое/удаляемое поле
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>("text")
@@ -151,12 +189,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         }
       )
     }
-  }
-
-  // Открыть диалог выбора типа поля
-  const handleAddField = () => {
-    setEditingField(null)
-    setShowTypeSelector(true)
   }
 
   // После выбора типа - открыть форму редактирования
@@ -252,77 +284,94 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mr-auto pb-10">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-10">
       {/* Статичные поля оформления */}
-      <StaticLayoutFields
-        formId={formId}
-        initialData={staticFieldsData || undefined}
-      />
+      <div className="lg:col-span-5">
+        <StaticLayoutFields
+          formId={formId}
+          initialData={staticFieldsData || undefined}
+        />
+      </div>
 
       {/* Динамические поля формы */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2">
-            <ListPlus className="h-5 w-5" />
-            {t("editor.dynamicFieldsTab.title")}
-          </CardTitle>
-          <CardDescription>
-            {t("editor.dynamicFieldsTab.description")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Список полей */}
-          {fields.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={fields.map((f) => f.id)}
-                strategy={verticalListSortingStrategy}
+      <div className="lg:col-span-6 xl:col-span-6">
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <ListPlus className="h-5 w-5" />
+              {t("editor.dynamicFieldsTab.title")}
+            </CardTitle>
+            <CardDescription>
+              {t("editor.dynamicFieldsTab.description")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Список полей */}
+            {fields.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="space-y-3 sm:space-y-4">
-                  {fields.map((field) => (
-                    <FieldListItem
-                      key={field.id}
-                      id={field.id}
-                      field={field}
-                      onEdit={() => handleEditField(field)}
-                      onDelete={() => handleDeleteClick(field)}
-                      onFieldUpdate={handleFieldUpdate}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-              {t("editor.dynamicFieldsTab.noFields")}
-            </div>
-          )}
+                <SortableContext
+                  items={fields.map((f) => f.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {fields.map((field) => (
+                      <FieldListItem
+                        key={field.id}
+                        id={field.id}
+                        field={field}
+                        onEdit={() => handleEditField(field)}
+                        onDelete={() => handleDeleteClick(field)}
+                        onFieldUpdate={handleFieldUpdate}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                {t("editor.dynamicFieldsTab.noFields")}
+              </div>
+            )}
 
-          {/* Кнопка добавления */}
-          <Button
-            onClick={handleAddField}
-            className="w-full h-14 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            {t("editor.dynamicFieldsTab.addField")}
-          </Button>
+            {/* Кнопка добавления (Dropdown) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-xl border-dashed border-2 hover:bg-accent hover:text-accent-foreground transition-all hover:scale-[1.01] active:scale-[0.99] text-base"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("editor.dynamicFieldsTab.addField")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                {FIELD_TYPES.map((fieldType) => (
+                  <DropdownMenuItem
+                    key={fieldType.type}
+                    onClick={() => {
+                      setEditingField(null)
+                      handleTypeSelect(fieldType.type)
+                    }}
+                    className="h-10 cursor-pointer"
+                  >
+                    {fieldType.icon}
+                    {fieldType.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <p className="text-sm sm:text-base text-muted-foreground font-light">
-            {t("editor.formDataTab.minOneField")}
-          </p>
-        </CardContent>
-      </Card>
+            <p className="text-xs text-muted-foreground font-light text-center">
+              {t("editor.formDataTab.minOneField")}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Диалог выбора типа поля */}
-      <FieldTypeSelector
-        open={showTypeSelector}
-        onOpenChange={setShowTypeSelector}
-        onSelect={handleTypeSelect}
-      />
 
       {/* Форма редактирования поля */}
       <FieldForm
