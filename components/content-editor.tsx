@@ -7,17 +7,10 @@
  */
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Sheet,
@@ -29,7 +22,6 @@ import {
 } from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { useEditorForms, useFormContent, useCurrentUser } from "@/lib/hooks"
-import { useToggleFormActive } from "@/lib/hooks/use-forms"
 import {
   FormDataTab,
   ContactsTab,
@@ -53,18 +45,17 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   const { data: user, isLoading: userLoading } = useCurrentUser()
   
   // React Query хуки
-  const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
-  const toggleActiveMutation = useToggleFormActive()
+  // const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
 
   // Локальное состояние
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
+  // const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
   const [activeTab, setActiveTab] = useState("data")
   const [maxVisitedTabIndex, setMaxVisitedTabIndex] = useState(0)
-  const propFormIdRef = useRef<string | undefined>(propFormId)
-  const userHasSelectedRef = useRef<boolean>(false)
+  // const propFormIdRef = useRef<string | undefined>(propFormId)
+  // const userHasSelectedRef = useRef<boolean>(false)
 
-  const forms = formsData?.forms || []
-  const firstFormId = forms.length > 0 ? forms[0].id : null
+  // const forms = formsData?.forms || []
+  // const firstFormId = forms.length > 0 ? forms[0].id : null
 
   // Мемоизируем вкладки с зависимостью от языка, чтобы они обновлялись при смене языка
   const tabs = useMemo(
@@ -80,22 +71,22 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   )
 
   // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
-  useEffect(() => {
-    if (propFormId !== propFormIdRef.current) {
-      propFormIdRef.current = propFormId
-      userHasSelectedRef.current = false
-      if (propFormId) {
-        setSelectedFormId(propFormId)
-      }
-    }
-  }, [propFormId])
+  // useEffect(() => {
+  //   if (propFormId !== propFormIdRef.current) {
+  //     propFormIdRef.current = propFormId
+  //     userHasSelectedRef.current = false
+  //     if (propFormId) {
+  //       setSelectedFormId(propFormId)
+  //     }
+  //   }
+  // }, [propFormId])
 
   // Устанавливаем первую форму по умолчанию, если нет выбранной формы
-  useEffect(() => {
-    if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
-      setSelectedFormId(firstFormId)
-    }
-  }, [firstFormId, selectedFormId])
+  // useEffect(() => {
+  //   if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
+  //     setSelectedFormId(firstFormId)
+  //   }
+  // }, [firstFormId, selectedFormId])
 
   // Отслеживаем прогресс вкладок - обновляем максимальный индекс только при движении вперед
   useEffect(() => {
@@ -106,32 +97,13 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }, [activeTab, tabs, maxVisitedTabIndex])
 
   // Загружаем контент выбранной формы
-  const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
+  const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(propFormId || null)
 
-  const handleFormChange = (formId: string) => {
-    userHasSelectedRef.current = true
-    setSelectedFormId(formId)
-  }
+  // const handleFormChange = (formId: string) => {
+  //   userHasSelectedRef.current = true
+  //   setSelectedFormId(formId)
+  // }
 
-  const handlePublish = async () => {
-    if (!selectedFormId) return
-
-    try {
-      // Проверяем и активируем форму, если она не активна
-      const selectedForm = forms.find(f => f.id === selectedFormId)
-      if (selectedForm && !selectedForm.is_active) {
-        await toggleActiveMutation.mutateAsync({ 
-          formId: selectedFormId, 
-          currentIsActive: false 
-        })
-        toast.success(t("editor.toast.published"))
-      } else {
-        toast.info(t("editor.toast.alreadyPublished"))
-      }
-    } catch (err) {
-      toast.error(t("editor.toast.publishError") + ": " + (err instanceof Error ? err.message : t("errors.networkError")))
-    }
-  }
 
   const handleContinue = () => {
     const currentIndex = tabs.findIndex(tab => tab.value === activeTab)
@@ -157,25 +129,25 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     setActiveTab("share")
   }
 
-  const isLoading = userLoading || formsLoading || contentLoading
+  const isLoading = userLoading || contentLoading
 
   // Показываем загрузку, если пользователь еще загружается или данные еще не загрузились
-  if (userLoading || (isLoading && !contentData && !formsData)) {
+  if (userLoading || (isLoading && !contentData)) {
     return <div className="text-center py-8">{t("editor.loadingContent")}</div>
   }
 
   // Проверяем ошибки перед проверкой загрузки
-  if (formsError) {
-    return (
-      <div className="py-4">
-        <div className="flex flex-col items-center justify-center py-8">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
-          <p className="text-sm text-muted-foreground">{formsError.message}</p>
-        </div>
-      </div>
-    )
-  }
+  // if (formsError) {
+  //   return (
+  //     <div className="py-4">
+  //       <div className="flex flex-col items-center justify-center py-8">
+  //         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+  //         <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
+  //         <p className="text-sm text-muted-foreground">{formsError.message}</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   if (contentError) {
     return (
@@ -190,7 +162,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }
 
   // Показываем "форма не найдена" только если пользователь загружен и данных нет
-  if (!userLoading && !formsLoading && !selectedFormId && forms.length === 0) {
+  if (!userLoading && !propFormId) {
     return (
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
@@ -202,67 +174,49 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     )
   }
 
-  const selectedForm = forms.find(f => f.id === selectedFormId)
+  // const selectedForm = forms.find(f => f.id === selectedFormId)
   const content = contentData?.content || {}
   const loadingMessages = contentData?.loadingMessages || ["", "", ""]
   const systemPrompt = contentData?.systemPrompt || ""
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Выбор формы */}
-      <div>
-        {/* Выбор формы (если несколько) */}
-        {forms.length > 1 && (
-          <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-            <SelectTrigger className="h-12 w-auto rounded-[18px] gap-2 px-0">
-              <SelectValue placeholder={t("editor.selectForm")} />
-            </SelectTrigger>
-            <SelectContent>
-              {forms.map((form) => (
-                <SelectItem key={form.id} value={form.id} className="text-base">
-                  {form.isMain ? `${form.name} (${t("editor.mainForm")})` : form.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {forms.length === 1 && (
-          <div className="h-12 flex items-center rounded-[18px]">
-            <span className="text-sm">{selectedForm?.name || t("editor.form")}</span>
-          </div>
-        )}
-      </div>
-
       {/* Вкладки редактора */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Десктопная навигация */}
-          <div className="relative w-fit hidden md:block">
-            <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0 gap-6 pb-2">
-              {tabs.map((tab, index) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:bg-transparent px-0 py-0"
-                >
-                  <span className={cn(
-                    "transition-opacity duration-300",
-                    activeTab === tab.value ? "opacity-100" : "opacity-70 hover:opacity-100"
-                  )}>
-                    {index + 1}. {tab.label}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {/* Линия прогресса */}
-            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-muted">
-              <div 
-                className="h-full bg-primary transition-all duration-500 ease-in-out"
-                style={{
-                  width: `${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length) * 100}%`
-                }}
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+          <div className="lg:col-span-11 flex flex-col-reverse md:flex-row md:items-center justify-between gap-4">
+            {/* Десктопная навигация */}
+            <div className="relative w-fit hidden md:block">
+              <TabsList className="w-full justify-start bg-transparent rounded-none h-auto p-0 gap-6 pb-2">
+                {tabs.map((tab, index) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:bg-transparent px-0 py-0"
+                  >
+                    <span className={cn(
+                      "transition-opacity duration-300",
+                      activeTab === tab.value ? "opacity-100" : "opacity-70 hover:opacity-100"
+                    )}>
+                      {index + 1}. {tab.label}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {/* Линия прогресса */}
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-muted">
+                <div 
+                  className="h-full bg-primary transition-all duration-500 ease-in-out origin-left"
+                  style={{
+                    transform: `scaleX(${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length)})`
+                  }}
+                />
+              </div>
             </div>
+
+            {/* Выбор формы удален из этого места */}
           </div>
+        </div>
 
           {/* Мобильная навигация */}
           <div className="md:hidden flex items-center justify-between mb-6 bg-muted/30 p-4 rounded-xl border">
@@ -316,16 +270,16 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
           <div className="pt-0 md:pt-6">
             <TabsContent value="data" className="mt-0">
-              <DynamicFieldsTab formId={selectedFormId} />
+              <DynamicFieldsTab formId={propFormId || null} />
             </TabsContent>
 
             <TabsContent value="contacts" className="mt-0">
-              <ContactsTab formId={selectedFormId} content={content} />
+              <ContactsTab formId={propFormId || null} content={content} />
             </TabsContent>
 
             <TabsContent value="generation" className="mt-0">
               <GenerationTab
-                formId={selectedFormId}
+                formId={propFormId || null}
                 systemPrompt={systemPrompt}
                 loadingMessages={loadingMessages}
                 content={content}
@@ -333,116 +287,119 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </TabsContent>
 
             <TabsContent value="result" className="mt-0">
-              <ResultTab formId={selectedFormId} content={content} />
+              <ResultTab formId={propFormId || null} content={content} />
             </TabsContent>
 
             <TabsContent value="share" className="mt-0">
-              <ShareTab formId={selectedFormId} />
+              <ShareTab formId={propFormId || null} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-0">
-              <SettingsTab formId={selectedFormId} />
+              <SettingsTab formId={propFormId || null} />
             </TabsContent>
           </div>
         </Tabs>
 
-        {/* Кнопки действий */}
-        <div className="flex flex-col gap-3">
-          {/* Вкладка "Данные формы" */}
-          {activeTab === "data" && (
-            <>
-              <Button
-                onClick={handleContinue}
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
-              >
-                {t("editor.continue")}
-              </Button>
-              <Button
-                onClick={handleBack}
-                variant="outline"
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-              >
-                {t("editor.goBack")}
-              </Button>
-            </>
-          )}
+            {/* Кнопки действий */}
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t mt-auto z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-3 justify-end">
+                {/* Вкладка "Данные формы" */}
+                {activeTab === "data" && (
+                  <>
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.goBack")}
+                    </Button>
+                    <Button
+                      onClick={handleContinue}
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.continue")}
+                    </Button>
+                  </>
+                )}
 
-          {/* Вкладки "Контакты" и "Генерация" */}
-          {(activeTab === "contacts" || activeTab === "generation") && (
-            <>
-              <Button
-                onClick={handleContinue}
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
-              >
-                {t("editor.continue")}
-              </Button>
-              <Button
-                onClick={handleBack}
-                variant="outline"
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-              >
-                {t("editor.goBack")}
-              </Button>
-            </>
-          )}
+                {/* Вкладки "Контакты" и "Генерация" */}
+                {(activeTab === "contacts" || activeTab === "generation") && (
+                  <>
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.goBack")}
+                    </Button>
+                    <Button
+                      onClick={handleContinue}
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.continue")}
+                    </Button>
+                  </>
+                )}
 
-          {/* Вкладка "Результат" */}
-          {activeTab === "result" && (
-            <>
-              <Button
-                onClick={handlePublish}
-                disabled={toggleActiveMutation.isPending || contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base sm:text-lg"
-              >
-                {toggleActiveMutation.isPending ? t("editor.publishing") : t("editor.saveAndPublish")}
-              </Button>
-              <Button
-                onClick={handleGoToShare}
-                variant="outline"
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-              >
-                {t("editor.share")}
-              </Button>
-              <Button
-                onClick={handleBack}
-                variant="outline"
-                disabled={contentLoading}
-                className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-              >
-                {t("editor.goBack")}
-              </Button>
-            </>
-          )}
+                {/* Вкладка "Результат" */}
+                {activeTab === "result" && (
+                  <>
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.goBack")}
+                    </Button>
+                    <Button
+                      onClick={handleGoToShare}
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.share")}
+                    </Button>
+                  </>
+                )}
 
-          {/* Вкладка "Поделиться" */}
-          {activeTab === "share" && (
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              disabled={contentLoading}
-              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-            >
-              {t("editor.goBack")}
-            </Button>
-          )}
+                {/* Вкладка "Поделиться" */}
+                {activeTab === "share" && (
+                  <>
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.goBack")}
+                    </Button>
+                    <Button
+                      onClick={() => setActiveTab("settings")}
+                      disabled={contentLoading}
+                      className="h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-base w-full sm:w-auto sm:min-w-[140px]"
+                    >
+                      {t("editor.tabs.settings")}
+                    </Button>
+                  </>
+                )}
 
-          {/* Вкладка "Настройки" */}
-          {activeTab === "settings" && (
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              disabled={contentLoading}
-              className="h-14 w-full sm:w-[335px] rounded-[18px] text-base sm:text-lg"
-            >
-              {t("editor.goBack")}
-            </Button>
-          )}
-        </div>
+                {/* Вкладка "Настройки" */}
+                {activeTab === "settings" && (
+                  <Button
+                    onClick={handleBack}
+                    variant="outline"
+                    disabled={contentLoading}
+                    className="h-11 rounded-lg text-base w-full sm:w-auto sm:min-w-[140px]"
+                  >
+                    {t("editor.goBack")}
+                  </Button>
+                )}
+              </div>
+            </div>
     </div>
   )
 }

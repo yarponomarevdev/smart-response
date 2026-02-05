@@ -20,15 +20,10 @@ export function LanguageToggle({ className, ...props }: React.ComponentProps<typ
   const handleLanguageChange = async () => {
     const newLanguage = language === "ru" ? "en" : "ru"
     
-    // Сразу обновляем UI
+    // Обновляем UI и сохраняем в cookie/localStorage
     setLanguage(newLanguage)
     
-    // Сохраняем в localStorage для всех пользователей
-    if (typeof window !== "undefined") {
-      localStorage.setItem("preferred-language", newLanguage)
-    }
-    
-    // Если пользователь авторизован, сохраняем в БД
+    // Если пользователь авторизован, также сохраняем в БД
     if (user) {
       try {
         await updateLanguageMutation.mutateAsync(newLanguage)

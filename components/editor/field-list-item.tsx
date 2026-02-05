@@ -65,17 +65,17 @@ export function FieldListItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-6 h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border border-[#f4f4f4] dark:border-muted transition-shadow ${
-        isDragging ? "shadow-lg opacity-50" : "hover:shadow-sm"
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/40 border border-transparent transition-all ${
+        isDragging ? "shadow-lg opacity-50 bg-muted" : "hover:bg-muted/60"
       }`}
     >
       {/* Drag handle */}
       <div
-        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0 touch-none"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground flex-shrink-0 touch-none"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-5 w-5" />
+        <GripVertical className="h-4 w-4" />
       </div>
 
       {/* Icon */}
@@ -93,21 +93,21 @@ export function FieldListItem({
                 await onFieldUpdate(field.id, { field_label: newValue })
               }}
               placeholder={t("editor.fieldForm.fieldNameLabel")}
-              className="font-medium text-base sm:text-lg flex-1 min-w-0"
+              className="font-medium text-sm sm:text-base flex-1 min-w-0"
             />
           ) : (
-            <span className="font-medium block min-w-0 truncate text-base sm:text-lg">{field.field_label}</span>
+            <span className="font-medium block min-w-0 truncate text-sm sm:text-base">{field.field_label}</span>
           )}
           {field.is_required && (
-            <Badge variant="secondary" className="text-xs flex-shrink-0 px-1.5 sm:px-2.5">
+            <Badge variant="secondary" className="text-[10px] h-5 flex-shrink-0 px-1.5">
               <span className="sm:hidden">
-                <Asterisk className="h-3 w-3" />
+                <Asterisk className="h-2.5 w-2.5" />
               </span>
               <span className="hidden sm:inline">{t("editor.fieldForm.requiredField")}</span>
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground min-w-0">
+        <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground min-w-0 mt-0.5">
           {/* Placeholder только для input полей */}
           {!LAYOUT_FIELD_TYPES.includes(field.field_type) && (
             <>
@@ -119,7 +119,7 @@ export function FieldListItem({
                   }}
                   placeholder={t("editor.fieldForm.placeholderLabel")}
                   emptyText={t("editor.fieldForm.emptyPlaceholder")}
-                  className="text-xs sm:text-sm flex-1 min-w-0"
+                  className="text-[10px] sm:text-xs flex-1 min-w-0"
                 />
               ) : (
                 field.placeholder && <span className="block min-w-0 truncate">{field.placeholder}</span>
@@ -138,12 +138,12 @@ export function FieldListItem({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <Button variant="ghost" size="icon" onClick={onEdit} className="h-8 w-8">
-          <Pencil className="h-4 w-4" />
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7">
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="h-8 w-8">
-          <Trash2 className="h-4 w-4 text-destructive" />
+        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7">
+          <Trash2 className="h-3.5 w-3.5 text-destructive/70 hover:text-destructive" />
         </Button>
       </div>
     </div>

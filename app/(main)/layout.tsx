@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { LanguageProvider } from "@/lib/i18n"
+import { getServerLanguage } from "@/lib/i18n/server"
 import { Toaster } from "@/components/ui/toaster"
 import { UpdateNotification } from "@/components/update-notification"
 import "../globals.css"
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
@@ -53,11 +54,14 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_APP_VERSION ||
     "dev"
 
+  // Получаем язык на сервере из cookie (устанавливается middleware)
+  const serverLanguage = await getServerLanguage()
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={serverLanguage} suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <QueryProvider>
-          <LanguageProvider>
+          <LanguageProvider defaultLanguage={serverLanguage}>
             <ThemeProvider
               attribute="class"
               defaultTheme="light"

@@ -81,8 +81,9 @@ export function useSaveSystemSettings() {
 
       return { success: true }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["systemSettings"] })
+    onSettled: () => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["systemSettings"] })
     },
   })
 }

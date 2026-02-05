@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { getFormFields, type FormField } from "@/app/actions/form-fields"
 import { cn } from "@/lib/utils"
@@ -38,10 +38,36 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   const [dynamicFields, setDynamicFields] = useState<FormField[]>([])
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
   const [fileNames, setFileNames] = useState<Record<string, string>>({})
+  
+  // Статические элементы оформления
+  const [staticLayout, setStaticLayout] = useState<{
+    heading?: string | null
+    subheading?: string | null
+    bodyText?: string | null
+    disclaimer?: string | null
+  }>({})
 
   useEffect(() => {
     const fetchFields = async () => {
       setContentLoading(true)
+
+      const supabase = createClient()
+
+      // Загружаем статические элементы оформления
+      const { data: formData } = await supabase
+        .from("forms")
+        .select("static_heading, static_subheading, static_body_text, static_disclaimer")
+        .eq("id", effectiveFormId)
+        .single()
+
+      if (formData) {
+        setStaticLayout({
+          heading: formData.static_heading,
+          subheading: formData.static_subheading,
+          bodyText: formData.static_body_text,
+          disclaimer: formData.static_disclaimer,
+        })
+      }
 
       // Загружаем динамические поля
       const fieldsResult = await getFormFields(effectiveFormId)
@@ -259,33 +285,96 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
 
       case "multiselect":
         const selectedValues = (value as string[]) || []
+        // Проверяем, есть ли хотя бы одна опция с картинкой
+        const hasImages = field.options?.some((option) => option.image)
+        
         return (
           <div key={field.id} className="space-y-2">
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
             </Label>
-            <div className="space-y-2 p-4 border rounded-lg bg-card">
-              {field.options?.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`${field.field_key}-${option.value}`}
-                    checked={selectedValues.includes(option.value)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        handleFieldChange(field.field_key, [...selectedValues, option.value])
-                      } else {
-                        handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
-                      }
-                    }}
-                    disabled={isLoading}
-                  />
-                  <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            
+            {/* Если есть картинки — отображаем карточки в сетке */}
+            {hasImages ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {field.options?.map((option) => {
+                  const isSelected = selectedValues.includes(option.value)
+                  
+                  const toggleOption = () => {
+                    if (isLoading) return
+                    if (isSelected) {
+                      handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
+                    } else {
+                      handleFieldChange(field.field_key, [...selectedValues, option.value])
+                    }
+                  }
+                  
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={toggleOption}
+                      disabled={isLoading}
+                      className={cn(
+                        "border rounded-lg p-3 transition-colors text-left",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50",
+                        isLoading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {option.image && (
+                        <div className="relative w-full aspect-square mb-2 rounded overflow-hidden">
+                          <img
+                            src={option.image}
+                            alt={option.label}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {/* Визуальный индикатор вместо Checkbox (чтобы избежать вложенных button) */}
+                        <div
+                          className={cn(
+                            "h-4 w-4 shrink-0 rounded-none border border-primary flex items-center justify-center transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background"
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </div>
+                        <span className="text-sm">{option.label}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              // Если картинок нет — стандартный список чекбоксов
+              <div className="space-y-2 p-4 border rounded-lg bg-card">
+                {field.options?.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${field.field_key}-${option.value}`}
+                      checked={selectedValues.includes(option.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleFieldChange(field.field_key, [...selectedValues, option.value])
+                        } else {
+                          handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
+                        }
+                      }}
+                      disabled={isLoading}
+                    />
+                    <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
 
@@ -449,6 +538,25 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         
+        {/* Статические элементы оформления */}
+        {staticLayout.heading && (
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance text-center">
+            {staticLayout.heading}
+          </h1>
+        )}
+        
+        {staticLayout.subheading && (
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-balance text-center">
+            {staticLayout.subheading}
+          </h2>
+        )}
+        
+        {staticLayout.bodyText && (
+          <p className="text-base sm:text-lg text-muted-foreground text-balance max-w-xl text-center">
+            {staticLayout.bodyText}
+          </p>
+        )}
+        
         {/* Все поля в порядке как в редакторе */}
         {dynamicFields.map((field) => {
           // Layout поля (заголовки, дисклеймер, кнопка) рендерятся как есть
@@ -464,6 +572,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         })}
 
         {error && <p className="text-sm text-destructive text-left">{error}</p>}
+        
+        {/* Статический дисклеймер перед кнопкой */}
+        {staticLayout.disclaimer && (
+          <p className="text-xs sm:text-sm text-muted-foreground text-center">
+            {staticLayout.disclaimer}
+          </p>
+        )}
         
         {/* Кнопка отправки формы */}
         <Button type="submit" disabled={isLoading} className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold">

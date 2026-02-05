@@ -20,6 +20,7 @@ export type FieldType = "text" | "url" | "select" | "multiselect" | "checkbox" |
 export interface FieldOption {
   value: string
   label: string
+  image?: string  // URL картинки в Storage
 }
 
 export interface FormField {

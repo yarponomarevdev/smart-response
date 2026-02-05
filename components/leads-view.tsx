@@ -53,6 +53,7 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
 
   const leads = data?.leads || []
   const forms = data?.forms || []
+  const formFields = data?.formFields || []
   const isSuperAdmin = data?.isSuperAdmin || false
 
   // Загружаем сохранённый режим отображения
@@ -118,8 +119,13 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
     })
     const customKeys = Array.from(customFieldKeys)
     
-    // Форматирование ключа для заголовка
+    // Форматирование ключа для заголовка: использует label из метаданных полей или fallback
     const formatKey = (key: string): string => {
+      // Ищем метаданные поля в formFields для любой формы в экспорте
+      const field = formFields.find(f => f.field_id === key)
+      if (field?.label) return field.label
+      
+      // Fallback: форматируем ключ
       return key
         .replace(/_/g, ' ')
         .replace(/([A-Z])/g, ' $1')
@@ -377,6 +383,8 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
       <LeadDetailModal
         lead={selectedLead}
         formName={selectedLead ? getFormName(selectedLead.form_id) : undefined}
+        formFields={formFields}
+        feedbackText={selectedLead ? forms.find(f => f.id === selectedLead.form_id)?.feedback_text : undefined}
         open={modalOpen}
         onOpenChange={setModalOpen}
       />

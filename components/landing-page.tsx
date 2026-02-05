@@ -7,16 +7,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Accordion,
   AccordionContent,
@@ -35,47 +25,11 @@ import {
   Users,
   TrendingUp,
   Lightbulb,
-  Sparkles,
   ArrowRight,
   Check,
   Menu,
   X,
 } from "lucide-react"
-
-// Типы целей для демо
-const DEMO_GOALS = [
-  { id: "qualify", labelKey: "landing.demo.goals.qualify" },
-  { id: "quote", labelKey: "landing.demo.goals.quote" },
-  { id: "feedback", labelKey: "landing.demo.goals.feedback" },
-]
-
-// Симуляция AI-генерации форм
-const DEMO_FORMS: Record<string, { titleKey: string; fieldsKeys: string[] }> = {
-  qualify: {
-    titleKey: "landing.demo.forms.qualify.title",
-    fieldsKeys: [
-      "landing.demo.forms.qualify.field1",
-      "landing.demo.forms.qualify.field2",
-      "landing.demo.forms.qualify.field3",
-    ],
-  },
-  quote: {
-    titleKey: "landing.demo.forms.quote.title",
-    fieldsKeys: [
-      "landing.demo.forms.quote.field1",
-      "landing.demo.forms.quote.field2",
-      "landing.demo.forms.quote.field3",
-    ],
-  },
-  feedback: {
-    titleKey: "landing.demo.forms.feedback.title",
-    fieldsKeys: [
-      "landing.demo.forms.feedback.field1",
-      "landing.demo.forms.feedback.field2",
-      "landing.demo.forms.feedback.field3",
-    ],
-  },
-}
 
 // Функции-иконки для фичей
 const FEATURE_ICONS = {
@@ -95,9 +49,6 @@ const USE_CASE_ICONS = {
 export function LandingPage() {
   const { t } = useTranslation()
   const router = useRouter()
-  const [selectedGoal, setSelectedGoal] = useState("qualify")
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [showForm, setShowForm] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<string>("")
 
@@ -139,19 +90,6 @@ export function LandingPage() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  // Обработка выбора цели
-  const handleGoalChange = (goal: string) => {
-    setIsGenerating(true)
-    setShowForm(false)
-    setSelectedGoal(goal)
-    
-    // Симуляция генерации
-    setTimeout(() => {
-      setShowForm(true)
-      setIsGenerating(false)
-    }, 800)
-  }
 
   // Плавный скролл к секции
   const scrollToSection = (sectionId: string) => {
@@ -262,12 +200,13 @@ export function LandingPage() {
         )}
       </header>
 
-      {/* Hero Section */}
-      <section
-        id="hero"
-        ref={(el) => { sectionRefs.current["hero"] = el }}
-        className="pt-24 pb-16 sm:pt-32 sm:pb-24"
-      >
+      <main>
+        {/* Hero Section */}
+        <section
+          id="hero"
+          ref={(el) => { sectionRefs.current["hero"] = el }}
+          className="pt-24 pb-8 sm:pt-32 sm:pb-12"
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h1 className="text-[clamp(2rem,5vw,3.75rem)] leading-[1.1] font-bold tracking-tight mb-6 text-balance">
@@ -282,167 +221,6 @@ export function LandingPage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-          </div>
-
-          {/* Интерактивное демо */}
-          <div className="max-w-2xl mx-auto">
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    {t("landing.demo.selectGoal")}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {DEMO_GOALS.map((goal) => (
-                      <Button
-                        key={goal.id}
-                        variant={selectedGoal === goal.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleGoalChange(goal.id)}
-                        className="rounded-full"
-                      >
-                        {t(goal.labelKey)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Результат генерации */}
-                <div className="border rounded-lg p-4 bg-muted/30 min-h-[200px]">
-                  {isGenerating ? (
-                    <div className="flex items-center justify-center h-[200px]">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Sparkles className="h-5 w-5 animate-pulse" />
-                        <span>{t("landing.demo.generating")}</span>
-                      </div>
-                    </div>
-                  ) : showForm ? (
-                    <div className="space-y-4 animate-in fade-in duration-500">
-                      <h3 className="font-semibold text-lg">
-                        {t(DEMO_FORMS[selectedGoal].titleKey)}
-                      </h3>
-                      
-                      <div className="space-y-4">
-                        {selectedGoal === "qualify" && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.qualify.field1")}</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="1-10">1-10</SelectItem>
-                                  <SelectItem value="11-50">11-50</SelectItem>
-                                  <SelectItem value="51-200">51-200</SelectItem>
-                                  <SelectItem value="201+">201+</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.qualify.field2")}</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="small">&lt; 100 000 ₽</SelectItem>
-                                  <SelectItem value="medium">100 000 - 500 000 ₽</SelectItem>
-                                  <SelectItem value="large">500 000+ ₽</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.qualify.field3")}</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="asap">Как можно скорее</SelectItem>
-                                  <SelectItem value="1month">В течение месяца</SelectItem>
-                                  <SelectItem value="3months">В течение 3 месяцев</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </>
-                        )}
-
-                        {selectedGoal === "quote" && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.quote.field1")}</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="web">Веб-разработка</SelectItem>
-                                  <SelectItem value="mobile">Мобильное приложение</SelectItem>
-                                  <SelectItem value="design">Дизайн</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.quote.field2")}</Label>
-                              <Input placeholder="Например, 5 страниц" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.quote.field3")}</Label>
-                              <div className="flex gap-2 flex-wrap">
-                                <Button variant="outline" size="sm" className="rounded-full h-8">SEO</Button>
-                                <Button variant="outline" size="sm" className="rounded-full h-8">Копирайтинг</Button>
-                                <Button variant="outline" size="sm" className="rounded-full h-8">Поддержка</Button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-
-                        {selectedGoal === "feedback" && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.feedback.field1")}</Label>
-                              <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Button key={star} variant="ghost" size="icon" className="h-8 w-8 text-yellow-400 hover:text-yellow-500">
-                                    ★
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.feedback.field2")}</Label>
-                              <Textarea placeholder="Напишите ваш отзыв..." className="min-h-[80px]" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("landing.demo.forms.feedback.field3")}</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="yes">Да, конечно</SelectItem>
-                                  <SelectItem value="maybe">Возможно</SelectItem>
-                                  <SelectItem value="no">Нет</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="pt-4">
-                        <Button 
-                          className="w-full rounded-full" 
-                          onClick={() => router.push("/auth/register")}
-                        >
-                          {t("landing.demo.submitPreview")}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </section>
@@ -660,6 +438,7 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+      </main>
     </div>
   )
 }

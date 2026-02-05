@@ -10,9 +10,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, Check, Link as LinkIcon, Code, ExternalLink } from "lucide-react"
+import { Copy, Check, Link as LinkIcon, Code, ExternalLink, Globe, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "@/lib/i18n"
+import { useFormPublishStatus } from "@/lib/hooks/use-form-content"
+import { useCurrentUser } from "@/lib/hooks/use-auth"
+import { toggleFormPublishStatus } from "@/app/actions/forms"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface ShareTabProps {
   formId: string | null
@@ -20,8 +24,13 @@ interface ShareTabProps {
 
 export function ShareTab({ formId }: ShareTabProps) {
   const { t } = useTranslation()
+  const { data: user } = useCurrentUser()
+  const queryClient = useQueryClient()
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedEmbed, setCopiedEmbed] = useState(false)
+  const [isToggling, setIsToggling] = useState(false)
+  
+  const { data: isPublished, isLoading: isLoadingStatus } = useFormPublishStatus(formId)
 
   if (!formId) {
     return (
@@ -29,6 +38,33 @@ export function ShareTab({ formId }: ShareTabProps) {
         {t("editor.shareTab.noForm")}
       </div>
     )
+  }
+
+  const handleTogglePublish = async () => {
+    if (!user?.id || !formId) return
+
+    setIsToggling(true)
+    try {
+      const result = await toggleFormPublishStatus(user.id, formId)
+      
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        // Обновляем кеш
+        queryClient.invalidateQueries({ queryKey: ["formPublishStatus", formId] })
+        queryClient.invalidateQueries({ queryKey: ["editorForms"] })
+        
+        toast.success(
+          result.is_active 
+            ? t("editor.shareTab.publishSuccess") 
+            : t("editor.shareTab.unpublishSuccess")
+        )
+      }
+    } catch (error) {
+      toast.error(t("editor.shareTab.publishError"))
+    } finally {
+      setIsToggling(false)
+    }
   }
 
   const formUrl = typeof window !== "undefined" 
@@ -56,6 +92,60 @@ export function ShareTab({ formId }: ShareTabProps) {
   return (
     <div className="space-y-6 max-w-4xl mr-auto pb-10">
       
+      {/* Статус публикации и действия */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            {isPublished ? (
+              <Globe className="h-5 w-5 text-green-600" />
+            ) : (
+              <Lock className="h-5 w-5 text-muted-foreground" />
+            )}
+            {t("editor.shareTab.publishStatus")}
+          </CardTitle>
+          <CardDescription>
+            {isPublished 
+              ? t("editor.shareTab.formPublished")
+              : t("editor.shareTab.formUnpublished")
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-3">
+          <Button
+            variant="default"
+            onClick={handleTogglePublish}
+            disabled={isToggling || isLoadingStatus}
+            className="flex items-center gap-2"
+          >
+            {isToggling ? (
+              <>
+                {isPublished 
+                  ? t("editor.shareTab.unpublishing")
+                  : t("editor.shareTab.publishing")
+                }
+              </>
+            ) : (
+              <>
+                {isPublished 
+                  ? t("editor.shareTab.unpublish")
+                  : t("editor.shareTab.publish")
+                }
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            asChild
+            disabled={!isPublished}
+          >
+            <a href={formUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              {t("editor.shareTab.openForm")}
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Прямая ссылка */}
       <Card>
         <CardHeader>

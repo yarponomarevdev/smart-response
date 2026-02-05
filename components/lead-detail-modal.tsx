@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -22,10 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Trash2, ExternalLink, Mail, Phone, Calendar, FileText, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react"
+import { Trash2, ExternalLink, Mail, Phone, FileText, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import type { Lead, LeadStatus } from "@/lib/hooks/use-leads"
+import type { Lead, LeadStatus, FormField } from "@/lib/hooks/use-leads"
 import { useUpdateLead, useDeleteLead } from "@/lib/hooks"
 import { useTranslation } from "@/lib/i18n"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -33,6 +34,8 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 interface LeadDetailModalProps {
   lead: Lead | null
   formName?: string
+  formFields: FormField[]
+  feedbackText?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -44,19 +47,27 @@ const statusColors: Record<LeadStatus, string> = {
 }
 
 // Служебные поля, которые не нужно показывать в списке
-const HIDDEN_FIELDS = ['phone', 'requestFeedback']
+const HIDDEN_FIELDS = ['phone']
 
-// Форматирование ключа: "field_name" -> "Field name"
-const formatKey = (key: string, t: (key: string) => string): string => {
+// Форматирование ключа: использует label из метаданных полей или fallback на форматирование
+const formatKey = (key: string, t: (key: string) => string, formFields: FormField[], formId: string | null, feedbackText?: string): string => {
   // Специальные ключи с понятными названиями
   const keyMap: Record<string, string> = {
     email: 'Email',
     phone: t("leads.detail.phone"),
     url: 'URL',
     parent_page_url: t("leads.detail.integrationSite"),
+    requestFeedback: feedbackText || "Обратная связь",
   }
   if (keyMap[key]) return keyMap[key]
   
+  // Ищем метаданные поля в formFields
+  if (formId) {
+    const field = formFields.find(f => f.form_id === formId && f.field_id === key)
+    if (field?.label) return field.label
+  }
+  
+  // Fallback: форматируем ключ
   return key
     .replace(/_/g, ' ')
     .replace(/([A-Z])/g, ' $1')
@@ -79,7 +90,7 @@ const isUrl = (value: unknown): boolean => {
   return value.startsWith('http://') || value.startsWith('https://')
 }
 
-export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDetailModalProps) {
+export function LeadDetailModal({ lead, formName, formFields, feedbackText, open, onOpenChange }: LeadDetailModalProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const updateLeadMutation = useUpdateLead()
@@ -88,7 +99,6 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
   const [notes, setNotes] = useState(lead?.notes || "")
   const [status, setStatus] = useState<LeadStatus>(lead?.lead_status || "todo")
   const [isNoteSaving, setIsNoteSaving] = useState(false)
-  const [isResultExpanded, setIsResultExpanded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousNotesRef = useRef<string>("")
@@ -183,27 +193,75 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
 
   if (!lead) return null
 
+  // Подготовка данных формы для отображения
+  const formDataEntries: [string, unknown][] = []
+  
+  // Email всегда первым
+  if (lead.email) {
+    formDataEntries.push(['email', lead.email])
+  }
+  
+  // Телефон из custom_fields
+  if (phone) {
+    formDataEntries.push(['phone', phone])
+  }
+  
+  // parent_page_url с приоритетом над обычным URL
+  const parentPageUrl = lead.custom_fields?.parent_page_url as string | undefined
+  if (parentPageUrl) {
+    formDataEntries.push(['parent_page_url', parentPageUrl])
+  } else if (lead.url) {
+    // Показываем обычный URL только если нет parent_page_url
+    formDataEntries.push(['url', lead.url])
+  }
+  
+  // Остальные custom_fields (кроме служебных и уже обработанных)
+  if (lead.custom_fields) {
+    Object.entries(lead.custom_fields)
+      .filter(([key]) => !HIDDEN_FIELDS.includes(key) && key !== 'parent_page_url')
+      .forEach(([key, value]) => {
+        // Для requestFeedback показываем только если true
+        if (key === 'requestFeedback' && value !== true) {
+          return
+        }
+        
+        if (value !== null && value !== undefined && value !== '') {
+          formDataEntries.push([key, value])
+        }
+      })
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto subtle-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-4 pr-8">
-              <span className="truncate">{lead.email || t("leads.noEmail")}</span>
-              <Badge className={`shrink-0 ${statusColors[status]}`}>
+        <DialogContent 
+          className="sm:max-w-5xl w-[95vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden sm:rounded-xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="p-6 border-b shrink-0 bg-background z-10">
+            <div className="flex items-start justify-between gap-4 pr-8">
+              <div className="space-y-1">
+                <DialogTitle className="text-xl font-semibold break-all">
+                  {lead.email || t("leads.noEmail")}
+                </DialogTitle>
+                <DialogDescription>
+                  ID: {lead.id.slice(0, 8)}... • {new Date(lead.created_at).toLocaleString()}
+                </DialogDescription>
+              </div>
+              <Badge className={`shrink-0 ${statusColors[status]} px-3 py-1 text-sm capitalize`}>
                 {getStatusLabel(status)}
               </Badge>
-            </DialogTitle>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-3 py-4">
-            {/* Первая строка: Статус, Дата, Форма */}
-            <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+          <div className="flex-1 min-h-0 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x">
+            {/* Сайдбар (Мета-информация и заметки) */}
+            <div className="w-full md:w-[320px] shrink-0 overflow-y-auto p-6 bg-muted/10 flex flex-col gap-6">
               {/* Статус */}
-              <div className="space-y-1">
-                <Label className="text-xs">{t("leads.table.status")}</Label>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t("leads.table.status")}</Label>
                 <Select value={status} onValueChange={(v) => handleStatusChange(v as LeadStatus)}>
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger className="w-full bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -214,191 +272,135 @@ export function LeadDetailModal({ lead, formName, open, onOpenChange }: LeadDeta
                 </Select>
               </div>
 
-              {/* Дата */}
-              <div className="space-y-1">
-                <Label className="text-xs">{t("leads.table.date")}</Label>
-                <div className="flex items-center gap-1.5 text-xs h-8 px-2.5 border rounded-md bg-muted/50">
-                  <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span className="truncate">{new Date(lead.created_at).toLocaleString()}</span>
-                </div>
-              </div>
-
               {/* Форма */}
               {formName && (
-                <div className="space-y-1">
-                  <Label className="text-xs">{t("leads.table.form")}</Label>
-                  <div className="flex items-center gap-1.5 text-xs h-8 px-2.5 border rounded-md bg-muted/50">
-                    <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t("leads.table.form")}</Label>
+                  <div className="flex items-center gap-2 text-sm font-medium p-2.5 border rounded-md bg-background">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
                     <span className="truncate">{formName}</span>
                   </div>
                 </div>
               )}
+
+              {/* Заметка */}
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t("leads.detail.notes")}</Label>
+                  {isNoteSaving && (
+                    <span className="text-xs text-muted-foreground animate-pulse">{t("common.saving")}</span>
+                  )}
+                </div>
+                <Textarea
+                  placeholder={t("leads.detail.notesPlaceholder")}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[120px] text-sm resize-none bg-background focus-visible:ring-1"
+                />
+              </div>
+
+              {/* Кнопка удаления */}
+              <div className="pt-4 mt-auto border-t">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={deleteLeadMutation.isPending}
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 justify-start"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {t("leads.deleteDialog.title")}
+                </Button>
+              </div>
             </div>
 
-            {/* Данные формы (Email, URL, телефон, custom_fields) */}
-            {(() => {
-              // Собираем все данные формы
-              const formDataEntries: [string, unknown][] = []
-              
-              // Email всегда первым
-              if (lead.email) {
-                formDataEntries.push(['email', lead.email])
-              }
-              
-              // Телефон из custom_fields
-              if (phone) {
-                formDataEntries.push(['phone', phone])
-              }
-              
-              // parent_page_url с приоритетом над обычным URL
-              const parentPageUrl = lead.custom_fields?.parent_page_url as string | undefined
-              if (parentPageUrl) {
-                formDataEntries.push(['parent_page_url', parentPageUrl])
-              } else if (lead.url) {
-                // Показываем обычный URL только если нет parent_page_url
-                formDataEntries.push(['url', lead.url])
-              }
-              
-              // Остальные custom_fields (кроме служебных и уже обработанных)
-              if (lead.custom_fields) {
-                Object.entries(lead.custom_fields)
-                  .filter(([key]) => !HIDDEN_FIELDS.includes(key) && key !== 'parent_page_url')
-                  .forEach(([key, value]) => {
-                    if (value !== null && value !== undefined && value !== '') {
-                      formDataEntries.push([key, value])
-                    }
-                  })
-              }
-
-              return formDataEntries.length > 0 ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">{t("leads.detail.formData")}</Label>
-                  <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Основной контент */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-background">
+              {/* Данные формы */}
+              {formDataEntries.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">{t("leads.detail.formData")}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-y-4 gap-x-8">
                     {formDataEntries.map(([key, value]) => (
-                      <div key={key} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">{formatKey(key, t)}</Label>
-                        {key === 'email' ? (
-                          <a
-                            href={`mailto:${value}`}
-                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                          >
-                            <Mail className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{String(value)}</span>
-                          </a>
-                        ) : key === 'phone' ? (
-                          <a
-                            href={`tel:${value}`}
-                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                          >
-                            <Phone className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{String(value)}</span>
-                          </a>
-                        ) : key === 'url' || key === 'parent_page_url' || isUrl(value) ? (
-                          <a
-                            href={String(value)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors h-8 px-2.5 border rounded-md bg-muted/50"
-                          >
-                            <ExternalLink className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{String(value)}</span>
-                          </a>
-                        ) : (
-                          <div className="flex items-center text-xs h-8 px-2.5 border rounded-md bg-muted/50">
-                            <span className="truncate">{formatValue(value)}</span>
-                          </div>
-                        )}
+                      <div key={key} className="group">
+                        <dt className="text-xs text-muted-foreground mb-1">
+                          {formatKey(key, t, formFields, lead.form_id, feedbackText)}
+                        </dt>
+                        <dd className="text-sm font-medium break-words leading-relaxed">
+                          {key === 'email' ? (
+                            <a href={`mailto:${value}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                              {String(value)} <ExternalLink className="h-3 w-3 opacity-50" />
+                            </a>
+                          ) : key === 'phone' ? (
+                            <a href={`tel:${value}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                              {String(value)} <Phone className="h-3 w-3 opacity-50" />
+                            </a>
+                          ) : (key === 'url' || key === 'parent_page_url' || isUrl(value)) ? (
+                            <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 break-all">
+                              {String(value)} <ExternalLink className="h-3 w-3 opacity-50" />
+                            </a>
+                          ) : (
+                            formatValue(value)
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : null
-            })()}
+              )}
 
-            {/* Третья строка: Заметка */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">{t("leads.detail.notes")}</Label>
-                {isNoteSaving && (
-                  <span className="text-xs text-muted-foreground">{t("common.saving")}</span>
-                )}
-              </div>
-              <Textarea
-                placeholder={t("leads.detail.notesPlaceholder")}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[60px] text-xs resize-none"
-              />
-            </div>
+              {/* Результат */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Badge variant="outline" className="h-5 px-1.5 rounded-sm">AI</Badge>
+                  <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">{t("leads.table.result")}</h3>
+                </div>
 
-            {/* Результат (сворачиваемый) */}
-            <div className="space-y-1.5 pt-2 border-t">
-              <button
-                onClick={() => setIsResultExpanded(!isResultExpanded)}
-                className="flex items-center justify-between w-full text-left hover:opacity-70 transition-opacity"
-              >
-                <Label className="text-xs cursor-pointer flex items-center gap-2 font-medium">
-                  {t("leads.table.result")}
-                  {lead.result_image_url && <ImageIcon className="h-3 w-3 text-muted-foreground" />}
-                </Label>
-                {isResultExpanded ? (
-                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </button>
-              {isResultExpanded && (
-                <div className="rounded-lg border bg-muted/30 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
                   {lead.result_image_url && !imageError && (
-                    <div className="mb-3">
+                    <div className="mb-6">
                       <img
                         src={lead.result_image_url}
                         alt="Result"
-                        className="rounded-lg max-h-[300px] w-full object-contain bg-background"
+                        className="rounded-lg max-h-[400px] w-full object-contain bg-background border shadow-sm"
                         onError={() => setImageError(true)}
                         loading="lazy"
                       />
                     </div>
                   )}
+                  
                   {lead.result_image_url && imageError && (
-                    <div className="mb-3 p-4 border-2 border-dashed rounded-lg text-center bg-muted/50">
-                      <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-xs font-medium text-foreground mb-1">{t("leads.detail.imageError")}</p>
-                      <p className="text-xs text-muted-foreground mb-3">{t("leads.detail.imageExpired")}</p>
+                    <div className="mb-6 p-6 border-2 border-dashed rounded-lg text-center bg-background">
+                      <ImageIcon className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                      <p className="text-sm font-medium text-foreground mb-1">{t("leads.detail.imageError")}</p>
+                      <p className="text-xs text-muted-foreground mb-4">{t("leads.detail.imageExpired")}</p>
                       <a
                         href={lead.result_image_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <ExternalLink className="h-4 w-4" />
                         {t("leads.detail.openInNewTab")}
                       </a>
                     </div>
                   )}
+
                   {lead.result_text ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                       <MarkdownRenderer content={lead.result_text} />
                     </div>
                   ) : !lead.result_image_url ? (
-                    <span className="text-sm text-muted-foreground">-</span>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>{t("leads.noResult") || "Результат отсутствует"}</p>
+                    </div>
                   ) : null}
                 </div>
-              )}
-            </div>
-
-            {/* Действия */}
-            <div className="flex justify-end pt-2 border-t">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                disabled={deleteLeadMutation.isPending}
-                className="h-7 text-xs"
-              >
-                <Trash2 className="h-3 w-3 mr-1.5" />
-                {t("common.delete")}
-              </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

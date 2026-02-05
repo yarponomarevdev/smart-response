@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 import { extractTextFromFile, isImageFile } from "@/lib/file-parser"
 import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
+import { generateText, generateImage } from "ai"
+import { openai } from "@/lib/ai/openai"
 
 // Интерфейс для результата базы знаний с поддержкой изображений
 interface KnowledgeBaseResult {
@@ -22,11 +24,11 @@ async function convertHeicToJpeg(buffer: Buffer): Promise<{ buffer: Buffer; mime
   try {
     const convert = await getHeicConvert()
     const outputBuffer = await convert({
-      buffer,
+      buffer: buffer as unknown as ArrayBuffer,
       format: "JPEG",
       quality: 0.9,
     })
-    return { buffer: Buffer.from(outputBuffer), mimeType: "image/jpeg" }
+    return { buffer: Buffer.from(outputBuffer as unknown as ArrayBuffer), mimeType: "image/jpeg" }
   } catch (error) {
     console.error("Ошибка конвертации HEIC:", error)
     throw new Error("Не удалось конвертировать HEIC изображение")
@@ -211,7 +213,7 @@ async function getKnowledgeBaseContent(
           if (file.file_type === "image/heic" || file.file_name.toLowerCase().endsWith(".heic")) {
             try {
               const converted = await convertHeicToJpeg(buffer)
-              buffer = converted.buffer
+              buffer = converted.buffer as Buffer<ArrayBuffer>
               mimeType = converted.mimeType
               console.log(`HEIC файл ${file.file_name} конвертирован в JPEG`)
             } catch (convertError) {
@@ -298,18 +300,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Проверка наличия API ключа OpenAI
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY не установлен")
-      return Response.json(
-        {
-          error: "Server configuration error",
-          details: "OpenAI API key is not configured",
-        },
-        { status: 500, headers: corsHeaders },
-      )
-    }
-
     const supabase = await createClient()
 
     // Fetch form settings directly from forms table
@@ -342,7 +332,7 @@ export async function POST(req: Request) {
     // Форматируем кастомные поля для включения в контекст
     // Извлекаем image поля отдельно - они не должны попадать в текстовый контекст
     const imageFieldKeys = new Set(imageFields.map(f => f.field_key))
-    let inputImages: Record<string, string> = {}
+    const inputImages: Record<string, string> = {}
     let customFieldsContext = ""
     
     if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
@@ -521,70 +511,25 @@ export async function POST(req: Request) {
       const hasInputImage = Object.keys(inputImages).length > 0
       const useEditAPI = hasInputImage
 
-      // Создаем короткий промпт через GPT
+      // Создаем короткий промпт через AI SDK generateText
       let compressedPrompt = ""
-      let promptSource: "gpt" | "fallback" = "gpt"
+      let promptSource: "ai-sdk" | "fallback" = "ai-sdk"
       try {
         // Инструкции для промпта зависят от режима
         const promptInstructions = useEditAPI
           ? `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для редактирования изображения (максимум 3500 символов). Пользователь загрузил своё изображение, и нужно описать, ЧТО ИЗМЕНИТЬ или ДОБАВИТЬ к нему. Промпт должен быть на английском языке и описывать конкретные изменения. Например: "Add a red hat to the person", "Change background to blue sky", "Add sunglasses to the face". Фокусируйся на действиях редактирования, а не на описании всей сцены.`
           : `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для DALL-E (максимум 3500 символов). Промпт должен быть на английском языке и описывать конкретные визуальные детали, которые нужно сгенерировать. Фокусируйся на ключевых визуальных элементах, цветах, стиле, настроении. Избегай излишних деталей, но сохрани суть.`
 
-        const promptCreationResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: textModel,
-            messages: [
-              {
-                role: "system",
-                content: `${imageSystemPrompt}
-
-${promptInstructions}`,
-              },
-              {
-                role: "user",
-                content: limitedContext,
-              },
-            ],
-            max_completion_tokens: 1000, // Ограничиваем выход, чтобы промпт точно уместился в 3500 символов
-          }),
+        const { text: generatedPrompt } = await generateText({
+          model: openai(textModel),
+          system: `${imageSystemPrompt}\n\n${promptInstructions}`,
+          prompt: limitedContext,
+          maxOutputTokens: 1000,
         })
 
-        if (!promptCreationResponse.ok) {
-          let errorData: unknown = null
-          try {
-            errorData = await promptCreationResponse.json()
-          } catch {
-            errorData = { error: { message: `HTTP ${promptCreationResponse.status}: ${promptCreationResponse.statusText}` } }
-          }
-          console.error("Ошибка создания промпта через GPT:", errorData)
-          promptSource = "fallback"
-          compressedPrompt = buildFallbackImagePrompt({
-            imageSystemPrompt,
-            context: limitedContext,
-            maxLength: maxDallePromptChars,
-          })
-        } else {
-          try {
-            const promptData = await promptCreationResponse.json()
-            compressedPrompt = promptData.choices?.[0]?.message?.content || ""
-          } catch (parseError) {
-            console.error("Ошибка парсинга промпта от GPT:", parseError)
-            promptSource = "fallback"
-            compressedPrompt = buildFallbackImagePrompt({
-              imageSystemPrompt,
-              context: limitedContext,
-              maxLength: maxDallePromptChars,
-            })
-          }
-        }
-
+        compressedPrompt = generatedPrompt || ""
       } catch (promptError: unknown) {
-        console.error("Ошибка создания промпта:", promptError)
+        console.error("Ошибка создания промпта через AI SDK:", promptError)
         promptSource = "fallback"
         compressedPrompt = buildFallbackImagePrompt({
           imageSystemPrompt,
@@ -615,12 +560,13 @@ ${promptInstructions}`,
       }
       console.log("Превью промпта изображения:", compressedPrompt.slice(0, 200) + "...")
 
-      // Теперь генерируем изображение с коротким промптом
-      let imageResponse
+      // Генерируем изображение с помощью AI SDK generateImage
+      let generatedImageBase64: string | null = null
+      
       try {
         if (useEditAPI) {
-          // Используем Images Edit API для редактирования входного изображения
-          console.log("Использование Images Edit API с входным изображением")
+          // Используем Image Edit API для редактирования входного изображения
+          console.log("Использование Images Edit API с входным изображением через AI SDK")
           
           // Берём первое доступное изображение
           const firstImageKey = Object.keys(inputImages)[0]
@@ -630,102 +576,68 @@ ${promptInstructions}`,
           const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "")
           const imageBuffer = Buffer.from(base64Data, "base64")
           
-          // Создаём FormData для отправки (используем глобальный FormData из Node.js 18+)
-          const formData = new FormData()
-          
-          // Создаём Blob из буфера и добавляем как файл
-          const blob = new Blob([imageBuffer], { type: "image/png" })
-          formData.append("model", imageModel)
-          formData.append("image", blob, "input.png")
-          formData.append("prompt", compressedPrompt)
-          formData.append("n", "1")
-          formData.append("size", "1024x1024")
-          
-          imageResponse = await fetch("https://api.openai.com/v1/images/edits", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          // AI SDK generateImage с prompt object для редактирования
+          // Примечание: Edit API поддерживает только dall-e-2
+          const { images } = await generateImage({
+            model: openai.image(imageModel),
+            prompt: {
+              text: compressedPrompt,
+              images: [imageBuffer],
             },
-            body: formData,
+            size: "1024x1024" as const,
           })
+          
+          if (images && images.length > 0) {
+            generatedImageBase64 = images[0].base64
+          }
         } else {
-          // Используем стандартный Images Generations API
-          imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: imageModel,
-              prompt: compressedPrompt,
-              n: 1,
-              size: "1024x1024",
-            }),
+          // Стандартная генерация изображения
+          console.log("Генерация изображения через AI SDK generateImage")
+          
+          const { images } = await generateImage({
+            model: openai.image(imageModel),
+            prompt: compressedPrompt,
+            size: "1024x1024" as const,
           })
+          
+          if (images && images.length > 0) {
+            generatedImageBase64 = images[0].base64
+          }
         }
-      } catch (imageFetchError: unknown) {
-        console.error("Ошибка подключения к API генерации изображений:", imageFetchError)
-        return Response.json(
-          {
-            error: "Ошибка подключения к API генерации изображений",
-            details: imageFetchError instanceof Error ? imageFetchError.message : "Failed to connect to OpenAI API",
-          },
-          { status: 502, headers: corsHeaders },
-        )
-      }
-
-      if (!imageResponse.ok) {
-        let errorData
-        try {
-          errorData = await imageResponse.json()
-        } catch {
-          errorData = { error: { message: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` } }
-        }
-        console.error("Ошибка API генерации изображений:", errorData)
-
+      } catch (imageGenError: unknown) {
+        console.error("Ошибка генерации изображения через AI SDK:", imageGenError)
         return Response.json(
           {
             error: "Ошибка генерации изображения",
-            details: errorData.error?.message || "Не удалось сгенерировать изображение. Проверьте настройки в админке.",
-          },
-          { status: imageResponse.status, headers: corsHeaders },
-        )
-      }
-
-      const imageData = await imageResponse.json()
-      const imageItem = imageData.data?.[0]
-      const tempImageUrl = imageItem?.url || ""
-      const tempImageBase64 = imageItem?.b64_json || ""
-
-      if (!tempImageUrl && !tempImageBase64) {
-        console.error("Пустой ответ изображения:", imageData)
-        return Response.json(
-          {
-            error: "Пустой ответ от API",
-            details: "API не вернуло URL или base64. Попробуйте другие настройки промптов.",
+            details: imageGenError instanceof Error ? imageGenError.message : "Не удалось сгенерировать изображение",
           },
           { status: 500, headers: corsHeaders },
         )
       }
 
+      if (!generatedImageBase64) {
+        console.error("Пустой результат генерации изображения")
+        return Response.json(
+          {
+            error: "Пустой ответ от API",
+            details: "API не вернуло изображение. Попробуйте другие настройки промптов.",
+          },
+          { status: 500, headers: corsHeaders },
+        )
+      }
+      
+      // AI SDK возвращает base64, URL больше не используется
+      const tempImageBase64 = generatedImageBase64
+
       // Сохраняем изображение в Supabase Storage для постоянного хранения
       const leadId = crypto.randomUUID()
-      let imageUrl: string | null = null
+      const imageUrl = await saveBase64ImageToStorage({
+        base64: tempImageBase64,
+        leadId,
+      })
 
-      if (tempImageBase64) {
-        imageUrl = await saveBase64ImageToStorage({
-          base64: tempImageBase64,
-          leadId,
-        })
-      } else {
-        imageUrl = await saveImageToStorage(tempImageUrl, leadId)
-      }
-
-      const finalImageUrl =
-        imageUrl ||
-        tempImageUrl ||
-        (tempImageBase64 ? `data:image/png;base64,${tempImageBase64}` : "")
+      // Используем сохранённый URL или fallback на data URL
+      const finalImageUrl = imageUrl || `data:image/png;base64,${tempImageBase64}`
 
       if (!imageUrl) {
         console.warn("Не удалось сохранить изображение в хранилище, используется временный ответ")
@@ -733,9 +645,9 @@ ${promptInstructions}`,
 
       // Для формата image_with_text генерируем также текстовое описание
       if (resultFormat === "image_with_text") {
-        const textModel = await getTextModel()
+        const textModelForDescription = await getTextModel()
         
-        if (!textModel) {
+        if (!textModelForDescription) {
           // Если текстовая модель не настроена, возвращаем только изображение
           return Response.json(
             {
@@ -764,53 +676,32 @@ ${promptInstructions}`,
         }
 
         if (textSystemPrompt) {
-          // Формируем user message с контекстом для генерации текста
-          const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}
+          // Инструкция для генерации описания результата
+          const resultDescriptionInstruction = `На основе всего предоставленного контекста создай краткое описание ГОТОВОГО РЕЗУЛЬТАТА (2-4 предложения). Опиши что получилось, какие ключевые характеристики имеет результат, для чего он подходит. Пиши как презентацию завершённой работы для клиента. НЕ пиши технические инструкции, промпты или описание процесса создания.`
 
-Provide a brief explanatory text to accompany the generated image. Keep it concise and relevant.`
+          // Формируем user message с контекстом для генерации текста
+          const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}${resultDescriptionInstruction}`
 
           try {
-            const requestBody = {
-              model: textModel,
-              messages: [
-                {
-                  role: "system",
-                  content: textSystemPrompt,
-                },
-                {
-                  role: "user",
-                  content: userMessage,
-                },
-              ],
-              // Безлимит на токены выхода - используем максимум модели
-            }
-
-            const textResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-              },
-              body: JSON.stringify(requestBody),
+            // Используем AI SDK generateText для текста к изображению
+            const { text: generatedText } = await generateText({
+              model: openai(textModelForDescription),
+              system: textSystemPrompt,
+              prompt: userMessage,
             })
 
-            if (textResponse.ok) {
-              const textCompletion = await textResponse.json()
-              const generatedText = textCompletion.choices[0]?.message?.content || ""
-
-              if (generatedText) {
-                return Response.json(
-                  {
-                    success: true,
-                    result: {
-                      type: "image_with_text",
-                      imageUrl: finalImageUrl,
-                      text: generatedText,
-                    },
+            if (generatedText) {
+              return Response.json(
+                {
+                  success: true,
+                  result: {
+                    type: "image_with_text",
+                    imageUrl: finalImageUrl,
+                    text: generatedText,
                   },
-                  { headers: corsHeaders },
-                )
-              }
+                },
+                { headers: corsHeaders },
+              )
             }
           } catch (textError) {
             console.error("Ошибка генерации текста для image_with_text:", textError)
@@ -843,6 +734,10 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
         { headers: corsHeaders },
       )
     } else {
+      // ============================================
+      // ТЕКСТОВАЯ ГЕНЕРАЦИЯ С ИСПОЛЬЗОВАНИЕМ AI SDK
+      // ============================================
+      
       // Получаем модель для генерации текста
       const textModel = await getTextModel()
       
@@ -882,153 +777,65 @@ Provide a brief explanatory text to accompany the generated image. Keep it conci
       console.log("Используется текстовая модель:", textModel)
       console.log("База знаний включена:", useKnowledgeBase)
 
-      // Извлекаем текст из ответа OpenAI
-      const extractGeneratedText = (completion: any) => {
-        return completion?.choices?.[0]?.message?.content || ""
-      }
-
-      // Тип для multimodal content
-      type MessageContent = string | Array<
-        | { type: "text"; text: string }
-        | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } }
-      >
-
-      /**
-       * Делает запрос к OpenAI и возвращает JSON completion.
-       * Поддерживает multimodal content (текст + изображения)
-       */
-      const callOpenAiChat = async (params: { 
-        systemPrompt: string
-        userMessage: string
-        images?: Array<{ fileName: string; base64: string; mimeType: string }>
-      }) => {
-        const { systemPrompt, userMessage, images = [] } = params
-
-        // Формируем content для user message
-        let userContent: MessageContent
-        
-        if (images.length > 0) {
-          // Multimodal: текст + изображения
-          userContent = [
-            { type: "text" as const, text: userMessage },
-            ...images.map(img => ({
-              type: "image_url" as const,
-              image_url: {
-                url: `data:${img.mimeType};base64,${img.base64}`,
-                detail: "auto" as const,
-              },
-            })),
-          ]
-          console.log(`Отправка multimodal запроса с ${images.length} изображениями из базы знаний`)
-        } else {
-          // Только текст
-          userContent = userMessage
-        }
-
-        const requestBody = {
-          model: textModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userContent },
-          ],
-          // Безлимит на токены выхода - используем максимум модели
-        }
-
-        let response
-        try {
-          response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify(requestBody),
-          })
-        } catch (fetchError: unknown) {
-          console.error("Ошибка подключения к OpenAI:", fetchError)
-          return {
-            ok: false as const,
-            status: 502,
-            payload: {
-              error: "OpenAI connection failed",
-              details: fetchError instanceof Error ? fetchError.message : "Failed to connect to OpenAI API",
-            },
-          }
-        }
-
-        if (!response.ok) {
-          let errorData
-          try {
-            errorData = await response.json()
-          } catch {
-            errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
-          }
-
-          console.error("Ошибка API OpenAI:", errorData)
-          return {
-            ok: false as const,
-            status: response.status,
-            payload: {
-              error: "OpenAI API error",
-              details: errorData.error?.message || "Unknown error",
-            },
-          }
-        }
-
-        try {
-          const completion = await response.json()
-          return { ok: true as const, completion }
-        } catch (parseError: unknown) {
-          console.error("Ошибка парсинга JSON от OpenAI:", parseError)
-          return {
-            ok: false as const,
-            status: 502,
-            payload: {
-              error: "Некорректный ответ от OpenAI",
-              details: parseError instanceof Error ? parseError.message : "Не удалось распарсить JSON",
-            },
-          }
-        }
-      }
-
       // Формируем user message с контекстом
       const userMessage = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}\n` : ""}${additionalUrlsContext}${customFieldsContext}${knowledgeBaseContext}
 
 Please provide your analysis and recommendations.`
 
-      // Передаём изображения из базы знаний для multimodal запроса
-      const firstAttempt = await callOpenAiChat({ 
-        systemPrompt: textSystemPrompt, 
-        userMessage,
-        images: knowledgeBaseImages,
-      })
-      if (!firstAttempt.ok) {
-        return Response.json(firstAttempt.payload, { status: firstAttempt.status, headers: corsHeaders })
+      // Формируем контент сообщения с поддержкой multimodal (изображения из базы знаний)
+      type UserContentPart = 
+        | { type: "text"; text: string }
+        | { type: "image"; image: string }
+      
+      let userContent: string | UserContentPart[]
+      
+      if (knowledgeBaseImages.length > 0) {
+        // Multimodal: текст + изображения из базы знаний
+        userContent = [
+          { type: "text", text: userMessage },
+          ...knowledgeBaseImages.map(img => ({
+            type: "image" as const,
+            image: `data:${img.mimeType};base64,${img.base64}`,
+          })),
+        ]
+      } else {
+        // Только текст
+        userContent = userMessage
       }
 
-      const generatedText = extractGeneratedText(firstAttempt.completion)
+      try {
+        // Используем generateText вместо streamText для надёжности с multimodal
+        const { text: generatedText } = await generateText({
+          model: openai(textModel),
+          system: textSystemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: userContent,
+            },
+          ],
+        })
 
-      // Fallback: если модель вернула tool_calls/refusal/пустой content — пробуем “дожать” текстом.
-      if (!generatedText) {
         return Response.json(
           {
-            error: "Пустой ответ от модели",
-            details: "No content generated",
+            success: true,
+            result: {
+              type: "text",
+              text: generatedText || "",
+            },
+          },
+          { headers: corsHeaders },
+        )
+      } catch (genError: unknown) {
+        console.error("Ошибка генерации текста от AI SDK:", genError)
+        return Response.json(
+          {
+            error: "Ошибка генерации текста",
+            details: genError instanceof Error ? genError.message : "Unknown generation error",
           },
           { status: 500, headers: corsHeaders },
         )
       }
-
-      return Response.json(
-        {
-          success: true,
-          result: {
-            type: "text",
-            text: generatedText,
-          },
-        },
-        { headers: corsHeaders },
-      )
     }
   } catch (error: unknown) {
     console.error("Ошибка генерации:", error)

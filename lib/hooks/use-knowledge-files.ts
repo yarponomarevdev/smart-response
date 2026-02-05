@@ -77,6 +77,7 @@ export function useKnowledgeFiles(formId: string | null) {
 
 /**
  * Хук для загрузки файла
+ * Использует optimistic update для мгновенного отображения файла в UI
  */
 export function useUploadKnowledgeFile() {
   const queryClient = useQueryClient()
@@ -85,15 +86,48 @@ export function useUploadKnowledgeFile() {
     mutationFn: async ({ formId, file }: { formId: string; file: File }) => {
       return uploadKnowledgeFile(formId, file)
     },
-    onSuccess: (_, variables) => {
-      // Инвалидируем кэш файлов для этой формы
-      queryClient.invalidateQueries({ queryKey: ["knowledgeFiles", variables.formId] })
+    onMutate: async ({ formId, file }) => {
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({ queryKey: ["knowledgeFiles", formId] })
+
+      const previousFiles = queryClient.getQueryData<KnowledgeFile[]>(["knowledgeFiles", formId])
+
+      // Optimistic: добавляем временный файл
+      if (previousFiles) {
+        const tempFile: KnowledgeFile = {
+          id: `temp-${Date.now()}`,
+          form_id: formId,
+          file_name: file.name,
+          file_path: "",
+          file_type: file.type,
+          file_size: file.size,
+          created_at: new Date().toISOString(),
+        }
+        
+        queryClient.setQueryData<KnowledgeFile[]>(
+          ["knowledgeFiles", formId],
+          [...previousFiles, tempFile]
+        )
+      }
+
+      return { previousFiles }
+    },
+    onError: (_err, variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousFiles) {
+        queryClient.setQueryData(["knowledgeFiles", variables.formId], context.previousFiles)
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["knowledgeFiles", variables.formId] })
     },
   })
 }
 
 /**
  * Хук для удаления файла
+ * Использует optimistic update для мгновенного удаления из UI
  */
 export function useDeleteKnowledgeFile() {
   const queryClient = useQueryClient()
@@ -101,11 +135,33 @@ export function useDeleteKnowledgeFile() {
   return useMutation({
     mutationFn: async ({ fileId, formId }: { fileId: string; formId: string }) => {
       await deleteKnowledgeFile(fileId)
-      return { formId }
+      return { fileId, formId }
     },
-    onSuccess: (data) => {
-      // Инвалидируем кэш файлов для этой формы
-      queryClient.invalidateQueries({ queryKey: ["knowledgeFiles", data.formId] })
+    onMutate: async ({ fileId, formId }) => {
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({ queryKey: ["knowledgeFiles", formId] })
+
+      const previousFiles = queryClient.getQueryData<KnowledgeFile[]>(["knowledgeFiles", formId])
+
+      // Optimistic: удаляем файл из списка
+      if (previousFiles) {
+        queryClient.setQueryData<KnowledgeFile[]>(
+          ["knowledgeFiles", formId],
+          previousFiles.filter((f) => f.id !== fileId)
+        )
+      }
+
+      return { previousFiles }
+    },
+    onError: (_err, variables, context) => {
+      // Откатываем при ошибке
+      if (context?.previousFiles) {
+        queryClient.setQueryData(["knowledgeFiles", variables.formId], context.previousFiles)
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["knowledgeFiles", variables.formId] })
     },
   })
 }

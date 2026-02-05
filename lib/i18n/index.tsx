@@ -55,8 +55,9 @@ export function LanguageProvider({ children, defaultLanguage }: { children: Reac
       const userLanguage = (user as any).language as Language | undefined
       if (userLanguage && (userLanguage === "ru" || userLanguage === "en")) {
         setLanguageState(userLanguage)
-        // Также обновляем localStorage
+        // Также обновляем cookie и localStorage
         if (typeof window !== "undefined") {
+          document.cookie = `preferred-language=${userLanguage}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
           localStorage.setItem("preferred-language", userLanguage)
         }
       }
@@ -82,6 +83,7 @@ export function LanguageProvider({ children, defaultLanguage }: { children: Reac
         setLanguageState((currentLang) => {
           if (currentLang !== userLanguage) {
             if (typeof window !== "undefined") {
+              document.cookie = `preferred-language=${userLanguage}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
               localStorage.setItem("preferred-language", userLanguage)
             }
             return userLanguage
@@ -116,8 +118,11 @@ export function LanguageProvider({ children, defaultLanguage }: { children: Reac
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
-    // Сохраняем в localStorage сразу
+    // Сохраняем в cookie для синхронизации с сервером и localStorage для обратной совместимости
     if (typeof window !== "undefined") {
+      // Cookie для серверного рендеринга
+      document.cookie = `preferred-language=${lang}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+      // localStorage для быстрого доступа на клиенте
       localStorage.setItem("preferred-language", lang)
     }
   }, [])

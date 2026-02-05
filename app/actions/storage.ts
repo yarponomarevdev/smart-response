@@ -116,3 +116,82 @@ export async function incrementDailyTestCount(userId: string): Promise<{
     limit: result.max_limit, // может быть NULL для superadmin
   }
 }
+
+/**
+ * Загружает картинку для опции multiselect в Storage
+ * Использует bucket knowledge-files с путём option-images/{formId}/{filename}
+ */
+export async function uploadOptionImage(
+  formId: string,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  // Проверяем тип файла
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP, GIF" }
+  }
+
+  // Проверяем размер (максимум 5MB)
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    return { error: "Размер файла не должен превышать 5MB" }
+  }
+
+  // Генерируем уникальное имя файла
+  const ext = file.name.split(".").pop() || "jpg"
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`
+  // Путь: {formId}/{fileName} - чтобы работали RLS политики по form_id
+  const filePath = `${formId}/${fileName}`
+
+  // Загружаем файл в Storage (bucket: form-images)
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from("form-images")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+    })
+
+  if (uploadError) {
+    console.error("Ошибка загрузки картинки опции:", uploadError)
+    return { error: "Ошибка загрузки файла: " + uploadError.message }
+  }
+
+  // Получаем публичный URL
+  const { data: urlData } = supabaseAdmin.storage
+    .from("form-images")
+    .getPublicUrl(filePath)
+
+  return { url: urlData.publicUrl }
+}
+
+/**
+ * Удаляет картинку опции из Storage
+ */
+export async function deleteOptionImage(imageUrl: string): Promise<{ success: boolean } | { error: string }> {
+  // Извлекаем путь из URL
+  // URL формата: .../storage/v1/object/public/form-images/{formId}/{filename}
+  const urlParts = imageUrl.split("/form-images/")
+  if (urlParts.length < 2) {
+    // Поддержка старого формата (если вдруг успели загрузить)
+    if (imageUrl.includes("/knowledge-files/")) {
+      const oldParts = imageUrl.split("/knowledge-files/")
+      const oldPath = oldParts[1]
+      await supabaseAdmin.storage.from("knowledge-files").remove([oldPath])
+      return { success: true }
+    }
+    return { error: "Некорректный URL изображения" }
+  }
+
+  const filePath = urlParts[1]
+
+  const { error } = await supabaseAdmin.storage
+    .from("form-images")
+    .remove([filePath])
+
+  if (error) {
+    console.error("Ошибка удаления картинки опции:", error)
+    return { error: "Ошибка удаления файла: " + error.message }
+  }
+
+  return { success: true }
+}

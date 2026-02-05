@@ -24,11 +24,21 @@ export interface Lead {
 interface Form {
   id: string
   name: string
+  feedback_text?: string
+}
+
+export interface FormField {
+  id: string
+  form_id: string
+  field_id: string
+  label: string
+  field_type: string
 }
 
 interface LeadsData {
   leads: Lead[]
   forms: Form[]
+  formFields: FormField[]
   isSuperAdmin: boolean
 }
 
@@ -52,7 +62,7 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
   if (isSuperAdmin) {
     const { data: allForms } = await supabase
       .from("forms")
-      .select("id, name")
+      .select("id, name, feedback_text")
       .order("created_at", { ascending: false })
 
     const { data: allLeads } = await supabase
@@ -60,9 +70,15 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
       .select("*")
       .order("created_at", { ascending: false })
 
+    const { data: allFormFields } = await supabase
+      .from("form_fields")
+      .select("id, form_id, field_id, label, field_type")
+      .order("display_order", { ascending: true })
+
     return {
       leads: allLeads || [],
       forms: allForms || [],
+      formFields: allFormFields || [],
       isSuperAdmin: true,
     }
   }
@@ -75,9 +91,16 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
       .eq("form_id", propFormId)
       .order("created_at", { ascending: false })
 
+    const { data: formFields } = await supabase
+      .from("form_fields")
+      .select("id, form_id, field_id, label, field_type")
+      .eq("form_id", propFormId)
+      .order("display_order", { ascending: true })
+
     return {
       leads: data || [],
       forms: [],
+      formFields: formFields || [],
       isSuperAdmin: false,
     }
   }
@@ -85,12 +108,12 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
   // Загружаем все формы пользователя
   const { data: userForms } = await supabase
     .from("forms")
-    .select("id, name")
+    .select("id, name, feedback_text")
     .eq("owner_id", userId)
     .order("created_at", { ascending: false })
 
   if (!userForms || userForms.length === 0) {
-    return { leads: [], forms: [], isSuperAdmin: false }
+    return { leads: [], forms: [], formFields: [], isSuperAdmin: false }
   }
 
   // Загружаем лиды по всем формам пользователя
@@ -101,9 +124,16 @@ async function fetchLeads(userId: string, propFormId?: string): Promise<LeadsDat
     .in("form_id", formIds)
     .order("created_at", { ascending: false })
 
+  const { data: userFormFields } = await supabase
+    .from("form_fields")
+    .select("id, form_id, field_id, label, field_type")
+    .in("form_id", formIds)
+    .order("display_order", { ascending: true })
+
   return {
     leads: leadsData || [],
     forms: userForms,
+    formFields: userFormFields || [],
     isSuperAdmin: false,
   }
 }
@@ -124,21 +154,51 @@ export function useLeads(propFormId?: string) {
 
 /**
  * Хук для удаления лида
+ * Использует optimistic update для мгновенного удаления из UI
  */
 export function useDeleteLead() {
   const queryClient = useQueryClient()
+  const { data: user } = useCurrentUser()
 
   return useMutation({
     mutationFn: async (leadId: string) => {
       const result = await deleteLead(leadId)
       if ("error" in result) throw new Error(result.error)
-      return result
+      return { leadId }
     },
-    onSuccess: () => {
-      // Инвалидируем кэш лидов и форм (т.к. изменился счетчик)
-      // Используем exact: false для инвалидации всех запросов с этими ключами
-      queryClient.invalidateQueries({ queryKey: ["leads"], exact: false })
-      queryClient.invalidateQueries({ queryKey: ["forms"], exact: false })
+    onMutate: async (leadId) => {
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({ queryKey: ["leads"], exact: false })
+      
+      // Получаем все кэшированные данные лидов (могут быть разные queryKey)
+      const previousLeadsQueries = queryClient.getQueriesData<LeadsData>({ queryKey: ["leads"] })
+      
+      // Optimistic: удаляем лид из всех кэшированных запросов
+      previousLeadsQueries.forEach(([queryKey, data]) => {
+        if (data) {
+          queryClient.setQueryData<LeadsData>(queryKey, {
+            ...data,
+            leads: data.leads.filter(lead => lead.id !== leadId),
+          })
+        }
+      })
+      
+      return { previousLeadsQueries }
+    },
+    onError: (_err, _variables, context) => {
+      // Откатываем все изменения при ошибке
+      if (context?.previousLeadsQueries) {
+        context.previousLeadsQueries.forEach(([queryKey, data]) => {
+          if (data) {
+            queryClient.setQueryData(queryKey, data)
+          }
+        })
+      }
+    },
+    onSettled: () => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["leads"], exact: false })
+      queryClient.refetchQueries({ queryKey: ["forms"], exact: false })
     },
   })
 }
@@ -151,6 +211,7 @@ interface UpdateLeadParams {
 
 /**
  * Хук для обновления лида (статус, заметки)
+ * Использует optimistic update для мгновенного обновления UI
  */
 export function useUpdateLead() {
   const queryClient = useQueryClient()
@@ -159,10 +220,49 @@ export function useUpdateLead() {
     mutationFn: async (params: UpdateLeadParams) => {
       const result = await updateLead(params)
       if ("error" in result) throw new Error(result.error)
-      return result
+      return params
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"], exact: false })
+    onMutate: async (params) => {
+      const { leadId, lead_status, notes } = params
+      
+      // Отменяем текущие запросы
+      await queryClient.cancelQueries({ queryKey: ["leads"], exact: false })
+      
+      // Получаем все кэшированные данные лидов
+      const previousLeadsQueries = queryClient.getQueriesData<LeadsData>({ queryKey: ["leads"] })
+      
+      // Optimistic: обновляем лид во всех кэшированных запросах
+      previousLeadsQueries.forEach(([queryKey, data]) => {
+        if (data) {
+          queryClient.setQueryData<LeadsData>(queryKey, {
+            ...data,
+            leads: data.leads.map(lead => {
+              if (lead.id !== leadId) return lead
+              return {
+                ...lead,
+                ...(lead_status !== undefined && { lead_status }),
+                ...(notes !== undefined && { notes }),
+              }
+            }),
+          })
+        }
+      })
+      
+      return { previousLeadsQueries }
+    },
+    onError: (_err, _variables, context) => {
+      // Откатываем все изменения при ошибке
+      if (context?.previousLeadsQueries) {
+        context.previousLeadsQueries.forEach(([queryKey, data]) => {
+          if (data) {
+            queryClient.setQueryData(queryKey, data)
+          }
+        })
+      }
+    },
+    onSettled: () => {
+      // Принудительно обновляем данные с сервера
+      queryClient.refetchQueries({ queryKey: ["leads"], exact: false })
     },
   })
 }

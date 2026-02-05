@@ -2,6 +2,7 @@
  * GenerationStep - Этап генерации результата
  * 
  * Показывает анимацию загрузки и CTA-блок во время генерации.
+ * Поддерживает стриминг текста через Vercel AI SDK.
  * Настраивается через вкладку "Генерация" в редакторе.
  */
 "use client"
@@ -17,25 +18,28 @@ import { useTranslation } from "@/lib/i18n"
 function extractErrorMessageFromPayload(payload: unknown, fallback: string) {
   if (!payload || typeof payload !== "object") return fallback
 
-  const maybeAny = payload as any
+  const maybeAny = payload as Record<string, unknown>
   const details = maybeAny?.details
   const error = maybeAny?.error
 
   if (typeof details === "string" && details.trim()) return details
   if (typeof error === "string" && error.trim()) return error
-  if (error && typeof error === "object" && typeof error.message === "string" && error.message.trim()) return error.message
+  if (error && typeof error === "object" && typeof (error as Record<string, unknown>).message === "string") {
+    const errorMessage = (error as Record<string, unknown>).message as string
+    if (errorMessage.trim()) return errorMessage
+  }
 
   return fallback
 }
 
 async function readJsonOrText(response: Response) {
   const rawText = await response.text().catch(() => "")
-  if (!rawText) return { data: null as any, rawText: "" }
+  if (!rawText) return { data: null as Record<string, unknown> | null, rawText: "" }
 
   try {
-    return { data: JSON.parse(rawText), rawText }
+    return { data: JSON.parse(rawText) as Record<string, unknown>, rawText }
   } catch {
-    return { data: null as any, rawText }
+    return { data: null, rawText }
   }
 }
 
@@ -57,6 +61,8 @@ interface FormContent {
   cta_text?: string
   button_text?: string
   button_url?: string
+  // Формат результата для определения типа генерации
+  ai_result_format?: string
 }
 
 export function GenerationStep({ 
@@ -88,6 +94,8 @@ export function GenerationStep({
   // Стабильная ссылка на onComplete
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
+  // Флаг для предотвращения повторного создания лида
+  const leadCreatedRef = useRef(false)
 
   // Загрузка контента формы и сообщений (теперь из таблицы forms)
   useEffect(() => {
@@ -97,7 +105,7 @@ export function GenerationStep({
       const supabase = createClient()
       const { data } = await supabase
         .from("forms")
-        .select("gen_title, gen_subtitle, cta_text, button_text, button_url, loading_messages")
+        .select("gen_title, gen_subtitle, cta_text, button_text, button_url, loading_messages, ai_result_format")
         .eq("id", formId)
         .single()
 
@@ -108,6 +116,7 @@ export function GenerationStep({
           cta_text: data.cta_text || undefined,
           button_text: data.button_text || undefined,
           button_url: data.button_url || undefined,
+          ai_result_format: data.ai_result_format || "text",
         })
         
         // Loading messages теперь JSONB массив
@@ -123,11 +132,9 @@ export function GenerationStep({
     fetchContent()
   }, [formId])
 
-  // Функция генерации результата и создания лида
-  const generateAndCreateLead = useCallback(async (): Promise<void> => {
+  // Функция генерации для всех форматов (JSON ответ)
+  const generateResult = useCallback(async (): Promise<void> => {
     try {
-      // Защита от некорректного состояния флоу: без formId API всегда вернёт 400
-      // URL опционален - форма может работать без него
       if (!formId) {
         const message = t("errors.generationMissingData")
         console.error("Отсутствует обязательное поле formId")
@@ -174,16 +181,16 @@ export function GenerationStep({
         throw new Error(errorMessage)
       }
 
-      const parsedOk = await readJsonOrText(response)
-      const data = parsedOk.data
+      const parsed = await readJsonOrText(response)
+      const data = parsed.data
 
       if (!data) {
-        console.error("Сервер вернул не-JSON ответ:", parsedOk.rawText?.slice(0, 2000))
+        console.error("Сервер вернул не-JSON ответ:", parsed.rawText?.slice(0, 2000))
         throw new Error("Сервер вернул не-JSON ответ от /api/generate")
       }
 
       if (data.success && data.result) {
-        const generatedResult = data.result
+        const generatedResult = data.result as { type: string; text: string; imageUrl?: string }
         
         // Создаём лид с данными контактов
         const extendedCustomFields = {
@@ -203,7 +210,6 @@ export function GenerationStep({
 
         if (leadResponse.error) {
           console.error("Не удалось создать лид:", leadResponse.error)
-          // Продолжаем даже если лид не создался
         }
 
         // Отправляем email асинхронно, если включена настройка
@@ -250,7 +256,9 @@ export function GenerationStep({
     }
   }, [url, formId, customFields, contactData, sendEmailToRespondent, onError, t])
 
-  // Ротация сообщений
+  // УДАЛЕНО: useCompletion для стриминга - теперь используем generateResult для всех форматов
+
+  // Ротация сообщений (только если нет стриминга текста)
   useEffect(() => {
     if (error || !isGenerating) return
     
@@ -264,16 +272,22 @@ export function GenerationStep({
   // Запуск генерации при монтировании
   useEffect(() => {
     if (hasStartedRef.current) return
+    
     hasStartedRef.current = true
-    generateAndCreateLead()
-  }, [generateAndCreateLead])
+    leadCreatedRef.current = false
+    
+    // Используем одну функцию для всех форматов (text, image, image_with_text)
+    generateResult()
+  }, [generateResult])
 
   // Обработчик повторной попытки
   const handleRetry = () => {
     setIsRetrying(true)
     setError(null)
     hasStartedRef.current = false
-    generateAndCreateLead()
+    leadCreatedRef.current = false
+    
+    generateResult()
   }
 
   // Извлекаем настройки из content
@@ -308,12 +322,12 @@ export function GenerationStep({
         ) : (
           <Button 
             onClick={handleRetry} 
-            disabled={isRetrying}
+            disabled={isRetrying || isGenerating}
             variant="outline"
             className="gap-2 h-10 sm:h-11 text-sm sm:text-base"
           >
-            <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-            {isRetrying ? t("errors.retrying") : t("errors.tryAgain")}
+            <RefreshCw className={`h-4 w-4 ${isRetrying || isGenerating ? 'animate-spin' : ''}`} />
+            {isRetrying || isGenerating ? t("errors.retrying") : t("errors.tryAgain")}
           </Button>
         )}
       </div>
@@ -332,7 +346,7 @@ export function GenerationStep({
         </p>
       </div>
 
-      {/* Блок с анимацией */}
+      {/* Блок с анимацией или стримингом текста */}
       <div className="w-full max-w-[500px] sm:max-w-[600px]">
         <div className="rounded-[20px] sm:rounded-[24px] relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 10' }}>
           {/* ShaderGradient анимация */}
@@ -370,8 +384,9 @@ export function GenerationStep({
             />
           </ShaderGradientCanvas>
           
-          {/* Overlay с текстом */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
+          {/* Overlay с текстом - показывает стриминг или сообщение загрузки */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px] p-4">
+            {/* Показываем сообщение загрузки */}
             <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
               {messages[messageIndex]}
             </p>
@@ -397,4 +412,3 @@ export function GenerationStep({
     </div>
   )
 }
-
