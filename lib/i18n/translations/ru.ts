@@ -42,6 +42,7 @@ export const ru = {
     tabs: {
       dashboard: "Дашборд",
       editor: "Редактор",
+      goToEditor: "Перейти в редактор",
       leads: "Ответы",
       users: "Пользователи",
       integrations: "Интеграции",

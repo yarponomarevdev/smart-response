@@ -7,17 +7,10 @@
  */
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Sheet,
@@ -52,17 +45,17 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   const { data: user, isLoading: userLoading } = useCurrentUser()
   
   // React Query хуки
-  const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
+  // const { data: formsData, isLoading: formsLoading, error: formsError } = useEditorForms()
 
   // Локальное состояние
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
+  // const [selectedFormId, setSelectedFormId] = useState<string | null>(propFormId || null)
   const [activeTab, setActiveTab] = useState("data")
   const [maxVisitedTabIndex, setMaxVisitedTabIndex] = useState(0)
-  const propFormIdRef = useRef<string | undefined>(propFormId)
-  const userHasSelectedRef = useRef<boolean>(false)
+  // const propFormIdRef = useRef<string | undefined>(propFormId)
+  // const userHasSelectedRef = useRef<boolean>(false)
 
-  const forms = formsData?.forms || []
-  const firstFormId = forms.length > 0 ? forms[0].id : null
+  // const forms = formsData?.forms || []
+  // const firstFormId = forms.length > 0 ? forms[0].id : null
 
   // Мемоизируем вкладки с зависимостью от языка, чтобы они обновлялись при смене языка
   const tabs = useMemo(
@@ -78,22 +71,22 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   )
 
   // Устанавливаем форму из пропсов при изменении propFormId (переход из карточки)
-  useEffect(() => {
-    if (propFormId !== propFormIdRef.current) {
-      propFormIdRef.current = propFormId
-      userHasSelectedRef.current = false
-      if (propFormId) {
-        setSelectedFormId(propFormId)
-      }
-    }
-  }, [propFormId])
+  // useEffect(() => {
+  //   if (propFormId !== propFormIdRef.current) {
+  //     propFormIdRef.current = propFormId
+  //     userHasSelectedRef.current = false
+  //     if (propFormId) {
+  //       setSelectedFormId(propFormId)
+  //     }
+  //   }
+  // }, [propFormId])
 
   // Устанавливаем первую форму по умолчанию, если нет выбранной формы
-  useEffect(() => {
-    if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
-      setSelectedFormId(firstFormId)
-    }
-  }, [firstFormId, selectedFormId])
+  // useEffect(() => {
+  //   if (!selectedFormId && firstFormId && !userHasSelectedRef.current) {
+  //     setSelectedFormId(firstFormId)
+  //   }
+  // }, [firstFormId, selectedFormId])
 
   // Отслеживаем прогресс вкладок - обновляем максимальный индекс только при движении вперед
   useEffect(() => {
@@ -104,12 +97,12 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }, [activeTab, tabs, maxVisitedTabIndex])
 
   // Загружаем контент выбранной формы
-  const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(selectedFormId)
+  const { data: contentData, isLoading: contentLoading, error: contentError } = useFormContent(propFormId || null)
 
-  const handleFormChange = (formId: string) => {
-    userHasSelectedRef.current = true
-    setSelectedFormId(formId)
-  }
+  // const handleFormChange = (formId: string) => {
+  //   userHasSelectedRef.current = true
+  //   setSelectedFormId(formId)
+  // }
 
 
   const handleContinue = () => {
@@ -136,25 +129,25 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     setActiveTab("share")
   }
 
-  const isLoading = userLoading || formsLoading || contentLoading
+  const isLoading = userLoading || contentLoading
 
   // Показываем загрузку, если пользователь еще загружается или данные еще не загрузились
-  if (userLoading || (isLoading && !contentData && !formsData)) {
+  if (userLoading || (isLoading && !contentData)) {
     return <div className="text-center py-8">{t("editor.loadingContent")}</div>
   }
 
   // Проверяем ошибки перед проверкой загрузки
-  if (formsError) {
-    return (
-      <div className="py-4">
-        <div className="flex flex-col items-center justify-center py-8">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
-          <p className="text-sm text-muted-foreground">{formsError.message}</p>
-        </div>
-      </div>
-    )
-  }
+  // if (formsError) {
+  //   return (
+  //     <div className="py-4">
+  //       <div className="flex flex-col items-center justify-center py-8">
+  //         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+  //         <p className="text-lg font-medium mb-2">{t("editor.loadingFormsError")}</p>
+  //         <p className="text-sm text-muted-foreground">{formsError.message}</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   if (contentError) {
     return (
@@ -169,7 +162,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
   }
 
   // Показываем "форма не найдена" только если пользователь загружен и данных нет
-  if (!userLoading && !formsLoading && !selectedFormId && forms.length === 0) {
+  if (!userLoading && !propFormId) {
     return (
       <div className="py-4">
         <div className="flex flex-col items-center justify-center py-8">
@@ -181,7 +174,7 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
     )
   }
 
-  const selectedForm = forms.find(f => f.id === selectedFormId)
+  // const selectedForm = forms.find(f => f.id === selectedFormId)
   const content = contentData?.content || {}
   const loadingMessages = contentData?.loadingMessages || ["", "", ""]
   const systemPrompt = contentData?.systemPrompt || ""
@@ -213,40 +206,15 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
               {/* Линия прогресса */}
               <div className="absolute bottom-0 left-0 w-full h-0.5 bg-muted">
                 <div 
-                  className="h-full bg-primary transition-all duration-500 ease-in-out"
+                  className="h-full bg-primary transition-all duration-500 ease-in-out origin-left"
                   style={{
-                    width: `${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length) * 100}%`
+                    transform: `scaleX(${((tabs.findIndex(tab => tab.value === activeTab) + 1) / tabs.length)})`
                   }}
                 />
               </div>
             </div>
 
-            {/* Выбор формы */}
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              {forms.length > 1 && (
-                <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-                  <SelectTrigger className="h-9 w-full md:w-[240px] rounded-lg border-2 border-primary/10 bg-background px-3 text-sm font-medium hover:border-primary/20 transition-colors focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus:outline-none">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-muted-foreground font-normal">{t("editor.form")}:</span>
-                      <SelectValue placeholder={t("editor.selectForm")} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {forms.map((form) => (
-                      <SelectItem key={form.id} value={form.id}>
-                        {form.isMain ? `${form.name} (${t("editor.mainForm")})` : form.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {forms.length === 1 && (
-                <div className="h-9 flex items-center px-3 rounded-lg border-2 border-primary/10 bg-muted/20 w-full md:w-auto">
-                  <span className="text-sm font-medium text-muted-foreground mr-2">{t("editor.form")}:</span>
-                  <span className="text-sm font-medium">{selectedForm?.name}</span>
-                </div>
-              )}
-            </div>
+            {/* Выбор формы удален из этого места */}
           </div>
         </div>
 
@@ -302,16 +270,16 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
 
           <div className="pt-0 md:pt-6">
             <TabsContent value="data" className="mt-0">
-              <DynamicFieldsTab formId={selectedFormId} />
+              <DynamicFieldsTab formId={propFormId || null} />
             </TabsContent>
 
             <TabsContent value="contacts" className="mt-0">
-              <ContactsTab formId={selectedFormId} content={content} />
+              <ContactsTab formId={propFormId || null} content={content} />
             </TabsContent>
 
             <TabsContent value="generation" className="mt-0">
               <GenerationTab
-                formId={selectedFormId}
+                formId={propFormId || null}
                 systemPrompt={systemPrompt}
                 loadingMessages={loadingMessages}
                 content={content}
@@ -319,15 +287,15 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
             </TabsContent>
 
             <TabsContent value="result" className="mt-0">
-              <ResultTab formId={selectedFormId} content={content} />
+              <ResultTab formId={propFormId || null} content={content} />
             </TabsContent>
 
             <TabsContent value="share" className="mt-0">
-              <ShareTab formId={selectedFormId} />
+              <ShareTab formId={propFormId || null} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-0">
-              <SettingsTab formId={selectedFormId} />
+              <SettingsTab formId={propFormId || null} />
             </TabsContent>
           </div>
         </Tabs>

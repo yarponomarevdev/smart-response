@@ -44,6 +44,7 @@ export const en: Translations = {
     tabs: {
       dashboard: "Dashboard",
       editor: "Editor",
+      goToEditor: "Go to Editor",
       leads: "Responses",
       users: "Users",
       integrations: "Integrations",

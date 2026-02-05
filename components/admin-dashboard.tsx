@@ -20,12 +20,20 @@ import { SystemSettingsEditor } from "./system-settings-editor"
 import { UserSettingsEditor } from "./user-settings-editor"
 import { BalanceTab } from "./editor"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useEditorForms } from "@/lib/hooks"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -45,6 +53,29 @@ export function AdminDashboard() {
   const [editorFormId, setEditorFormId] = useState<string | undefined>(undefined)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { data: formsData } = useEditorForms()
+  const forms = formsData?.forms || []
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null)
+
+  // Устанавливаем первую форму по умолчанию, если нет выбранной
+  useEffect(() => {
+    if (!selectedFormId && forms.length > 0) {
+      setSelectedFormId(forms[0].id)
+    }
+  }, [forms, selectedFormId])
+
+  // Обновляем selectedFormId при выборе формы в FormsManager
+  useEffect(() => {
+    if (editorFormId) {
+      setSelectedFormId(editorFormId)
+    }
+  }, [editorFormId])
+
+  const handleFormChange = (formId: string) => {
+    setSelectedFormId(formId)
+    // Если мы не на табе редактора или ответов, переключаемся на редактор?
+    // Пока оставим как есть, просто меняем контекст
+  }
   const router = useRouter()
 
   useEffect(() => {
@@ -191,6 +222,35 @@ export function AdminDashboard() {
                 </SheetContent>
               </Sheet>
               <h1 className="text-xl font-bold">{panelTitle}</h1>
+              
+              {/* Выбор формы в хедере */}
+              {activeTab === "editor" && forms.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground hidden sm:inline-block">/</span>
+                  <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
+                    <SelectTrigger className="h-9 w-[200px] sm:w-[240px] border-none bg-transparent hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 px-2 font-medium">
+                      <SelectValue placeholder={t("editor.selectForm")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {forms.map((form) => (
+                        <SelectItem key={form.id} value={form.id}>
+                          {form.isMain ? `${form.name} (${t("editor.mainForm")})` : form.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {activeTab !== "editor" && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setActiveTab("editor")}
+                  className="hidden sm:flex"
+                >
+                  {t("admin.tabs.goToEditor")}
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -338,7 +398,7 @@ export function AdminDashboard() {
                   }} />
                 </TabsContent>
                 <TabsContent value="editor" className="space-y-4">
-                  <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
+                  <ContentEditor formId={selectedFormId || undefined} onBackToDashboard={() => setActiveTab("dashboard")} />
                 </TabsContent>
                 <TabsContent value="leads" className="space-y-4">
                   <LeadsView />
@@ -362,7 +422,7 @@ export function AdminDashboard() {
                   }} />
                 </TabsContent>
                 <TabsContent value="editor" className="space-y-4">
-                  <ContentEditor formId={editorFormId} onBackToDashboard={() => setActiveTab("dashboard")} />
+                  <ContentEditor formId={selectedFormId || undefined} onBackToDashboard={() => setActiveTab("dashboard")} />
                 </TabsContent>
                 <TabsContent value="leads" className="space-y-4">
                   <LeadsView />
