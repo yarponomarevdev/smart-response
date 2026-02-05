@@ -183,7 +183,7 @@ function generateOwnerNotificationHTML({
                         ` : ""}
                         ${parentPageUrl ? `
                         <tr>
-                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 160px;">Сайт интеграции:</td>
+                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 160px;">Сайт:</td>
                           <td style="padding: 8px 0; color: #ffffff; font-size: 14px; word-break: break-all;">
                             <a href="${parentPageUrl}" style="color: #60a5fa; text-decoration: none;">${parentPageUrl}</a>
                           </td>
