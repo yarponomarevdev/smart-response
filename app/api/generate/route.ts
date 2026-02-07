@@ -489,10 +489,10 @@ export async function POST(req: Request) {
         )
       }
 
-      // DALL-E имеет лимит 4000 символов для промпта
-      // Используем GPT для создания короткого промпта на основе всего контекста
-      const maxContextChars = 12000
-      const maxDallePromptChars = 3500
+      // gpt-image-1 поддерживает до 32K символов промпта
+      // Используем GPT для трансформации сырого контекста в визуальное описание
+      const maxContextChars = 24000
+      const maxImagePromptChars = 16000
       const metaContext = `${customFieldsContext}${additionalUrlsContext}${knowledgeBaseContext}`.trim()
       const fullContext = `${normalizedMainUrl ? `URL: ${normalizedMainUrl}\n\n` : ""}${metaContext ? `${metaContext}\n\n` : ""}${urlContent ? `--- Контент страницы ---\n${urlContent}` : ""}`.trim()
       const { text: limitedContext, wasTruncated: wasContextTruncated } = limitTextByChars({
@@ -517,14 +517,14 @@ export async function POST(req: Request) {
       try {
         // Инструкции для промпта зависят от режима
         const promptInstructions = useEditAPI
-          ? `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для редактирования изображения (максимум 3500 символов). Пользователь загрузил своё изображение, и нужно описать, ЧТО ИЗМЕНИТЬ или ДОБАВИТЬ к нему. Промпт должен быть на английском языке и описывать конкретные изменения. Например: "Add a red hat to the person", "Change background to blue sky", "Add sunglasses to the face". Фокусируйся на действиях редактирования, а не на описании всей сцены.`
-          : `ВАЖНО: На основе предоставленного контекста создай короткий и точный промпт для DALL-E (максимум 3500 символов). Промпт должен быть на английском языке и описывать конкретные визуальные детали, которые нужно сгенерировать. Фокусируйся на ключевых визуальных элементах, цветах, стиле, настроении. Избегай излишних деталей, но сохрани суть.`
+          ? `На основе предоставленного контекста создай детальный промпт для редактирования изображения. Пользователь загрузил своё изображение, и нужно описать, ЧТО ИЗМЕНИТЬ или ДОБАВИТЬ к нему. Промпт должен быть на английском языке и описывать конкретные изменения. Фокусируйся на действиях редактирования, а не на описании всей сцены.`
+          : `На основе предоставленного контекста создай детальный промпт для генерации изображения. Промпт должен быть на английском языке и описывать конкретные визуальные детали: элементы, цвета, стиль, композицию, настроение. Будь максимально точен и подробен — модель может обработать длинные промпты.`
 
         const { text: generatedPrompt } = await generateText({
           model: openai(textModel),
           system: `${imageSystemPrompt}\n\n${promptInstructions}`,
           prompt: limitedContext,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 4000,
         })
 
         compressedPrompt = generatedPrompt || ""
@@ -534,7 +534,7 @@ export async function POST(req: Request) {
         compressedPrompt = buildFallbackImagePrompt({
           imageSystemPrompt,
           context: limitedContext,
-          maxLength: maxDallePromptChars,
+          maxLength: maxImagePromptChars,
         })
       }
 
@@ -543,20 +543,23 @@ export async function POST(req: Request) {
         compressedPrompt = buildFallbackImagePrompt({
           imageSystemPrompt,
           context: limitedContext,
-          maxLength: maxDallePromptChars,
+          maxLength: maxImagePromptChars,
         })
       }
 
+      // Добавляем системный промпт напрямую в финальный промпт для image модели,
+      // чтобы инструкции по стилю/формату гарантированно дошли до gpt-image-1
+      const fullImagePrompt = `${imageSystemPrompt}\n\n---\n\n${compressedPrompt}`
       const { text: finalPrompt, wasTruncated: wasPromptTruncated } = limitTextByChars({
-        value: compressedPrompt,
-        maxLength: maxDallePromptChars,
+        value: fullImagePrompt,
+        maxLength: maxImagePromptChars,
       })
       compressedPrompt = finalPrompt
 
       console.log("Источник промпта изображения:", promptSource)
       console.log("Размер сжатого промпта:", compressedPrompt.length, "символов")
       if (wasPromptTruncated) {
-        console.log("Промпт обрезан до", maxDallePromptChars, "символов")
+        console.log("Промпт обрезан до", maxImagePromptChars, "символов")
       }
       console.log("Превью промпта изображения:", compressedPrompt.slice(0, 200) + "...")
 
@@ -577,7 +580,6 @@ export async function POST(req: Request) {
           const imageBuffer = Buffer.from(base64Data, "base64")
           
           // AI SDK generateImage с prompt object для редактирования
-          // Примечание: Edit API поддерживает только dall-e-2
           const { images } = await generateImage({
             model: openai.image(imageModel),
             prompt: {
