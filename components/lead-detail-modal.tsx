@@ -90,6 +90,12 @@ const isUrl = (value: unknown): boolean => {
   return value.startsWith('http://') || value.startsWith('https://')
 }
 
+// Проверка, является ли значение base64-изображением
+const isBase64Image = (value: unknown): boolean => {
+  if (typeof value !== 'string') return false
+  return value.startsWith('data:image/')
+}
+
 export function LeadDetailModal({ lead, formName, formFields, feedbackText, open, onOpenChange }: LeadDetailModalProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
@@ -343,6 +349,13 @@ export function LeadDetailModal({ lead, formName, formFields, feedbackText, open
                             <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 break-all">
                               {String(value)} <ExternalLink className="h-3 w-3 opacity-50" />
                             </a>
+                          ) : isBase64Image(value) ? (
+                            <img
+                              src={String(value)}
+                              alt={formatKey(key, t, formFields, lead.form_id, feedbackText)}
+                              className="rounded-lg max-h-[300px] max-w-full object-contain border shadow-sm"
+                              loading="lazy"
+                            />
                           ) : (
                             formatValue(value)
                           )}
