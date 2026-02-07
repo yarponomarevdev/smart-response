@@ -150,101 +150,6 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
       .trim()
   }
 
-  function loadImage({ imageUrl }: { imageUrl: string }): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error("Не удалось загрузить изображение для шаринга"))
-      img.src = imageUrl
-    })
-  }
-
-  function wrapTextToLines({
-    ctx,
-    text,
-    maxWidth,
-  }: {
-    ctx: CanvasRenderingContext2D
-    text: string
-    maxWidth: number
-  }): string[] {
-    if (!text.trim()) return []
-
-    const words = text.split(/\s+/)
-    const lines: string[] = []
-    let currentLine = words[0] || ""
-
-    for (let i = 1; i < words.length; i += 1) {
-      const word = words[i]
-      const testLine = `${currentLine} ${word}`
-      const { width } = ctx.measureText(testLine)
-      if (width > maxWidth) {
-        lines.push(currentLine)
-        currentLine = word
-      } else {
-        currentLine = testLine
-      }
-    }
-
-    if (currentLine) lines.push(currentLine)
-    return lines
-  }
-
-  async function createShareImageWithText({
-    imageUrl,
-    text,
-  }: {
-    imageUrl: string
-    text: string
-  }): Promise<File> {
-    const img = await loadImage({ imageUrl })
-    const cleanedText = stripMarkdown(text)
-    const baseWidth = img.naturalWidth || 1200
-    const padding = Math.max(24, Math.round(baseWidth * 0.05))
-    const fontSize = Math.max(16, Math.round(baseWidth / 30))
-    const lineHeight = Math.round(fontSize * 1.4)
-
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
-    if (!ctx) throw new Error("Не удалось создать canvas для шаринга")
-
-    ctx.font = `${fontSize}px sans-serif`
-    const textLines = wrapTextToLines({
-      ctx,
-      text: cleanedText,
-      maxWidth: baseWidth - padding * 2,
-    })
-    const textBlockHeight = textLines.length
-      ? textLines.length * lineHeight + padding * 2
-      : 0
-
-    canvas.width = baseWidth
-    canvas.height = img.naturalHeight + textBlockHeight
-
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0, baseWidth, img.naturalHeight)
-
-    if (textLines.length) {
-      ctx.fillStyle = "#111111"
-      ctx.textBaseline = "top"
-      let y = img.naturalHeight + padding
-      for (const line of textLines) {
-        ctx.fillText(line, padding, y)
-        y += lineHeight
-      }
-    }
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => {
-        if (!result) reject(new Error("Не удалось создать изображение для шаринга"))
-        else resolve(result)
-      }, "image/png")
-    })
-
-    return new File([blob], "result-with-text.png", { type: "image/png" })
-  }
 
   const handleShare = async () => {
     // Подготавливаем контент для копирования в зависимости от типа результата
@@ -265,14 +170,9 @@ export function SuccessStep({ result, formId, email, onRestart }: SuccessStepPro
     if (navigator.share && window.isSecureContext && result.imageUrl) {
       try {
         const imageUrl = result.imageUrl
-        const file =
-          result.type === "image_with_text" && result.text
-            ? await createShareImageWithText({ imageUrl, text: result.text })
-            : await (async () => {
-              const response = await fetch(imageUrl, { mode: "cors" })
-              const blob = await response.blob()
-              return new File([blob], "image.png", { type: blob.type })
-            })()
+        const response = await fetch(imageUrl, { mode: "cors" })
+        const blob = await response.blob()
+        const file = new File([blob], "result.png", { type: blob.type })
         
         const shareData = {
           title: resultTitle,
