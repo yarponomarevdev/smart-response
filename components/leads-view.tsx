@@ -272,7 +272,7 @@ export function LeadsView({ formId: propFormId }: LeadsViewProps) {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedFormId} onValueChange={setSelectedFormId}>
-                <SelectTrigger className="h-9 w-full sm:w-[200px]">
+                <SelectTrigger className="h-9 w-full sm:w-[200px] bg-background border border-input shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 focus:ring-0 focus:ring-offset-0 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]">
                   <SelectValue placeholder={t("leads.selectForm")} />
                 </SelectTrigger>
                 <SelectContent>

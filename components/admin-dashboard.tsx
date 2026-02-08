@@ -140,7 +140,8 @@ export function AdminDashboard() {
         disabled: true,
         badge: t("admin.tabs.comingSoon")
       },
-      { value: "system", label: t("admin.tabs.settings") },
+      { value: "settings", label: t("admin.tabs.settings") },
+      { value: "system", label: t("admin.tabs.systemSettings") },
     ]
 
     const userTabs = [
@@ -199,7 +200,7 @@ export function AdminDashboard() {
               {/* Бургер-меню для мобильных */}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden">
+                  <Button variant="outline" size="icon" className="md:hidden">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
@@ -228,7 +229,7 @@ export function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground hidden sm:inline-block">/</span>
                   <Select value={selectedFormId || ""} onValueChange={handleFormChange}>
-                    <SelectTrigger className="h-9 w-[200px] sm:w-[240px] border-none bg-transparent hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 px-2 font-medium">
+                    <SelectTrigger className="h-9 w-[200px] sm:w-[240px] bg-background border border-input shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 focus:ring-0 focus:ring-offset-0 px-2 font-medium">
                       <SelectValue placeholder={t("editor.selectForm")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -243,7 +244,7 @@ export function AdminDashboard() {
               )}
               {activeTab !== "editor" && (
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   onClick={() => setActiveTab("editor")}
                   className="hidden sm:flex"
@@ -256,21 +257,29 @@ export function AdminDashboard() {
             <div className="flex items-center gap-2">
               {isSuperAdmin && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   asChild
                   className="hidden sm:flex"
                 >
                   <Link href="/">
-                    <Home className="mr-2 h-4 w-4" />
+                    <Home className="h-4 w-4" />
                     <span>{t("admin.panel.backToLanding")}</span>
                   </Link>
                 </Button>
               )}
-              <LanguageToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
-              <ThemeToggle className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent border-none shadow-none hover:bg-accent hover:text-accent-foreground" />
+              <LanguageToggle
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground dark:bg-transparent dark:hover:bg-accent/50"
+              />
+              <ThemeToggle
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground dark:bg-transparent dark:hover:bg-accent/50"
+              />
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm"
                 onClick={handleLogout} 
                 className="hidden sm:flex"
@@ -279,7 +288,7 @@ export function AdminDashboard() {
                 <span>{t("common.logout")}</span>
               </Button>
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="icon"
                 onClick={handleLogout} 
                 className="sm:hidden"
@@ -337,10 +346,16 @@ export function AdminDashboard() {
                     </span>
                   </TabsTrigger>
                   <TabsTrigger 
-                    value="system"
+                    value="settings"
                     className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
                   >
                     {t("admin.tabs.settings")}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="system"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2"
+                  >
+                    {t("admin.tabs.systemSettings")}
                   </TabsTrigger>
                 </>
               ) : (
@@ -408,6 +423,9 @@ export function AdminDashboard() {
                 </TabsContent>
                 <TabsContent value="integrations" className="space-y-4">
                   {/* Скоро */}
+                </TabsContent>
+                <TabsContent value="settings" className="space-y-4">
+                  <UserSettingsEditor />
                 </TabsContent>
                 <TabsContent value="system" className="space-y-4">
                   <SystemSettingsEditor />

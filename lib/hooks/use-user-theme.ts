@@ -32,13 +32,14 @@ async function fetchUserTheme(userId: string): Promise<Theme | null> {
 export function useUserTheme(): UseUserThemeReturn {
   const { data: user } = useCurrentUser()
   const queryClient = useQueryClient()
+  const userThemeQueryKey = ["userTheme", user?.id] as const
 
   // Загружаем тему из БД для авторизованных пользователей
   const {
     data: userTheme,
     isLoading,
   } = useQuery({
-    queryKey: ["userTheme", user?.id],
+    queryKey: userThemeQueryKey,
     queryFn: () => fetchUserTheme(user!.id),
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 минут
@@ -61,9 +62,33 @@ export function useUserTheme(): UseUserThemeReturn {
       }
       return result
     },
+    onMutate: async (nextTheme) => {
+      // Ключевой фикс: если в момент клика ещё грузится тема из БД,
+      // результат запроса может прийти позже и перетереть новый выбор.
+      // Отменяем/сбрасываем refetch и делаем оптимистичное обновление кэша.
+      if (!user) return
+
+      await queryClient.cancelQueries({ queryKey: userThemeQueryKey })
+
+      const previousTheme =
+        (queryClient.getQueryData<Theme | null>(userThemeQueryKey) ?? null)
+
+      queryClient.setQueryData<Theme | null>(userThemeQueryKey, nextTheme)
+
+      return { previousTheme }
+    },
+    onError: (_error, _nextTheme, context) => {
+      if (!user) return
+      if (!context) return
+
+      queryClient.setQueryData<Theme | null>(
+        userThemeQueryKey,
+        context.previousTheme ?? null
+      )
+    },
     onSuccess: async (_, theme) => {
       // Оптимистично обновляем кэш сразу
-      queryClient.setQueryData(["userTheme", user?.id], theme)
+      queryClient.setQueryData(userThemeQueryKey, theme)
       // Не инвалидируем запрос, чтобы избежать лишних запросов
     },
   })

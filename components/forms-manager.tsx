@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Copy, ExternalLink, Users, Code2, AlertCircle, Plus, Loader2, Trash2, FileEdit } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Copy, ExternalLink, Code2, AlertCircle, Plus, Loader2, Trash2, FileEdit } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { InlineEditableText } from "@/components/ui/inline-editable-text"
@@ -156,36 +156,6 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
       setError(err instanceof Error ? err.message : t("errors.savingFailed"))
       throw err
     }
-  }
-
-  // Нет форм - показываем приглашение создать
-  if (forms.length === 0 && !createFormMutation.isPending) {
-    return (
-      <div className="py-4">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium mb-2">{t("forms.noFormsYet")}</p>
-          <p className="text-sm text-muted-foreground mb-6">{t("forms.noFormsDescription")}</p>
-          <Button 
-            onClick={handleCreateForm} 
-            disabled={createFormMutation.isPending} 
-            className="h-10 sm:h-[53px] px-4 sm:px-6 rounded-[18px] bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90 text-sm sm:text-base"
-          >
-            {createFormMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("forms.creating")}
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("forms.createForm")}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   const isUnlimited = limitInfo?.limit === null
@@ -367,16 +337,16 @@ export function FormsManager({ onOpenEditor }: FormsManagerProps = {}) {
           <button
             onClick={handleCreateForm}
             disabled={createFormMutation.isPending}
-            className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-accent/50 transition-all duration-200 min-h-[250px] group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 min-h-[250px] group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {createFormMutation.isPending ? (
               <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
             ) : (
               <>
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-background transition-colors">
-                  <Plus className="h-6 w-6 text-muted-foreground group-hover:text-foreground" />
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                  <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary" />
                 </div>
-                <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                <span className="font-medium text-muted-foreground group-hover:text-primary transition-colors">
                   {t("forms.createForm")}
                 </span>
               </>

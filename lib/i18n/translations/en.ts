@@ -50,6 +50,7 @@ export const en: Translations = {
       integrations: "Integrations",
       balance: "Balance",
       settings: "Settings",
+      systemSettings: "System Settings",
       comingSoon: "Coming Soon",
     },
   },

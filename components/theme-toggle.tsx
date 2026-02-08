@@ -38,9 +38,10 @@ export function ThemeToggle({ className, ...props }: React.ComponentProps<typeof
           "h-10 sm:h-[53px] w-10 sm:w-[53px] rounded-[18px] bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-800 border border-border transition-colors",
           className
         )}
-        disabled
         aria-label="Переключить тему"
         {...props}
+        type="button"
+        disabled
       >
         <Sun className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Переключить тему</span>
@@ -57,6 +58,7 @@ export function ThemeToggle({ className, ...props }: React.ComponentProps<typeof
       onClick={handleThemeChange}
       aria-label="Переключить тему"
       {...props}
+      type="button"
     >
       {theme === "dark" ? (
         <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />

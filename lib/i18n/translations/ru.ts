@@ -37,7 +37,7 @@ export const ru = {
       superadminDescription: "Управление главной формой, создание форм и просмотр всех пользователей",
       userDescription: "Управление вашей формой и лидами",
       menu: "Меню",
-      backToLanding: "На лендинг",
+      backToLanding: "Перейти на сайт",
     },
     tabs: {
       dashboard: "Дашборд",
@@ -48,6 +48,7 @@ export const ru = {
       integrations: "Интеграции",
       balance: "Баланс",
       settings: "Настройки",
+      systemSettings: "Системные настройки",
       comingSoon: "Скоро",
     },
   },
