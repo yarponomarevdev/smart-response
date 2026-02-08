@@ -10,7 +10,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { LeadsView } from "./leads-view"
 import { ContentEditor } from "./content-editor"
@@ -269,11 +268,6 @@ export function AdminDashboard() {
                 </Button>
               )}
               <LanguageToggle
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground dark:bg-transparent dark:hover:bg-accent/50"
-              />
-              <ThemeToggle
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 sm:h-9 sm:w-9 rounded-full bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground dark:bg-transparent dark:hover:bg-accent/50"

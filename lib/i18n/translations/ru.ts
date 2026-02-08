@@ -59,6 +59,15 @@ export const ru = {
     user: {
       title: "Пользовательские настройки",
       description: "Персональные настройки вашего аккаунта",
+      appearance: {
+        title: "Оформление",
+        description: "Выберите цветовую схему интерфейса",
+        light: "Светлая",
+        dark: "Тёмная",
+        system: "Системная",
+        systemHintLight: "Сейчас по системе: светлая",
+        systemHintDark: "Сейчас по системе: тёмная",
+      },
       language: {
         label: "Язык интерфейса",
         description: "Выберите язык интерфейса",

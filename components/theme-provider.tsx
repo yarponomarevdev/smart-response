@@ -21,21 +21,47 @@ function ThemeSynchronizer() {
   const hasSyncedRef = React.useRef(false)
   const lastUserIdRef = React.useRef<string | null>(null)
 
+  const hasUserOverride = () => {
+    if (typeof window === 'undefined') return false
+    return window.__srThemeUserOverride === true
+  }
+
   // Сбрасываем синхронизацию при смене пользователя
   React.useEffect(() => {
-    if (user?.id !== lastUserIdRef.current) {
-      hasSyncedRef.current = false
-      lastUserIdRef.current = user?.id ?? null
-    }
+    const nextUserId = user?.id ?? null
+    if (nextUserId === lastUserIdRef.current) return
+
+    // Сбрасываем “синхронизировано”, чтобы тема могла подтянуться для нового пользователя
+    hasSyncedRef.current = false
+
+    // Важно: НЕ сбрасываем флаг ручного выбора при первом появлении userId (null → id),
+    // иначе первый клик по теме до загрузки пользователя будет перетёрт темой из БД.
+    const hadUserBefore = lastUserIdRef.current !== null
+    lastUserIdRef.current = nextUserId
+
+    // Сбрасываем override только при реальной смене пользователя (когда раньше userId уже был)
+    if (hadUserBefore && typeof window !== 'undefined') window.__srThemeUserOverride = false
   }, [user?.id])
 
   // Синхронизируем тему из БД только один раз при первой загрузке
   React.useEffect(() => {
     // Пропускаем если:
     // - ещё загружается
-    // - уже синхронизировано
     // - пользователь не авторизован
-    if (isLoading || hasSyncedRef.current || !user) {
+    if (isLoading || !user) {
+      return
+    }
+
+    // КРИТИЧНО: проверяем hasUserOverride() ДО проверки hasSyncedRef!
+    // Иначе после первого клика эффект выйдет на hasSyncedRef раньше,
+    // чем проверит флаг ручного выбора, и тема откатится.
+    if (hasUserOverride()) {
+      hasSyncedRef.current = true
+      return
+    }
+
+    // Если уже синхронизировано И не было ручного выбора, больше не синхронизируем
+    if (hasSyncedRef.current) {
       return
     }
 
@@ -58,4 +84,10 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       {children}
     </NextThemesProvider>
   )
+}
+
+declare global {
+  interface Window {
+    __srThemeUserOverride?: boolean
+  }
 }

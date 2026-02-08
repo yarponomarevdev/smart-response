@@ -1,6 +1,6 @@
 ---
 name: database-operations
-model: gemini-3-pro
+model: claude-4.6-opus-high-thinking
 description: Субагент для работы с базой данных Supabase в проекте SmartResponse. Создание миграций, серверных экшенов, RLS-политик, функций PostgreSQL и оптимизация запросов. Обеспечивает консистентность схемы и безопасность данных.
 ---
 

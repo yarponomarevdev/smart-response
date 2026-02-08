@@ -61,6 +61,15 @@ export const en: Translations = {
     user: {
       title: "User Settings",
       description: "Personal settings for your account",
+      appearance: {
+        title: "Appearance",
+        description: "Choose the interface color scheme",
+        light: "Light",
+        dark: "Dark",
+        system: "System",
+        systemHintLight: "Currently by system: light",
+        systemHintDark: "Currently by system: dark",
+      },
       language: {
         label: "Interface Language",
         description: "Choose your interface language",

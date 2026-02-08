@@ -18,6 +18,10 @@ export function ThemeToggle({ className, ...props }: React.ComponentProps<typeof
 
   const handleThemeChange = React.useCallback(() => {
     const newTheme = theme === "dark" ? "light" : "dark"
+
+    // Помечаем, что тема выбрана вручную в этой сессии.
+    // Это нужно, чтобы синхронизация темы из БД не перетёрла первый клик.
+    if (typeof window !== "undefined") window.__srThemeUserOverride = true
     
     // Мгновенно меняем тему локально для быстрого отклика UI
     setTheme(newTheme)
@@ -68,4 +72,10 @@ export function ThemeToggle({ className, ...props }: React.ComponentProps<typeof
       <span className="sr-only">Переключить тему</span>
     </Button>
   )
+}
+
+declare global {
+  interface Window {
+    __srThemeUserOverride?: boolean
+  }
 }
