@@ -168,7 +168,10 @@ export function ContentEditor({ formId: propFormId, onBackToDashboard }: Content
         <div className="flex flex-col items-center justify-center py-8">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-lg font-medium mb-2">{t("editor.noForms")}</p>
-          <p className="text-sm text-muted-foreground">{t("editor.noFormsDescription")}</p>
+          <p className="text-sm text-muted-foreground mb-6">{t("editor.noFormsDescription")}</p>
+          <Button onClick={onBackToDashboard}>
+            Перейти в дашборд
+          </Button>
         </div>
       </div>
     )
