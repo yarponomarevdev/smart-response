@@ -34,6 +34,10 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
   const [error, setError] = useState<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
 
+  function isMultipleSelectionField(field: FormField): boolean {
+    return field.field_type === "multiselect" && field.selection_type === "multiple"
+  }
+
   // Динамические поля
   const [dynamicFields, setDynamicFields] = useState<FormField[]>([])
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
@@ -78,7 +82,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         fieldsResult.fields.forEach((field) => {
           if (field.field_type === "checkbox") {
             initialValues[field.field_key] = false
-          } else if (field.field_type === "multiselect" || field.selection_type === "multiple") {
+          } else if (isMultipleSelectionField(field)) {
             initialValues[field.field_key] = []
           } else {
             initialValues[field.field_key] = ""
@@ -103,7 +107,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     for (const field of dynamicFields) {
       if (field.is_required) {
         const value = fieldValues[field.field_key]
-        const isMultipleSelection = field.field_type === "multiselect" || field.selection_type === "multiple"
+        const isMultipleSelection = isMultipleSelectionField(field)
         
         if (field.field_type === "checkbox" && value !== true) {
           return false
@@ -215,9 +219,6 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     // Передаём URL (или null если нет) и кастомные поля
     onSubmit(formattedUrl || null, extendedFieldValues)
   }
-
-  const isMultipleSelectionField = (field: FormField) =>
-    field.field_type === "multiselect" || field.selection_type === "multiple"
 
   const renderSelectionLabel = (field: FormField) => (
     <Label htmlFor={field.field_key}>
@@ -380,8 +381,8 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         // List - карточный UI если есть картинки, иначе чекбоксы/радио
         const isMultipleSelection = isMultipleSelectionField(field)
         const hasImages = field.options?.some((option) => option.image)
-        const selectedValue = (value as string) || ""
-        const selectedValues = (value as string[]) || []
+        const selectedValue = typeof value === "string" ? value : ""
+        const selectedValues = Array.isArray(value) ? value : []
         
         if (hasImages)
           return (
