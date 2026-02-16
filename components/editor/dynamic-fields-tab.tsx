@@ -15,16 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import {
   DndContext,
@@ -75,7 +65,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   
   // Состояние диалогов
   const [showFieldForm, setShowFieldForm] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   // Список типов полей
   const FIELD_TYPES = useMemo(() => [
@@ -114,7 +103,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   // Текущее редактируемое/удаляемое поле
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>("text")
   const [editingField, setEditingField] = useState<FormField | null>(null)
-  const [deletingField, setDeletingField] = useState<FormField | null>(null)
 
   // Хуки для работы с данными
   const { data: fieldsData, isLoading: isLoadingFields } = useFormFields(formId)
@@ -219,9 +207,15 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
   }
 
   // Подтверждение удаления
-  const handleDeleteClick = (field: FormField) => {
-    setDeletingField(field)
-    setShowDeleteDialog(true)
+  const handleDeleteClick = async (field: FormField) => {
+    if (!formId) return
+
+    try {
+      await deleteFieldMutation.mutateAsync({ formId, fieldId: field.id })
+      toast.success(t("editor.dynamicFieldsTab.fieldDeleted"))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("editor.dynamicFieldsTab.fieldDeleteError"))
+    }
   }
 
   // Быстрое обновление поля (inline редактирование)
@@ -253,19 +247,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
     }
   }
 
-  // Удалить поле
-  const handleDeleteConfirm = async () => {
-    if (!formId || !deletingField) return
-
-    try {
-      await deleteFieldMutation.mutateAsync({ formId, fieldId: deletingField.id })
-      toast.success(t("editor.dynamicFieldsTab.fieldDeleted"))
-      setShowDeleteDialog(false)
-      setDeletingField(null)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("editor.dynamicFieldsTab.fieldDeleteError"))
-    }
-  }
 
   if (!formId) {
     return (
@@ -396,26 +377,6 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
         isLoading={saveFieldMutation.isPending}
       />
 
-      {/* Диалог подтверждения удаления */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("editor.dynamicFieldsTab.deleteDialog.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("editor.dynamicFieldsTab.deleteDialog.description", { label: deletingField?.field_label || "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("editor.dynamicFieldsTab.deleteDialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteFieldMutation.isPending ? t("editor.dynamicFieldsTab.deleteDialog.deleting") : t("editor.dynamicFieldsTab.deleteDialog.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

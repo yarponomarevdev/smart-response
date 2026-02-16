@@ -4,6 +4,7 @@
  */
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InlineEditableText } from "@/components/ui/inline-editable-text"
@@ -12,6 +13,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { FormField, FieldType } from "@/app/actions/form-fields"
 import { useTranslation } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 interface FieldListItemProps {
   id: string
@@ -46,6 +48,14 @@ export function FieldListItem({
   onFieldUpdate,
 }: FieldListItemProps) {
   const { t } = useTranslation()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  useEffect(() => {
+    if (showDeleteConfirm) {
+      const timer = setTimeout(() => setShowDeleteConfirm(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showDeleteConfirm])
   
   const {
     attributes,
@@ -142,8 +152,24 @@ export function FieldListItem({
         <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7">
           <Pencil className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7">
-          <Trash2 className="h-3.5 w-3.5 text-destructive/70 hover:text-destructive" />
+        <Button
+          variant={showDeleteConfirm ? "destructive" : "ghost"}
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (showDeleteConfirm) {
+              onDelete()
+            } else {
+              setShowDeleteConfirm(true)
+            }
+          }}
+          className={cn("h-7 w-7 transition-all", showDeleteConfirm && "w-auto px-2")}
+        >
+          {showDeleteConfirm ? (
+            <span className="text-xs font-medium">{t("common.delete")}?</span>
+          ) : (
+            <Trash2 className="h-3.5 w-3.5 text-destructive/70 hover:text-destructive" />
+          )}
         </Button>
       </div>
     </div>
