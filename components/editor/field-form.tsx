@@ -5,7 +5,7 @@
  */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog"
 import { Plus, Trash2, Settings, ChevronDown, ImagePlus, Loader2, X } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
-import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import type { FieldType, FormFieldInput, FieldOption } from "@/app/actions/form-fields"
 import { uploadOptionImage, deleteOptionImage } from "@/app/actions/storage"
@@ -39,6 +38,22 @@ function generateFieldKey(label: string): string {
     .substring(0, 50)
 }
 
+/**
+ * Делает ключ уникальным, добавляя суффикс если нужно
+ */
+function makeUniqueKey(baseKey: string, existingKeys: string[]): string {
+  if (!baseKey) return ""
+  if (!existingKeys.includes(baseKey)) return baseKey
+  
+  let counter = 1
+  while (existingKeys.includes(`${baseKey}_${counter}`)) {
+    counter++
+  }
+  return `${baseKey}_${counter}`
+}
+
+type SelectionType = "single" | "multiple"
+
 interface FieldFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -51,13 +66,49 @@ interface FieldFormProps {
 
 
 // Типы полей, для которых не нужен placeholder и is_required
-const LAYOUT_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer"]
+const LAYOUT_FIELD_TYPES = new Set<FieldType>(["h1", "h2", "h3", "disclaimer"])
 
 // Типы полей, для которых нужны опции
-const OPTION_FIELD_TYPES: FieldType[] = ["select", "multiselect"]
+const OPTION_FIELD_TYPES = new Set<FieldType>(["select", "multiselect"])
 
 // Типы полей, для которых не нужен placeholder (select/multiselect используют выбор из списка)
-const NO_PLACEHOLDER_FIELD_TYPES: FieldType[] = ["h1", "h2", "h3", "disclaimer", "select", "multiselect"]
+const NO_PLACEHOLDER_FIELD_TYPES = new Set<FieldType>(["h1", "h2", "h3", "disclaimer", "select", "multiselect"])
+
+function normalizeOptionsOnOpen(loadedOptions: FieldOption[]): FieldOption[] {
+  const keyCount = new Map<string, number>()
+  loadedOptions.forEach((option) => {
+    keyCount.set(option.value, (keyCount.get(option.value) || 0) + 1)
+  })
+
+  const keysToNumber = new Set(
+    Array.from(keyCount.entries())
+      .filter(([_, count]) => count > 1)
+      .map(([key]) => key)
+  )
+
+  const keyCounters = new Map<string, number>()
+
+  return loadedOptions.map((option) => {
+    const baseKey = option.value
+    if (!keysToNumber.has(baseKey)) return option
+
+    const counter = (keyCounters.get(baseKey) || 0) + 1
+    keyCounters.set(baseKey, counter)
+    return { ...option, value: `${baseKey}_${counter}` }
+  })
+}
+
+function getOtherOptionKeys(options: FieldOption[], currentIndex: number): string[] {
+  return options
+    .map((option, index) => (index === currentIndex ? null : option.value))
+    .filter((key): key is string => Boolean(key))
+}
+
+function prepareOptionsForSave(fieldType: FieldType, options: FieldOption[]): FieldOption[] {
+  return options
+    .filter((option) => option.value && option.label)
+    .map((option) => (fieldType === "select" ? { value: option.value, label: option.label } : option))
+}
 
 export function FieldForm({
   open,
@@ -74,13 +125,16 @@ export function FieldForm({
   const [placeholder, setPlaceholder] = useState(initialData?.placeholder || "")
   const [isRequired, setIsRequired] = useState(initialData?.is_required ?? false)
   const [options, setOptions] = useState<FieldOption[]>(initialData?.options || [])
-  const [selectionType, setSelectionType] = useState<'single' | 'multiple'>(initialData?.selection_type || 'single')
+  const [selectionType, setSelectionType] = useState<SelectionType>(initialData?.selection_type || "single")
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
 
-  const isLayoutField = LAYOUT_FIELD_TYPES.includes(fieldType)
-  const needsOptions = OPTION_FIELD_TYPES.includes(fieldType)
+  const isLayoutField = LAYOUT_FIELD_TYPES.has(fieldType)
+  const needsOptions = OPTION_FIELD_TYPES.has(fieldType)
+  const canShowPlaceholder = !NO_PLACEHOLDER_FIELD_TYPES.has(fieldType)
+  const selectionSingleId = `${fieldType}-selection-single`
+  const selectionMultipleId = `${fieldType}-selection-multiple`
 
   const FIELD_TYPE_LABELS = useMemo(() => ({
     text: t("editor.fieldTypes.text"),
@@ -102,8 +156,9 @@ export function FieldForm({
       setKey(initialData?.field_key || "")
       setPlaceholder(initialData?.placeholder || "")
       setIsRequired(initialData?.is_required ?? false)
-      setOptions(initialData?.options || [])
-      setSelectionType(initialData?.selection_type || 'single')
+
+      setOptions(normalizeOptionsOnOpen(initialData?.options || []))
+      setSelectionType(initialData?.selection_type || "single")
       setKeyManuallyEdited(!!initialData?.field_key)
     }
   }, [open])
@@ -115,22 +170,28 @@ export function FieldForm({
     }
   }, [label, keyManuallyEdited])
 
-  const handleAddOption = () => {
-    setOptions([...options, { value: "", label: "" }])
-  }
+  const handleAddOption = () => setOptions((prev) => [...prev, { value: "", label: "" }])
 
   const handleOptionChange = (index: number, field: "value" | "label", value: string) => {
     const newOptions = [...options]
-    newOptions[index] = { ...newOptions[index], [field]: value }
-    // Автогенерация value из label если value пустой
-    if (field === "label" && !newOptions[index].value) {
-      newOptions[index].value = generateFieldKey(value)
+    const otherOptionKeys = getOtherOptionKeys(newOptions, index)
+
+    if (field === "label") {
+      newOptions[index].label = value
+      if (!newOptions[index].value) {
+        newOptions[index].value = makeUniqueKey(generateFieldKey(value), otherOptionKeys)
+      }
+    } else {
+      // При ручном изменении ключа тоже проверяем уникальность
+      const normalizedValue = generateFieldKey(value)
+      newOptions[index].value = makeUniqueKey(normalizedValue, otherOptionKeys)
     }
+    
     setOptions(newOptions)
   }
 
   const handleRemoveOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index))
+    setOptions((prev) => prev.filter((_, i) => i !== index))
   }
 
   // Загрузка картинки для опции (только для multiselect)
@@ -148,10 +209,12 @@ export function FieldForm({
         return
       }
 
-      const newOptions = [...options]
-      newOptions[index] = { ...newOptions[index], image: result.url }
-      setOptions(newOptions)
-    } catch (error) {
+      setOptions((prev) => {
+        const next = [...prev]
+        next[index] = { ...next[index], image: result.url }
+        return next
+      })
+    } catch {
       toast.error("Ошибка загрузки изображения")
     } finally {
       setUploadingIndex(null)
@@ -169,24 +232,18 @@ export function FieldForm({
       // Игнорируем ошибку удаления из Storage, всё равно убираем из state
     }
 
-    const newOptions = [...options]
-    newOptions[index] = { ...newOptions[index], image: undefined }
-    setOptions(newOptions)
+    setOptions((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], image: undefined }
+      return next
+    })
   }
 
   const handleSave = () => {
     if (!label.trim() || !key.trim()) return
     if (needsOptions && options.length === 0) return
 
-    const preparedOptions = needsOptions
-      ? options
-        .filter((option) => option.value && option.label)
-        .map((option) => (
-          fieldType === "select"
-            ? { value: option.value, label: option.label }
-            : option
-        ))
-      : []
+    const preparedOptions = needsOptions ? prepareOptionsForSave(fieldType, options) : []
 
     onSave({
       id: initialData?.id,
@@ -200,7 +257,7 @@ export function FieldForm({
     })
   }
 
-  const isValid = label.trim() && key.trim() && (!needsOptions || options.some(o => o.value && o.label))
+  const isValid = Boolean(label.trim() && key.trim() && (!needsOptions || options.some((o) => o.value && o.label)))
 
   // Определяем label для поля ввода текста в зависимости от типа
   const getLabelText = () => {
@@ -274,7 +331,7 @@ export function FieldForm({
           </div>
 
           {/* Плейсхолдер - только для полей ввода (не для select/multiselect) */}
-          {!NO_PLACEHOLDER_FIELD_TYPES.includes(fieldType) && (
+          {canShowPlaceholder && (
             <div className="space-y-2">
               <Label htmlFor="field_placeholder">{t("editor.fieldForm.placeholderLabel")}</Label>
               <Input
@@ -302,16 +359,16 @@ export function FieldForm({
           {fieldType === "multiselect" && (
             <div className="space-y-2">
               <Label>{t("editor.fieldForm.selectionTypeLabel")}</Label>
-              <RadioGroup value={selectionType} onValueChange={(value: 'single' | 'multiple') => setSelectionType(value)}>
+              <RadioGroup value={selectionType} onValueChange={(value: SelectionType) => setSelectionType(value)}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="single" id="single" />
-                  <Label htmlFor="single" className="font-normal cursor-pointer">
+                  <RadioGroupItem value="single" id={selectionSingleId} />
+                  <Label htmlFor={selectionSingleId} className="font-normal cursor-pointer">
                     {t("editor.fieldForm.selectionTypeSingle")}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="multiple" id="multiple" />
-                  <Label htmlFor="multiple" className="font-normal cursor-pointer">
+                  <RadioGroupItem value="multiple" id={selectionMultipleId} />
+                  <Label htmlFor={selectionMultipleId} className="font-normal cursor-pointer">
                     {t("editor.fieldForm.selectionTypeMultiple")}
                   </Label>
                 </div>
@@ -333,7 +390,7 @@ export function FieldForm({
                   </div>
                   <div className="space-y-2">
                     {options.map((option, index) => (
-                      <div key={index} className="flex gap-2 items-center">
+                      <div key={`${option.value || "option"}-${index}`} className="flex gap-2 items-center">
                         <Input
                           value={option.label}
                           onChange={(e) => handleOptionChange(index, "label", e.target.value)}
@@ -364,7 +421,7 @@ export function FieldForm({
               {fieldType === "multiselect" && (
                 <div className="space-y-3">
                   {options.map((option, index) => (
-                    <div key={index} className="flex gap-2 items-start">
+                    <div key={`${option.value || "option"}-${index}`} className="flex gap-2 items-start">
                       <div className="w-16 h-16 border rounded overflow-hidden flex-shrink-0 relative group">
                         {option.image ? (
                           <>
