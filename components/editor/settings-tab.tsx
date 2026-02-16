@@ -17,7 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase/client"
 import { useUpdateFormNotification, useUpdateFormRespondentEmail, useUpdateFormTheme, useUpdateFormLanguage } from "@/lib/hooks/use-forms"
 import { useAutoSaveFormName } from "@/lib/hooks/use-autosave"
-import { AutoSaveFieldWrapper } from "@/components/ui/auto-save-input"
+import { SaveStatusIndicator } from "@/components/ui/auto-save-input"
 import { toast } from "sonner"
 import { AlertCircle, Mail, Globe, Palette, Type } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
@@ -181,25 +181,24 @@ export function SettingsTab({ formId }: SettingsTabProps) {
         <CardContent className="space-y-6">
           {/* Название формы */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-              <Type className="h-4 w-4" />
-              <span>{t("editor.settingsTab.formName")}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Type className="h-4 w-4" />
+                <Label htmlFor="formName">{t("editor.settingsTab.formName")}</Label>
+              </div>
+              <SaveStatusIndicator status={formName.status} />
             </div>
-            <AutoSaveFieldWrapper
-              label=""
-              labelFor="formName"
-              status={formName.status}
-              counter={{ current: formName.value.length, max: 30 }}
-            >
-              <Input
-                id="formName"
-                value={formName.value}
-                onChange={(e) => formName.onChange(e.target.value)}
-                className="max-w-md"
-                placeholder={t("editor.settingsTab.formNamePlaceholder")}
-                maxLength={30}
-              />
-            </AutoSaveFieldWrapper>
+            <Input
+              id="formName"
+              value={formName.value}
+              onChange={(e) => formName.onChange(e.target.value)}
+              className="max-w-md"
+              placeholder={t("editor.settingsTab.formNamePlaceholder")}
+              maxLength={30}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formName.value.length}/30 символов
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">

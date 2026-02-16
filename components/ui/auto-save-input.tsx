@@ -19,7 +19,9 @@ interface SaveStatusIndicatorProps {
 export function SaveStatusIndicator({ status, className }: SaveStatusIndicatorProps) {
   const { t } = useTranslation()
   
-  if (status === "idle") return null
+  if (status === "idle") {
+    return <div className={cn("h-5", className)} aria-hidden="true" />
+  }
 
   return (
     <div
