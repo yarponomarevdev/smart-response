@@ -11,6 +11,33 @@ interface KnowledgeBaseResult {
   images: Array<{ fileName: string; base64: string; mimeType: string }>
 }
 
+interface ContextFieldOption {
+  value: string
+  label: string
+  image: string | null
+}
+
+interface ContextFormField {
+  field_key: string
+  field_type: string
+  field_label: string
+  options: ContextFieldOption[]
+}
+
+interface SelectedOptionImageRef {
+  fieldKey: string
+  fieldLabel: string
+  optionValue: string
+  optionLabel: string
+  imageUrl: string
+}
+
+interface CustomFieldsProcessingResult {
+  customFieldsContext: string
+  inputImages: Record<string, string>
+  selectedOptionImageRefs: SelectedOptionImageRef[]
+}
+
 // Динамический импорт heic-convert для конвертации HEIC в JPEG
 async function getHeicConvert() {
   const heicModule = await import("heic-convert")
@@ -116,6 +143,167 @@ function buildFallbackImagePrompt(params: BuildFallbackImagePromptParams) {
   const { text: finalPrompt } = limitTextByChars({ value: basePrompt, maxLength })
 
   return finalPrompt
+}
+
+function getContextOptionLabel(field: ContextFormField | undefined, rawValue: string): string {
+  if (!field || field.options.length === 0) return rawValue
+
+  const matchedOption = field.options.find((option) => option.value === rawValue)
+  return matchedOption?.label || rawValue
+}
+
+function formatValueForAiContext(field: ContextFormField | undefined, value: unknown): string {
+  if (Array.isArray(value)) {
+    const items = value
+      .map((item) => String(item))
+      .filter((item) => item.trim().length > 0)
+      .map((item) => getContextOptionLabel(field, item))
+
+    return items.join(", ")
+  }
+
+  if (typeof value === "boolean") return value ? "Да" : "Нет"
+  if (typeof value === "string") return getContextOptionLabel(field, value)
+  return String(value)
+}
+
+function hasMeaningfulValue(value: unknown): boolean {
+  if (value === undefined || value === null) return false
+  if (typeof value === "string") return value.trim().length > 0
+  if (Array.isArray(value)) return value.some((item) => String(item).trim().length > 0)
+  return true
+}
+
+function normalizeFieldOptions(rawOptions: unknown): ContextFieldOption[] {
+  if (!Array.isArray(rawOptions)) return []
+
+  const normalized: ContextFieldOption[] = []
+
+  for (const rawOption of rawOptions) {
+    if (!rawOption || typeof rawOption !== "object") continue
+    const option = rawOption as Record<string, unknown>
+    if (typeof option.value !== "string" || typeof option.label !== "string") continue
+
+    normalized.push({
+      value: option.value,
+      label: option.label,
+      image: typeof option.image === "string" ? option.image : null,
+    })
+  }
+
+  return normalized
+}
+
+function normalizeContextFields(rawFieldsData: unknown): ContextFormField[] {
+  if (!Array.isArray(rawFieldsData)) return []
+
+  const normalized: ContextFormField[] = []
+
+  for (const rawField of rawFieldsData) {
+    if (!rawField || typeof rawField !== "object") continue
+    const field = rawField as Record<string, unknown>
+
+    if (
+      typeof field.field_key !== "string" ||
+      typeof field.field_type !== "string" ||
+      typeof field.field_label !== "string"
+    ) {
+      continue
+    }
+
+    normalized.push({
+      field_key: field.field_key,
+      field_type: field.field_type,
+      field_label: field.field_label,
+      options: normalizeFieldOptions(field.options),
+    })
+  }
+
+  return normalized
+}
+
+function toSelectedValues(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((v) => String(v)).filter((v) => v.trim().length > 0)
+  if (typeof value === "string" && value.trim()) return [value]
+  return []
+}
+
+function collectSelectedOptionImageRefs(
+  customFields: Record<string, unknown>,
+  contextFieldsByKey: Map<string, ContextFormField>
+): SelectedOptionImageRef[] {
+  const refs: SelectedOptionImageRef[] = []
+  const usedPairs = new Set<string>()
+
+  for (const [fieldKey, rawValue] of Object.entries(customFields)) {
+    const field = contextFieldsByKey.get(fieldKey)
+    if (!field?.options || field.options.length === 0) continue
+
+    const selectedValues = toSelectedValues(rawValue)
+    if (selectedValues.length === 0) continue
+
+    for (const selectedValue of selectedValues) {
+      const option = field.options.find((item) => item.value === selectedValue)
+      if (!option?.image) continue
+
+      const dedupeKey = `${fieldKey}:${selectedValue}:${option.image}`
+      if (usedPairs.has(dedupeKey)) continue
+      usedPairs.add(dedupeKey)
+
+      refs.push({
+        fieldKey,
+        fieldLabel: field.field_label,
+        optionValue: selectedValue,
+        optionLabel: option.label,
+        imageUrl: option.image,
+      })
+    }
+  }
+
+  return refs
+}
+
+function processCustomFieldsForContext(params: {
+  customFields: Record<string, unknown>
+  contextFieldsByKey: Map<string, ContextFormField>
+  imageFieldKeys: Set<string>
+}): CustomFieldsProcessingResult {
+  const { customFields, contextFieldsByKey, imageFieldKeys } = params
+
+  const inputImages: Record<string, string> = {}
+  const selectedOptionImageRefs = collectSelectedOptionImageRefs(customFields, contextFieldsByKey)
+  let customFieldsContext = "\n\n--- Данные пользователя ---\n"
+
+  for (const [key, value] of Object.entries(customFields)) {
+    if (!hasMeaningfulValue(value)) continue
+
+    const fieldMeta = contextFieldsByKey.get(key)
+    const contextFieldName = fieldMeta?.field_label || key
+
+    // Исключаем image-поля из текстового контекста, но сохраняем как input image
+    if (imageFieldKeys.has(key)) {
+      if (typeof value === "string" && value.startsWith("data:image/")) {
+        inputImages[key] = value
+      }
+      continue
+    }
+
+    const formattedValue = formatValueForAiContext(fieldMeta, value)
+    if (formattedValue) customFieldsContext += `- ${contextFieldName}: ${formattedValue}\n`
+  }
+
+  if (selectedOptionImageRefs.length > 0) {
+    customFieldsContext += `\n--- Выбранные визуальные референсы ---\n`
+    selectedOptionImageRefs.forEach((ref) => {
+      customFieldsContext += `- ${ref.fieldLabel}: ${ref.optionLabel}\n`
+    })
+  }
+
+  return {
+    customFieldsContext,
+    inputImages,
+    selectedOptionImageRefs,
+  }
 }
 
 async function fetchUrlContent(url: string): Promise<string> {
@@ -323,37 +511,32 @@ export async function POST(req: Request) {
     // Fetch form fields to identify URL and image fields
     const { data: fieldsData } = await supabase
       .from("form_fields")
-      .select("field_key, field_type, field_label")
+      .select("field_key, field_type, field_label, options")
       .eq("form_id", formId)
 
-    const urlFields = fieldsData?.filter(f => f.field_type === 'url') || []
-    const imageFields = fieldsData?.filter(f => f.field_type === 'image') || []
+    const contextFields = normalizeContextFields(fieldsData)
+
+    const contextFieldsByKey = new Map(contextFields.map((field) => [field.field_key, field]))
+    const urlFields = contextFields.filter((field) => field.field_type === "url")
+    const imageFields = contextFields.filter((field) => field.field_type === "image")
 
     // Форматируем кастомные поля для включения в контекст
     // Извлекаем image поля отдельно - они не должны попадать в текстовый контекст
     const imageFieldKeys = new Set(imageFields.map(f => f.field_key))
-    const inputImages: Record<string, string> = {}
     let customFieldsContext = ""
+    let selectedOptionImageRefs: SelectedOptionImageRef[] = []
+    let inputImages: Record<string, string> = {}
     
     if (customFields && typeof customFields === "object" && Object.keys(customFields).length > 0) {
-      customFieldsContext = "\n\n--- Данные пользователя ---\n"
-      for (const [key, value] of Object.entries(customFields)) {
-        if (value !== undefined && value !== null && value !== "") {
-          // Исключаем image поля из текстового контекста
-          if (imageFieldKeys.has(key)) {
-            // Сохраняем base64 изображения отдельно
-            if (typeof value === "string" && value.startsWith("data:image/")) {
-              inputImages[key] = value
-            }
-          } else if (Array.isArray(value)) {
-            customFieldsContext += `- ${key}: ${value.join(", ")}\n`
-          } else if (typeof value === "boolean") {
-            customFieldsContext += `- ${key}: ${value ? "Да" : "Нет"}\n`
-          } else {
-            customFieldsContext += `- ${key}: ${value}\n`
-          }
-        }
-      }
+      const processedCustomFields = processCustomFieldsForContext({
+        customFields: customFields as Record<string, unknown>,
+        contextFieldsByKey,
+        imageFieldKeys,
+      })
+
+      customFieldsContext = processedCustomFields.customFieldsContext
+      selectedOptionImageRefs = processedCustomFields.selectedOptionImageRefs
+      inputImages = processedCustomFields.inputImages
     }
     
     // Process additional URL fields
@@ -509,7 +692,8 @@ export async function POST(req: Request) {
 
       // Определяем режим генерации для формирования промпта
       const hasInputImage = Object.keys(inputImages).length > 0
-      const useEditAPI = hasInputImage
+      const hasSelectedOptionImage = selectedOptionImageRefs.length > 0
+      const useEditAPI = hasInputImage || hasSelectedOptionImage
 
       // Создаем короткий промпт через AI SDK generateText
       let compressedPrompt = ""
@@ -517,7 +701,7 @@ export async function POST(req: Request) {
       try {
         // Инструкции для промпта зависят от режима
         const promptInstructions = useEditAPI
-          ? `На основе предоставленного контекста создай детальный промпт для редактирования изображения. Пользователь загрузил своё изображение, и нужно описать, ЧТО ИЗМЕНИТЬ или ДОБАВИТЬ к нему. Промпт должен быть на английском языке и описывать конкретные изменения. Фокусируйся на действиях редактирования, а не на описании всей сцены.`
+          ? `На основе предоставленного контекста создай детальный промпт для редактирования изображения. Пользователь передал визуальные референсы (загруженные изображения и/или выбранные картинки из опций формы), и нужно описать, ЧТО ИЗМЕНИТЬ, СОХРАНИТЬ или ДОБАВИТЬ, опираясь на эти референсы. Промпт должен быть на английском языке и описывать конкретные изменения. Фокусируйся на действиях редактирования, а не на описании всей сцены.`
           : `На основе предоставленного контекста создай детальный промпт для генерации изображения. Промпт должен быть на английском языке и описывать конкретные визуальные детали: элементы, цвета, стиль, композицию, настроение. Будь максимально точен и подробен — модель может обработать длинные промпты.`
 
         const { text: generatedPrompt } = await generateText({
@@ -568,23 +752,37 @@ export async function POST(req: Request) {
       
       try {
         if (useEditAPI) {
-          // Используем Image Edit API для редактирования входного изображения
-          console.log("Использование Images Edit API с входным изображением через AI SDK")
-          
-          // Берём первое доступное изображение
-          const firstImageKey = Object.keys(inputImages)[0]
-          const base64Image = inputImages[firstImageKey]
-          
-          // Извлекаем base64 данные (убираем префикс data:image/png;base64,)
-          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "")
-          const imageBuffer = Buffer.from(base64Data, "base64")
+          // Используем Image Edit API для редактирования входных изображений/референсов
+          console.log("Использование Images Edit API с визуальными референсами через AI SDK")
+
+          const promptImages: Array<Buffer | string> = []
+
+          // 1) Base64 изображения из image-полей формы
+          Object.values(inputImages).forEach((base64Image) => {
+            const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "")
+            if (!base64Data) return
+            promptImages.push(Buffer.from(base64Data, "base64"))
+          })
+
+          // 2) URL изображений выбранных опций (List/Dropdown)
+          selectedOptionImageRefs.forEach((ref) => {
+            promptImages.push(ref.imageUrl)
+          })
+
+          // Ограничиваем количество входных изображений для стабильности
+          const limitedPromptImages = promptImages.slice(0, 6)
+          console.log("Количество входных референсов для image edit:", limitedPromptImages.length)
+
+          if (limitedPromptImages.length === 0) {
+            throw new Error("Не удалось подготовить выбранные изображения для image edit")
+          }
           
           // AI SDK generateImage с prompt object для редактирования
           const { images } = await generateImage({
             model: openai.image(imageModel),
             prompt: {
               text: compressedPrompt,
-              images: [imageBuffer],
+              images: limitedPromptImages,
             },
             size: "1024x1024" as const,
           })
