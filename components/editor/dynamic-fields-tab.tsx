@@ -128,7 +128,8 @@ export function DynamicFieldsTab({ formId }: DynamicFieldsTabProps) {
       return data as StaticFields
     },
     enabled: !!formId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 1 * 60 * 1000, // Данные свежие 1 минуту
+    refetchOnMount: true, // Перезагружаем данные при монтировании компонента для синхронизации
   })
 
   // Настройка сенсоров для drag-and-drop

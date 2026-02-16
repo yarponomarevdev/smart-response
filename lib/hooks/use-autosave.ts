@@ -50,8 +50,11 @@ export function useAutoSaveField({
 
   // Обновляем значение когда приходит новое initialValue
   useEffect(() => {
+    // НЕ обновляем, если пользователь активно печатает (есть активный debounce таймер)
     if (timeoutRef.current) return
-
+    
+    // Обновляем только при первой инициализации или если значение изменилось извне
+    // (но не после нашего собственного сохранения)
     if (initialValue !== initialValueRef.current || !isInitializedRef.current) {
       setValue(initialValue)
       initialValueRef.current = initialValue
@@ -85,8 +88,11 @@ export function useAutoSaveField({
 
       if (formId !== formIdRef.current) return
 
-      // Инвалидируем кэш
-      await queryClient.invalidateQueries({ queryKey: ["formContent", formId] })
+      // Обновляем кэш напрямую вместо инвалидации, чтобы не прерывать ввод пользователя
+      queryClient.setQueryData(["staticLayoutFields", formId], (old: any) => {
+        if (!old) return old
+        return { ...old, [fieldKey]: newValue || null }
+      })
 
       setStatus("saved")
       
