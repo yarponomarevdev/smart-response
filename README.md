@@ -20,7 +20,7 @@
 - **UI**: Tailwind CSS, Radix UI, shadcn/ui
 - **Backend**: Next.js API Routes
 - **База данных**: Supabase (PostgreSQL)
-- **AI**: OpenAI API (GPT-5, DALL-E)
+- **AI**: OpenAI API (GPT-5)
 - **Email**: Resend
 - **Хранилище**: Supabase Storage
 - **Аутентификация**: Supabase Auth

@@ -71,7 +71,7 @@ See `.env.example` for full list.
    - Accepts form data + URL + custom fields
    - Fetches knowledge base files from Supabase Storage
    - Fetches URL content (with fallback to Jina Reader proxy for blocked sites)
-   - Calls OpenAI API (text generation via `streamText`, image generation via `generateImage`)
+   - Calls OpenAI API (text generation via `streamText`)
    - Returns streaming response for text, static response for images
 
 4. **Server Actions** (`app/actions/`)
@@ -132,7 +132,6 @@ Quotas checked before:
 
 **Models (configurable in system_settings)**:
 - Text: GPT-5 (default) via `@ai-sdk/openai`
-- Image: DALL-E via OpenAI API
 
 **Prompt Composition**:
 1. Global system prompt (from `system_settings.global_text_prompt`)

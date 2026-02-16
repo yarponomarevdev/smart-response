@@ -29,8 +29,8 @@ description: Субагент для работы с базой данных Sup
 | Таблица | Назначение |
 |---|---|
 | `users` | Пользователи (id = auth.users.id), роли (user/superadmin), квоты |
-| `forms` | Формы пользователей, AI-настройки, тема, контент |
-| `form_fields` | Динамические поля форм (text, url, select, multiselect, checkbox, image, h1-h3, disclaimer) |
+| `forms` | Формы пользователей, AI-настройки, тема, контент, статичные поля |
+| `form_fields` | Динамические поля форм (text, url, select, multi-select, checkbox, image) |
 | `leads` | Заявки/ответы форм, сгенерированный AI-контент, статусы |
 | `form_knowledge_files` | Файлы базы знаний, привязанные к формам |
 | `system_settings` | Глобальные настройки AI (модели, промпты) — key/value |
@@ -49,7 +49,7 @@ forms.id (1) → (N) form_knowledge_files.form_id (CASCADE DELETE)
 
 - `knowledge-files` — файлы базы знаний (путь: `{form_id}/{filename}`)
 - `generated-images` — AI-сгенерированные изображения
-- `form-images` — изображения опций полей
+- `form-images` — изображения опций полей multiselect
 
 ## Миграции
 
@@ -211,53 +211,20 @@ export async function myAction(params: MyParams) {
 }
 ```
 
-### Паттерны серверных экшенов
-
-1. **Проверка авторизации** — в начале каждого экшена
-2. **Проверка владельца** — перед любой мутацией данных
-3. **Проверка суперадмина** — для админских операций:
-   ```typescript
-   const { data: userData } = await supabase
-     .from("users")
-     .select("role")
-     .eq("id", user.id)
-     .single()
-   if (userData?.role !== "superadmin") throw new Error("Только для администраторов")
-   ```
-4. **Проверка квот** — перед созданием форм, генерацией, загрузкой файлов
-5. **Throw user-friendly ошибки** — все ошибки должны быть понятны пользователю
-6. **`"use server"`** — обязательная директива в начале файла
-
-### Расположение файлов
+### Расположение файлов экшенов
 
 | Файл | Ответственность |
 |---|---|
-| `app/actions/forms.ts` | CRUD форм, квоты, публикация |
+| `app/actions/forms.ts` | CRUD форм, квоты, публикация, тема, язык |
 | `app/actions/form-fields.ts` | Поля форм, порядок, CRUD |
-| `app/actions/leads.ts` | Заявки, статусы, уведомления |
-| `app/actions/storage.ts` | Файлы, хранилище, лимиты |
+| `app/actions/leads.ts` | Заявки, статусы, заметки |
+| `app/actions/storage.ts` | Файлы, хранилище, лимиты, изображения опций |
 | `app/actions/system-settings.ts` | Глобальные настройки (superadmin) |
-| `app/actions/users.ts` | Управление пользователями, квоты |
+| `app/actions/users.ts` | Управление пользователями, квоты, тема, язык |
 
 **Новый экшен** добавляй в существующий файл по тематике. Создавай новый файл только если тематика не подходит ни к одному существующему.
 
 ## PostgreSQL-функции
-
-### Шаблон функции
-
-```sql
-CREATE OR REPLACE FUNCTION public.my_function(param_name UUID)
-RETURNS return_type
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  -- Логика функции
-  RETURN result;
-END;
-$$;
-```
 
 ### Существующие функции
 
@@ -268,22 +235,13 @@ $$;
 | `increment_daily_test_count(user_id)` | Инкремент дневного счётчика тестов с авто-сбросом |
 | `get_daily_test_info(user_id)` | Получение инфо о дневных тестах без инкремента |
 
-### Правила
+### Правила функций
 
 1. **`SECURITY DEFINER`** — функция выполняется от имени создателя (обходит RLS)
-2. **`SET search_path = public`** — обязательно для безопасности (предотвращает search_path injection)
-3. **Атомарность** — используй функции для операций, требующих атомарности (инкременты, транзакции)
+2. **`SET search_path = public`** — обязательно для безопасности
+3. **Атомарность** — используй функции для операций, требующих атомарности
 
-## Индексы
-
-### Когда добавлять
-
-- Колонки в `WHERE` с частыми запросами
-- Колонки в `JOIN` (foreign keys)
-- Колонки в `ORDER BY`
-- Составные индексы для частых комбинаций
-
-### Существующие индексы
+## Существующие индексы
 
 ```
 idx_forms_owner_id — forms(owner_id)
@@ -295,27 +253,12 @@ idx_leads_lead_status — leads(lead_status)
 idx_form_knowledge_files_form_id — form_knowledge_files(form_id)
 ```
 
-### Именование
-
-Формат: `idx_{table}_{column}` или `idx_{table}_{column1}_{column2}` для составных.
-
 ## Безопасность — чеклист
 
-- [ ] RLS включен на таблице (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`)
-- [ ] Политики покрывают все операции (SELECT, INSERT, UPDATE, DELETE)
-- [ ] Используется `(select auth.uid())` вместо `auth.uid()` в политиках
+- [ ] RLS включен на таблице
+- [ ] Политики покрывают все нужные операции (SELECT, INSERT, UPDATE, DELETE)
+- [ ] Используется `(select auth.uid())` в политиках
 - [ ] `SECURITY DEFINER` + `SET search_path = public` для функций
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` используется ТОЛЬКО на сервере
-- [ ] Пользовательский ввод валидируется перед записью в БД
-- [ ] CASCADE DELETE настроен для дочерних таблиц
-- [ ] Суперадмин-проверка для админских операций
-
-## Чеклист перед завершением
-
-- [ ] Миграция следует нумерации (проверен последний номер)
-- [ ] RLS-политики созданы для всех новых таблиц
-- [ ] Индексы добавлены для частых запросов
-- [ ] Серверные экшены включают проверку авторизации и владельца
-- [ ] Ошибки понятны пользователю (user-friendly)
-- [ ] Не сломаны существующие данные (DEFAULT для новых NOT NULL колонок)
-- [ ] PostgreSQL-функции используют `SET search_path = public`
+- [ ] CASCADE DELETE для дочерних таблиц
+- [ ] Номер миграции правильный (проверен через `ls supabase/`)

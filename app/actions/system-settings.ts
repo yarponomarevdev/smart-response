@@ -3,7 +3,7 @@
  * - getSystemSetting: получение значения настройки
  * - updateSystemSetting: обновление настройки (только для superadmin)
  * - getGlobalTextPrompt: получение глобального промпта для текстового формата
- * - getGlobalImagePrompt: получение глобального промпта для изображений (DALL-E)
+ * - getGlobalImagePrompt: получение глобального промпта для изображений
  */
 "use server"
 
@@ -55,7 +55,7 @@ export async function getGlobalTextPrompt(): Promise<string | null> {
 }
 
 /**
- * Получает глобальный промпт для генерации изображений (DALL-E)
+ * Получает глобальный промпт для генерации изображений
  * Используется в API /api/generate когда ai_result_format = "image"
  */
 export async function getGlobalImagePrompt(): Promise<string | null> {
