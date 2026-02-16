@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ export function FieldForm({
   const [placeholder, setPlaceholder] = useState(initialData?.placeholder || "")
   const [isRequired, setIsRequired] = useState(initialData?.is_required ?? false)
   const [options, setOptions] = useState<FieldOption[]>(initialData?.options || [])
+  const [selectionType, setSelectionType] = useState<'single' | 'multiple'>(initialData?.selection_type || 'single')
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
@@ -101,6 +103,7 @@ export function FieldForm({
       setPlaceholder(initialData?.placeholder || "")
       setIsRequired(initialData?.is_required ?? false)
       setOptions(initialData?.options || [])
+      setSelectionType(initialData?.selection_type || 'single')
       setKeyManuallyEdited(!!initialData?.field_key)
     }
   }, [open])
@@ -183,6 +186,7 @@ export function FieldForm({
       placeholder: isLayoutField ? undefined : (placeholder.trim() || undefined),
       is_required: isLayoutField ? false : isRequired,
       options: needsOptions ? options.filter(o => o.value && o.label) : [],
+      selection_type: needsOptions ? selectionType : undefined,
     })
   }
 
@@ -284,119 +288,100 @@ export function FieldForm({
             </div>
           )}
 
+          {/* Тип выбора - только для полей с опциями */}
+          {needsOptions && (
+            <div className="space-y-2">
+              <Label>{t("editor.fieldForm.selectionTypeLabel")}</Label>
+              <RadioGroup value={selectionType} onValueChange={(value: 'single' | 'multiple') => setSelectionType(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="single" id="single" />
+                  <Label htmlFor="single" className="font-normal cursor-pointer">
+                    {t("editor.fieldForm.selectionTypeSingle")}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="multiple" id="multiple" />
+                  <Label htmlFor="multiple" className="font-normal cursor-pointer">
+                    {t("editor.fieldForm.selectionTypeMultiple")}
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
           {needsOptions && (
             <div className="space-y-2">
               <Label>{t("editor.fieldForm.optionsLabel")}</Label>
               
-              {/* Для select — простой режим без картинок */}
-              {fieldType === "select" && (
-                <>
-                  {/* Заголовки колонок */}
-                  <div className="flex gap-2 text-xs text-muted-foreground px-1">
-                    <span className="flex-1">{t("editor.fieldForm.optionName")}</span>
-                    <span className="flex-1">{t("editor.fieldForm.optionKey")}</span>
-                    <span className="w-10" />
-                  </div>
-                  <div className="space-y-2">
-                    {options.map((option, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          value={option.label}
-                          onChange={(e) => handleOptionChange(index, "label", e.target.value)}
-                          placeholder={t("editor.fieldForm.optionName")}
-                          className="flex-1"
-                        />
-                        <Input
-                          value={option.value}
-                          onChange={(e) => handleOptionChange(index, "value", e.target.value)}
-                          placeholder={t("editor.fieldForm.optionValue")}
-                          className="flex-1 font-mono text-sm"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveOption(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Для multiselect — режим с картинками */}
-              {fieldType === "multiselect" && (
-                <div className="space-y-3">
-                  {options.map((option, index) => (
-                    <div key={index} className="flex gap-2 items-start">
-                      {/* Картинка */}
-                      <div className="w-16 h-16 border rounded overflow-hidden flex-shrink-0 relative group">
-                        {option.image ? (
-                          <>
-                            <Image
-                              src={option.image}
-                              alt={option.label || "Option image"}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveOptionImage(index)}
-                              className="absolute top-0 right-0 p-0.5 bg-destructive text-destructive-foreground rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </>
-                        ) : uploadingIndex === index ? (
-                          <div className="w-full h-full flex items-center justify-center bg-muted">
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
-                            <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp,image/gif"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (file) handleOptionImageUpload(index, file)
-                                e.target.value = ""
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                      {/* Название и ключ */}
-                      <div className="flex-1 space-y-1">
-                        <Input
-                          value={option.label}
-                          onChange={(e) => handleOptionChange(index, "label", e.target.value)}
-                          placeholder={t("editor.fieldForm.optionName")}
-                        />
-                        <Input
-                          value={option.value}
-                          onChange={(e) => handleOptionChange(index, "value", e.target.value)}
-                          placeholder={t("editor.fieldForm.optionKey")}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveOption(index)}
-                        className="self-center"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              {/* Режим с картинками для обоих типов */}
+              <div className="space-y-3">
+                {options.map((option, index) => (
+                  <div key={index} className="flex gap-2 items-start">
+                    {/* Картинка */}
+                    <div className="w-16 h-16 border rounded overflow-hidden flex-shrink-0 relative group">
+                      {option.image ? (
+                        <>
+                          <Image
+                            src={option.image}
+                            alt={option.label || "Option image"}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOptionImage(index)}
+                            className="absolute top-0 right-0 p-0.5 bg-destructive text-destructive-foreground rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      ) : uploadingIndex === index ? (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+                          <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleOptionImageUpload(index, file)
+                              e.target.value = ""
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    {/* Название и ключ */}
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        value={option.label}
+                        onChange={(e) => handleOptionChange(index, "label", e.target.value)}
+                        placeholder={t("editor.fieldForm.optionName")}
+                      />
+                      <Input
+                        value={option.value}
+                        onChange={(e) => handleOptionChange(index, "value", e.target.value)}
+                        placeholder={t("editor.fieldForm.optionKey")}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveOption(index)}
+                      className="self-center"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
 
               <Button
                 type="button"

@@ -78,7 +78,7 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         fieldsResult.fields.forEach((field) => {
           if (field.field_type === "checkbox") {
             initialValues[field.field_key] = false
-          } else if (field.field_type === "multiselect") {
+          } else if (field.field_type === "multiselect" || field.selection_type === "multiple") {
             initialValues[field.field_key] = []
           } else {
             initialValues[field.field_key] = ""
@@ -103,11 +103,13 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     for (const field of dynamicFields) {
       if (field.is_required) {
         const value = fieldValues[field.field_key]
+        const isMultipleSelection = field.field_type === "multiselect" || field.selection_type === "multiple"
+        
         if (field.field_type === "checkbox" && value !== true) {
           return false
-        } else if (field.field_type === "multiselect" && (!Array.isArray(value) || value.length === 0)) {
+        } else if (isMultipleSelection && (!Array.isArray(value) || value.length === 0)) {
           return false
-        } else if (field.field_type !== "checkbox" && field.field_type !== "multiselect" && !value) {
+        } else if (field.field_type !== "checkbox" && !isMultipleSelection && !value) {
           return false
         }
       }
@@ -214,6 +216,95 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
     onSubmit(formattedUrl || null, extendedFieldValues)
   }
 
+  const isMultipleSelectionField = (field: FormField) =>
+    field.field_type === "multiselect" || field.selection_type === "multiple"
+
+  const renderSelectionLabel = (field: FormField) => (
+    <Label htmlFor={field.field_key}>
+      {field.field_label}
+      {field.is_required && <span className="text-destructive ml-1">*</span>}
+    </Label>
+  )
+
+  const renderImageOptionCards = ({
+    field,
+    isMultipleSelection,
+    selectedValue,
+    selectedValues,
+  }: {
+    field: FormField
+    isMultipleSelection: boolean
+    selectedValue: string
+    selectedValues: string[]
+  }) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {field.options?.map((option) => {
+        const isSelected = isMultipleSelection
+          ? selectedValues.includes(option.value)
+          : selectedValue === option.value
+
+        const handleClick = () => {
+          if (isLoading) return
+          if (!isMultipleSelection) {
+            handleFieldChange(field.field_key, option.value)
+            return
+          }
+          if (isSelected) {
+            handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
+            return
+          }
+          handleFieldChange(field.field_key, [...selectedValues, option.value])
+        }
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={handleClick}
+            disabled={isLoading}
+            className={cn(
+              "border rounded-lg p-3 transition-colors text-left",
+              isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+              isLoading && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {option.image && (
+              <div className="relative w-full aspect-square mb-2 rounded overflow-hidden">
+                <img
+                  src={option.image}
+                  alt={option.label}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {!isMultipleSelection ? (
+                <div
+                  className={cn(
+                    "h-4 w-4 shrink-0 rounded-full border border-primary flex items-center justify-center transition-colors",
+                    isSelected ? "bg-primary" : "bg-background"
+                  )}
+                >
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-primary-foreground" />}
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "h-4 w-4 shrink-0 rounded-none border border-primary flex items-center justify-center transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground" : "bg-background"
+                  )}
+                >
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+              )}
+              <span className="text-sm">{option.label}</span>
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+
   // Рендер динамического поля
   const renderField = (field: FormField) => {
     const value = fieldValues[field.field_key]
@@ -258,123 +349,72 @@ export function URLSubmissionStep({ onSubmit, formId }: URLSubmissionStepProps) 
         )
 
       case "select":
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_key}>
-              {field.field_label}
-              {field.is_required && <span className="text-destructive ml-1">*</span>}
-            </Label>
-            <Select
-              value={(value as string) || ""}
-              onValueChange={(val) => handleFieldChange(field.field_key, val)}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border">
-                <SelectValue placeholder={t("common.selectPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )
-
       case "multiselect":
-        const selectedValues = (value as string[]) || []
-        // Проверяем, есть ли хотя бы одна опция с картинкой
+        const isMultipleSelection = isMultipleSelectionField(field)
         const hasImages = field.options?.some((option) => option.image)
+        const selectedValue = (value as string) || ""
+        const selectedValues = (value as string[]) || []
         
+        if (hasImages)
+          return (
+            <div key={field.id} className="space-y-2">
+              {renderSelectionLabel(field)}
+              {renderImageOptionCards({
+                field,
+                isMultipleSelection,
+                selectedValue,
+                selectedValues,
+              })}
+            </div>
+          )
+
+        if (!isMultipleSelection)
+          return (
+            <div key={field.id} className="space-y-2">
+              {renderSelectionLabel(field)}
+              <Select
+                value={selectedValue}
+                onValueChange={(val) => handleFieldChange(field.field_key, val)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="h-12 sm:h-14 text-base px-4 sm:px-6 bg-card border-border">
+                  <SelectValue placeholder={t("common.selectPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options?.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )
+
         return (
           <div key={field.id} className="space-y-2">
-            <Label>
-              {field.field_label}
-              {field.is_required && <span className="text-destructive ml-1">*</span>}
-            </Label>
-            
-            {/* Если есть картинки — отображаем карточки в сетке */}
-            {hasImages ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {field.options?.map((option) => {
-                  const isSelected = selectedValues.includes(option.value)
-                  
-                  const toggleOption = () => {
-                    if (isLoading) return
-                    if (isSelected) {
+            {renderSelectionLabel(field)}
+            <div className="space-y-2 p-4 border rounded-lg bg-card">
+              {field.options?.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${field.field_key}-${option.value}`}
+                    checked={selectedValues.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        handleFieldChange(field.field_key, [...selectedValues, option.value])
+                        return
+                      }
                       handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
-                    } else {
-                      handleFieldChange(field.field_key, [...selectedValues, option.value])
-                    }
-                  }
-                  
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={toggleOption}
-                      disabled={isLoading}
-                      className={cn(
-                        "border rounded-lg p-3 transition-colors text-left",
-                        isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50",
-                        isLoading && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      {option.image && (
-                        <div className="relative w-full aspect-square mb-2 rounded overflow-hidden">
-                          <img
-                            src={option.image}
-                            alt={option.label}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        {/* Визуальный индикатор вместо Checkbox (чтобы избежать вложенных button) */}
-                        <div
-                          className={cn(
-                            "h-4 w-4 shrink-0 rounded-none border border-primary flex items-center justify-center transition-colors",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-background"
-                          )}
-                        >
-                          {isSelected && <Check className="h-3 w-3" />}
-                        </div>
-                        <span className="text-sm">{option.label}</span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              // Если картинок нет — стандартный список чекбоксов
-              <div className="space-y-2 p-4 border rounded-lg bg-card">
-                {field.options?.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`${field.field_key}-${option.value}`}
-                      checked={selectedValues.includes(option.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          handleFieldChange(field.field_key, [...selectedValues, option.value])
-                        } else {
-                          handleFieldChange(field.field_key, selectedValues.filter((v) => v !== option.value))
-                        }
-                      }}
-                      disabled={isLoading}
-                    />
-                    <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            )}
+                    }}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor={`${field.field_key}-${option.value}`} className="cursor-pointer">
+                    {option.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
         )
 

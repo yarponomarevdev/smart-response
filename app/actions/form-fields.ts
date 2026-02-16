@@ -32,6 +32,7 @@ export interface FormField {
   placeholder?: string | null
   is_required: boolean
   options: FieldOption[]
+  selection_type?: 'single' | 'multiple' | null  // Тип выбора для select/multiselect
   order_index: number
   created_at: string
   updated_at: string
@@ -45,6 +46,7 @@ export interface FormFieldInput {
   placeholder?: string
   is_required?: boolean
   options?: FieldOption[]
+  selection_type?: 'single' | 'multiple'  // Тип выбора для select/multiselect
   order_index?: number
 }
 
