@@ -193,8 +193,18 @@ export function GenerationStep({
         const generatedResult = data.result as { type: string; text: string; imageUrl?: string }
         
         // Создаём лид с данными контактов
+        // Убираем base64 изображения из customFields — они уже обработаны в /api/generate
+        // и не должны храниться в БД или передаваться через Server Action (лимит 1MB)
+        const sanitizedCustomFields = customFields
+          ? Object.fromEntries(
+              Object.entries(customFields).filter(
+                ([, v]) => typeof v !== "string" || !v.startsWith("data:image")
+              )
+            )
+          : {}
+
         const extendedCustomFields = {
-          ...customFields,
+          ...sanitizedCustomFields,
           ...(contactData.phone ? { phone: contactData.phone } : {}),
           ...(contactData.feedback !== undefined ? { requestFeedback: contactData.feedback } : {}),
         }
