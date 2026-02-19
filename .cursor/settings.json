@@ -1,11 +1,5 @@
 {
   "plugins": {
-    "linear": {
-      "enabled": true
-    },
-    "supabase": {
-      "enabled": true
-    },
     "context7-plugin": {
       "enabled": true
     },
@@ -13,6 +7,12 @@
       "enabled": true
     },
     "vercel": {
+      "enabled": true
+    },
+    "supabase": {
+      "enabled": true
+    },
+    "linear": {
       "enabled": true
     }
   }
