@@ -9,7 +9,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Share2, Download } from "lucide-react"
-import { jsPDF } from "jspdf"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { createClient } from "@/lib/supabase/client"
 import { markdownToPdfContent, getPdfStyles } from "@/lib/utils/markdown-to-pdf"
