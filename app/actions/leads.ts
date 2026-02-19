@@ -141,19 +141,19 @@ function generateOwnerNotificationHTML({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Новая заявка</title>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #000000; color: #ffffff;">
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; color: #171717;">
         <span style="display:none !important; visibility:hidden; mso-hide:all; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">Новый пользователь заполнил форму ${formName}</span>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
           <tr>
             <td align="center" style="padding: 40px 20px;">
-              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171717; border-radius: 8px; overflow: hidden;">
+              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5;">
                 <!-- Header -->
                 <tr>
                   <td style="padding: 40px 40px 20px 40px; text-align: center;">
-                    <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #171717;">
                       🎉 Новая заявка с формы
                     </h1>
-                    <p style="margin: 16px 0 0 0; font-size: 20px; color: #a3a3a3;">
+                    <p style="margin: 16px 0 0 0; font-size: 20px; color: #525252;">
                       "${formName}"
                     </p>
                   </td>
@@ -162,37 +162,37 @@ function generateOwnerNotificationHTML({
                 <!-- Lead Info -->
                 <tr>
                   <td style="padding: 20px 40px;">
-                    <div style="background-color: #262626; border-radius: 8px; padding: 20px;">
-                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #a3a3a3; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 20px;">
+                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">
                         Информация о лиде
                       </h3>
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 80px;">Email:</td>
-                          <td style="padding: 8px 0; color: #ffffff; font-size: 14px; font-weight: 500;">
-                            <a href="mailto:${leadEmail}" style="color: #60a5fa; text-decoration: none;">${leadEmail}</a>
+                          <td style="padding: 8px 0; color: #525252; font-size: 14px; width: 80px;">Email:</td>
+                          <td style="padding: 8px 0; color: #171717; font-size: 14px; font-weight: 500;">
+                            <a href="mailto:${leadEmail}" style="color: #2563eb; text-decoration: none;">${leadEmail}</a>
                           </td>
                         </tr>
                         ${requestFeedback ? `
                         <tr>
-                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 80px;">${feedbackText || "Обратная связь"}:</td>
-                          <td style="padding: 8px 0; color: #ffffff; font-size: 14px; font-weight: 500;">
+                          <td style="padding: 8px 0; color: #525252; font-size: 14px; width: 80px;">${feedbackText || "Обратная связь"}:</td>
+                          <td style="padding: 8px 0; color: #171717; font-size: 14px; font-weight: 500;">
                             Да
                           </td>
                         </tr>
                         ` : ""}
                         ${parentPageUrl ? `
                         <tr>
-                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 160px;">Сайт:</td>
-                          <td style="padding: 8px 0; color: #ffffff; font-size: 14px; word-break: break-all;">
-                            <a href="${parentPageUrl}" style="color: #60a5fa; text-decoration: none;">${parentPageUrl}</a>
+                          <td style="padding: 8px 0; color: #525252; font-size: 14px; width: 160px;">Сайт:</td>
+                          <td style="padding: 8px 0; color: #171717; font-size: 14px; word-break: break-all;">
+                            <a href="${parentPageUrl}" style="color: #2563eb; text-decoration: none;">${parentPageUrl}</a>
                           </td>
                         </tr>
                         ` : url ? `
                         <tr>
-                          <td style="padding: 8px 0; color: #a3a3a3; font-size: 14px; width: 80px;">URL:</td>
-                          <td style="padding: 8px 0; color: #ffffff; font-size: 14px; word-break: break-all;">
-                            <a href="${url}" style="color: #60a5fa; text-decoration: none;">${url}</a>
+                          <td style="padding: 8px 0; color: #525252; font-size: 14px; width: 80px;">URL:</td>
+                          <td style="padding: 8px 0; color: #171717; font-size: 14px; word-break: break-all;">
+                            <a href="${url}" style="color: #2563eb; text-decoration: none;">${url}</a>
                           </td>
                         </tr>
                         ` : ""}
@@ -205,8 +205,8 @@ function generateOwnerNotificationHTML({
                 ${resultImageUrl ? `
                 <tr>
                   <td style="padding: 20px 40px;">
-                    <div style="background-color: #262626; border-radius: 8px; padding: 20px;">
-                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #a3a3a3; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 20px;">
+                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">
                         Сгенерированное изображение
                       </h3>
                       <img src="${resultImageUrl}" alt="Результат" style="max-width: 100%; height: auto; border-radius: 4px;" />
@@ -219,11 +219,11 @@ function generateOwnerNotificationHTML({
                 ${resultText ? `
                 <tr>
                   <td style="padding: 20px 40px;">
-                    <div style="background-color: #262626; border-radius: 8px; padding: 20px;">
-                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #a3a3a3; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 20px;">
+                      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">
                         Ответ формы
                       </h3>
-                      <div style="color: #d4d4d4; font-size: 14px; line-height: 1.7;">${htmlContent}</div>
+                      <div style="color: #404040; font-size: 14px; line-height: 1.7;">${htmlContent}</div>
                     </div>
                   </td>
                 </tr>
@@ -232,7 +232,7 @@ function generateOwnerNotificationHTML({
                 <!-- CTA Button -->
                 <tr>
                   <td style="padding: 30px 40px 40px 40px; text-align: center;">
-                    <a href="${dashboardUrl}/admin" style="display: inline-block; padding: 16px 32px; background-color: #59191f; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                    <a href="${dashboardUrl}/admin" style="display: inline-block; padding: 16px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
                       Перейти в личный кабинет
                     </a>
                   </td>
@@ -240,11 +240,11 @@ function generateOwnerNotificationHTML({
                 
                 <!-- Footer -->
                 <tr>
-                  <td style="padding: 20px 40px; text-align: center; border-top: 1px solid #262626;">
+                  <td style="padding: 20px 40px; text-align: center; border-top: 1px solid #e5e5e5;">
                     <p style="margin: 0; color: #737373; font-size: 12px;">
                       Это автоматическое уведомление от SmartResponse.io
                     </p>
-                    <p style="margin: 8px 0 0 0; color: #525252; font-size: 11px;">
+                    <p style="margin: 8px 0 0 0; color: #a3a3a3; font-size: 11px;">
                       Вы можете отключить уведомления в настройках формы
                     </p>
                   </td>
