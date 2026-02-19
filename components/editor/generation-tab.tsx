@@ -310,25 +310,25 @@ export function GenerationTab({
                   {t("editor.generationTab.formatText")}
                 </Label>
               </div>
-              {/* Премиум — coming soon */}
-              <div className="flex items-center gap-3 opacity-70">
+              <div className="flex items-center gap-3">
                 <Checkbox
                   id="format_image"
                   checked={resultFormat.value === "image"}
-                  onCheckedChange={() => {}}
-                  disabled
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      resultFormat.onChange("image")
+                    }
+                  }}
                   className="h-6 w-6 rounded-[5px]"
                 />
                 <Label 
                   htmlFor="format_image" 
-                  className="text-base sm:text-lg cursor-not-allowed"
+                  className="text-base sm:text-lg cursor-pointer"
                 >
                   {t("editor.generationTab.formatImage")}
                 </Label>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {t("editor.generationTab.comingSoonPremium")}
-                </span>
               </div>
+              {/* Премиум — coming soon */}
               <div className="flex items-center gap-3 opacity-70">
                 <Checkbox
                   id="format_image_with_text"
