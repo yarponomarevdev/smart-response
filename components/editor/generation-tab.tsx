@@ -310,41 +310,78 @@ export function GenerationTab({
                   {t("editor.generationTab.formatText")}
                 </Label>
               </div>
-              <div className="flex items-center gap-3">
+              {/* Премиум — coming soon */}
+              <div className="flex items-center gap-3 opacity-70">
                 <Checkbox
                   id="format_image"
                   checked={resultFormat.value === "image"}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      resultFormat.onChange("image")
-                    }
-                  }}
+                  onCheckedChange={() => {}}
+                  disabled
                   className="h-6 w-6 rounded-[5px]"
                 />
                 <Label 
                   htmlFor="format_image" 
-                  className="text-base sm:text-lg cursor-pointer"
+                  className="text-base sm:text-lg cursor-not-allowed"
                 >
                   {t("editor.generationTab.formatImage")}
                 </Label>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {t("editor.generationTab.comingSoonPremium")}
+                </span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 opacity-70">
                 <Checkbox
                   id="format_image_with_text"
                   checked={resultFormat.value === "image_with_text"}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      resultFormat.onChange("image_with_text")
-                    }
-                  }}
+                  onCheckedChange={() => {}}
+                  disabled
                   className="h-6 w-6 rounded-[5px]"
                 />
                 <Label 
                   htmlFor="format_image_with_text" 
-                  className="text-base sm:text-lg cursor-pointer"
+                  className="text-base sm:text-lg cursor-not-allowed"
                 >
                   {t("editor.generationTab.formatImageWithText")}
                 </Label>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {t("editor.generationTab.comingSoonPremium")}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 opacity-70">
+                <Checkbox
+                  id="format_video"
+                  checked={false}
+                  onCheckedChange={() => {}}
+                  disabled
+                  className="h-6 w-6 rounded-[5px]"
+                />
+                <Label 
+                  htmlFor="format_video" 
+                  className="text-base sm:text-lg cursor-not-allowed"
+                >
+                  {t("editor.generationTab.formatVideo")}
+                </Label>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {t("editor.generationTab.comingSoonPremium")}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 opacity-70">
+                <Checkbox
+                  id="format_audio"
+                  checked={false}
+                  onCheckedChange={() => {}}
+                  disabled
+                  className="h-6 w-6 rounded-[5px]"
+                />
+                <Label 
+                  htmlFor="format_audio" 
+                  className="text-base sm:text-lg cursor-not-allowed"
+                >
+                  {t("editor.generationTab.formatAudio")}
+                </Label>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {t("editor.generationTab.comingSoonPremium")}
+                </span>
               </div>
             </div>
           </div>

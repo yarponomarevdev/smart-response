@@ -565,6 +565,9 @@ export const ru = {
       formatText: "Текст",
       formatImage: "Изображение",
       formatImageWithText: "Изображение с поясняющим текстом",
+      formatVideo: "Видео",
+      formatAudio: "Аудио",
+      comingSoonPremium: "Скоро (Премиум)",
     },
     dynamicFieldsTab: {
       title: "Поля формы",

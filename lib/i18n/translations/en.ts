@@ -567,6 +567,9 @@ export const en: Translations = {
       formatText: "Text",
       formatImage: "Image",
       formatImageWithText: "Image with explanatory text",
+      formatVideo: "Video",
+      formatAudio: "Audio",
+      comingSoonPremium: "Coming Soon (Premium)",
     },
     dynamicFieldsTab: {
       title: "Form Fields",
