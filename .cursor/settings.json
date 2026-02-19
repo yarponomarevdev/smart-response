@@ -1,0 +1,19 @@
+{
+  "plugins": {
+    "linear": {
+      "enabled": true
+    },
+    "supabase": {
+      "enabled": true
+    },
+    "context7-plugin": {
+      "enabled": true
+    },
+    "cursor-team-kit": {
+      "enabled": true
+    },
+    "vercel": {
+      "enabled": true
+    }
+  }
+}
