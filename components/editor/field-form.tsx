@@ -390,7 +390,7 @@ export function FieldForm({
                   </div>
                   <div className="space-y-2">
                     {options.map((option, index) => (
-                      <div key={`${option.value || "option"}-${index}`} className="flex gap-2 items-center">
+                      <div key={index} className="flex gap-2 items-center">
                         <Input
                           value={option.label}
                           onChange={(e) => handleOptionChange(index, "label", e.target.value)}
@@ -421,7 +421,7 @@ export function FieldForm({
               {fieldType === "multiselect" && (
                 <div className="space-y-3">
                   {options.map((option, index) => (
-                    <div key={`${option.value || "option"}-${index}`} className="flex gap-2 items-start">
+                    <div key={index} className="flex gap-2 items-start">
                       <div className="w-16 h-16 border rounded overflow-hidden flex-shrink-0 relative group">
                         {option.image ? (
                           <>
