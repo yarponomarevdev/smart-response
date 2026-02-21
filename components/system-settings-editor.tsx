@@ -12,23 +12,87 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, CheckCircle2, AlertTriangle, MessageSquareText, Image as ImageIcon } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 
-// Доступные модели OpenAI
-const TEXT_MODELS = [
-  { value: "gpt-5", label: "GPT-5" },
-  { value: "gpt-5-mini", label: "GPT-5 Mini" },
-  { value: "gpt-5-nano", label: "GPT-5 Nano" },
-  { value: "gpt-5.2", label: "GPT-5.2" },
+interface ModelOption {
+  value: string
+  label: string
+}
+
+interface ModelGroup {
+  label: string
+  options: ModelOption[]
+}
+
+const TEXT_MODEL_GROUPS: ModelGroup[] = [
+  {
+    label: "OpenAI",
+    options: [
+      { value: "openai:gpt-5", label: "GPT-5" },
+      { value: "openai:gpt-5-mini", label: "GPT-5 Mini" },
+      { value: "openai:gpt-5-nano", label: "GPT-5 Nano" },
+      { value: "openai:gpt-5.2", label: "GPT-5.2" },
+    ],
+  },
+  {
+    label: "OpenRouter",
+    options: [
+      { value: "openrouter:google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { value: "openrouter:google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+      { value: "openrouter:anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+      { value: "openrouter:meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
+    ],
+  },
 ]
 
-const IMAGE_MODELS = [
-  { value: "gpt-image-1", label: "GPT-Image-1" },
-  { value: "gpt-image-1.5", label: "GPT-Image-1.5" },
+const IMAGE_MODEL_GROUPS: ModelGroup[] = [
+  {
+    label: "OpenAI",
+    options: [
+      { value: "openai:gpt-image-1", label: "GPT-Image-1" },
+      { value: "openai:gpt-image-1.5", label: "GPT-Image-1.5" },
+    ],
+  },
+  {
+    label: "OpenRouter",
+    options: [
+      {
+        value: "openrouter:google/gemini-2.5-flash-image-preview",
+        label: "Nano Banana Preview (Gemini 2.5 Flash Image Preview)",
+      },
+      {
+        value: "openrouter:google/gemini-2.5-flash-image",
+        label: "Nano Banana (Gemini 2.5 Flash Image)",
+      },
+      {
+        value: "openrouter:google/gemini-3-pro-image-preview",
+        label: "Nano Banana Pro (Gemini 3 Pro Image Preview)",
+      },
+      { value: "openrouter:black-forest-labs/flux.2-pro", label: "Flux.2 Pro" },
+      { value: "openrouter:black-forest-labs/flux.2-flex", label: "Flux.2 Flex" },
+    ],
+  },
 ]
+
+function normalizeModelValue(value: string) {
+  const normalizedValue = value.trim()
+  if (!normalizedValue) return ""
+  if (normalizedValue.includes(":")) return normalizedValue
+  return `openai:${normalizedValue}`
+}
+
 import { useSystemSettings, useSaveSystemSettings } from "@/lib/hooks"
 
 export function SystemSettingsEditor() {
@@ -49,8 +113,8 @@ export function SystemSettingsEditor() {
     if (data) {
       setGlobalTextPrompt(data.globalTextPrompt)
       setGlobalImagePrompt(data.globalImagePrompt)
-      setTextModel(data.textModel)
-      setImageModel(data.imageModel)
+      setTextModel(normalizeModelValue(data.textModel))
+      setImageModel(normalizeModelValue(data.imageModel))
     }
   }, [data])
 
@@ -155,10 +219,18 @@ export function SystemSettingsEditor() {
                   <SelectValue placeholder="Выберите модель..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEXT_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
+                  {TEXT_MODEL_GROUPS.map((group, index) => (
+                    <div key={group.label}>
+                      {index > 0 && <SelectSeparator />}
+                      <SelectGroup>
+                        <SelectLabel>{group.label}</SelectLabel>
+                        {group.options.map((model) => (
+                          <SelectItem key={model.value} value={model.value}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </div>
                   ))}
                 </SelectContent>
               </Select>
@@ -214,10 +286,18 @@ export function SystemSettingsEditor() {
                   <SelectValue placeholder="Выберите модель..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {IMAGE_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
+                  {IMAGE_MODEL_GROUPS.map((group, index) => (
+                    <div key={group.label}>
+                      {index > 0 && <SelectSeparator />}
+                      <SelectGroup>
+                        <SelectLabel>{group.label}</SelectLabel>
+                        {group.options.map((model) => (
+                          <SelectItem key={model.value} value={model.value}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </div>
                   ))}
                 </SelectContent>
               </Select>

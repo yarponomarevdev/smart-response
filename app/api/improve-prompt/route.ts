@@ -4,7 +4,7 @@
  */
 
 import { generateText } from "ai"
-import { openai } from "@/lib/ai/openai"
+import { resolveTextModel } from "@/lib/ai/provider"
 import { getTextModel } from "@/app/actions/system-settings"
 
 export const maxDuration = 60
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     // Генерируем улучшенный промпт с помощью AI SDK
     const { text: improvedPrompt } = await generateText({
-      model: openai(textModel),
+      model: resolveTextModel(textModel),
       system: IMPROVE_SYSTEM_PROMPT,
       prompt,
     })

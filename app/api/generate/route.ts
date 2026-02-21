@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { getGlobalTextPrompt, getGlobalImagePrompt, getTextModel, getImageModel } from "@/app/actions/system-settings"
 import { extractTextFromFile, isImageFile } from "@/lib/file-parser"
 import { saveBase64ImageToStorage, saveImageToStorage } from "@/lib/utils/image-storage"
-import { generateText, generateImage } from "ai"
-import { openai } from "@/lib/ai/openai"
+import { generateText } from "ai"
+import { generateImageFromProvider, resolveTextModel } from "@/lib/ai/provider"
 
 // Интерфейс для результата базы знаний с поддержкой изображений
 interface KnowledgeBaseResult {
@@ -705,7 +705,7 @@ export async function POST(req: Request) {
           : `На основе предоставленного контекста создай детальный промпт для генерации изображения. Промпт должен быть на английском языке и описывать конкретные визуальные детали: элементы, цвета, стиль, композицию, настроение. Будь максимально точен и подробен — модель может обработать длинные промпты.`
 
         const { text: generatedPrompt } = await generateText({
-          model: openai(textModel),
+          model: resolveTextModel(textModel),
           system: `${imageSystemPrompt}\n\n${promptInstructions}`,
           prompt: limitedContext,
           maxOutputTokens: 4000,
@@ -778,13 +778,13 @@ export async function POST(req: Request) {
           }
           
           // AI SDK generateImage с prompt object для редактирования
-          const { images } = await generateImage({
-            model: openai.image(imageModel),
+          const { images } = await generateImageFromProvider({
+            modelString: imageModel,
             prompt: {
               text: compressedPrompt,
               images: limitedPromptImages,
             },
-            size: "1024x1024" as const,
+            size: "1024x1024",
           })
           
           if (images && images.length > 0) {
@@ -794,10 +794,10 @@ export async function POST(req: Request) {
           // Стандартная генерация изображения
           console.log("Генерация изображения через AI SDK generateImage")
           
-          const { images } = await generateImage({
-            model: openai.image(imageModel),
+          const { images } = await generateImageFromProvider({
+            modelString: imageModel,
             prompt: compressedPrompt,
-            size: "1024x1024" as const,
+            size: "1024x1024",
           })
           
           if (images && images.length > 0) {
@@ -885,7 +885,7 @@ export async function POST(req: Request) {
           try {
             // Используем AI SDK generateText для текста к изображению
             const { text: generatedText } = await generateText({
-              model: openai(textModelForDescription),
+              model: resolveTextModel(textModelForDescription),
               system: textSystemPrompt,
               prompt: userMessage,
             })
@@ -1006,7 +1006,7 @@ Please provide your analysis and recommendations.`
       try {
         // Используем generateText вместо streamText для надёжности с multimodal
         const { text: generatedText } = await generateText({
-          model: openai(textModel),
+          model: resolveTextModel(textModel),
           system: textSystemPrompt,
           messages: [
             {
