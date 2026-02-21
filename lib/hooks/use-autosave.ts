@@ -88,10 +88,31 @@ export function useAutoSaveField({
 
       if (formId !== formIdRef.current) return
 
-      // Обновляем кэш напрямую вместо инвалидации, чтобы не прерывать ввод пользователя
-      queryClient.setQueryData(["staticLayoutFields", formId], (old: any) => {
+      // Обновляем кэш напрямую вместо инвалидации, чтобы не прерывать ввод пользователя.
+      // 1) Кэш вкладки "Данные формы" (статичные элементы оформления)
+      queryClient.setQueryData(["staticLayoutFields", formId], (old: Record<string, unknown> | null) => {
         if (!old) return old
         return { ...old, [fieldKey]: newValue || null }
+      })
+      // 2) Общий кэш контента редактора (используется остальными вкладками)
+      queryClient.setQueryData(["formContent", formId], (old: {
+        content?: Record<string, string>
+        loadingMessages?: string[]
+        systemPrompt?: string
+        resultFormat?: string
+      } | null) => {
+        if (!old) return old
+        const nextContent = {
+          ...(old.content || {}),
+          [fieldKey]: newValue || "",
+        }
+        const nextData = {
+          ...old,
+          content: nextContent,
+        }
+        if (fieldKey === "ai_system_prompt") nextData.systemPrompt = newValue || ""
+        if (fieldKey === "ai_result_format") nextData.resultFormat = newValue || "text"
+        return nextData
       })
 
       setStatus("saved")
@@ -320,8 +341,22 @@ export function useAutoSaveBoolean({
 
       if (formId !== formIdRef.current) return
 
-      // Инвалидируем кэш
-      await queryClient.invalidateQueries({ queryKey: ["formContent", formId] })
+      // Обновляем кэш контента формы без refetch, чтобы не терять ввод при переключении вкладок
+      queryClient.setQueryData(["formContent", formId], (old: {
+        content?: Record<string, string>
+        loadingMessages?: string[]
+        systemPrompt?: string
+        resultFormat?: string
+      } | null) => {
+        if (!old) return old
+        return {
+          ...old,
+          content: {
+            ...(old.content || {}),
+            [fieldKey]: String(newValue),
+          },
+        }
+      })
 
       setStatus("saved")
       
@@ -439,8 +474,30 @@ export function useAutoSaveArray({
 
       if (formId !== formIdRef.current) return
 
-      // Инвалидируем кэш
-      await queryClient.invalidateQueries({ queryKey: ["formContent", formId] })
+      // Обновляем кэш контента формы без refetch, чтобы значение не откатывалось на вкладках
+      queryClient.setQueryData(["formContent", formId], (old: {
+        content?: Record<string, string>
+        loadingMessages?: string[]
+        systemPrompt?: string
+        resultFormat?: string
+      } | null) => {
+        if (!old) return old
+
+        const nextData = {
+          ...old,
+          loadingMessages: [...newValues],
+        }
+
+        if (fieldKey === "loading_messages") return nextData
+
+        return {
+          ...nextData,
+          content: {
+            ...(old.content || {}),
+            [fieldKey]: JSON.stringify(newValues),
+          },
+        }
+      })
 
       // Устанавливаем статус "saved" только для измененного поля
       setStatuses(prev => {
