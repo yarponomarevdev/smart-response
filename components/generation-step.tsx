@@ -54,9 +54,6 @@ interface GenerationStepProps {
 }
 
 interface FormContent {
-  // Заголовки генерации (из вкладки "Генерация")
-  gen_title?: string
-  gen_subtitle?: string
   // CTA блок
   cta_text?: string
   button_text?: string
@@ -105,14 +102,12 @@ export function GenerationStep({
       const supabase = createClient()
       const { data } = await supabase
         .from("forms")
-        .select("gen_title, gen_subtitle, cta_text, button_text, button_url, loading_messages, ai_result_format")
+        .select("cta_text, button_text, button_url, loading_messages, ai_result_format")
         .eq("id", formId)
         .single()
 
       if (data) {
         setContent({
-          gen_title: data.gen_title || undefined,
-          gen_subtitle: data.gen_subtitle || undefined,
           cta_text: data.cta_text || undefined,
           button_text: data.button_text || undefined,
           button_url: data.button_url || undefined,
@@ -301,8 +296,6 @@ export function GenerationStep({
   }
 
   // Извлекаем настройки из content
-  const genTitle = content.gen_title || "Генерируем ваш результат"
-  const genSubtitle = content.gen_subtitle || "Подождите несколько секунд..."
   const ctaText = content.cta_text || ""
   const buttonText = content.button_text || ""
   const buttonUrl = content.button_url || ""
@@ -346,19 +339,9 @@ export function GenerationStep({
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4 max-w-2xl mx-auto">
-      {/* Главный заголовок */}
-      <div className="space-y-2 sm:space-y-3">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
-          {genTitle}
-        </h1>
-        <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-          {genSubtitle}
-        </p>
-      </div>
-
-      {/* Блок с анимацией или стримингом текста */}
-      <div className="w-full max-w-[500px] sm:max-w-[600px]">
-        <div className="rounded-[20px] sm:rounded-[24px] relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 10' }}>
+      {/* Блок с анимацией и текстом загрузки */}
+      <div className="w-full max-w-[560px] sm:max-w-[680px]">
+        <div className="rounded-[20px] sm:rounded-[24px] relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}>
           {/* ShaderGradient анимация */}
           <ShaderGradientCanvas
             style={{
@@ -394,10 +377,9 @@ export function GenerationStep({
             />
           </ShaderGradientCanvas>
           
-          {/* Overlay с текстом - показывает стриминг или сообщение загрузки */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px] p-4">
-            {/* Показываем сообщение загрузки */}
-            <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
+          {/* Overlay с текстом - показывает сообщение загрузки */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px] p-6">
+            <p className="text-white font-semibold text-base sm:text-lg md:text-xl px-6 text-center">
               {messages[messageIndex]}
             </p>
           </div>

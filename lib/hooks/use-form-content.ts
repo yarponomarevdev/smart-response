@@ -56,9 +56,6 @@ interface FormData {
   cta_text: string | null
   button_text: string | null
   button_url: string | null
-  // Generation step
-  gen_title: string | null
-  gen_subtitle: string | null
 }
 
 interface FormContentData {
@@ -188,10 +185,6 @@ async function fetchFormContent(formId: string): Promise<FormContentData> {
   if (form.cta_text) contentMap.cta_text = form.cta_text
   if (form.button_text) contentMap.button_text = form.button_text
   if (form.button_url) contentMap.button_url = form.button_url
-  
-  // Generation step
-  if (form.gen_title) contentMap.gen_title = form.gen_title
-  if (form.gen_subtitle) contentMap.gen_subtitle = form.gen_subtitle
 
   // Loading messages (из JSONB массива)
   const loadingMessages = Array.isArray(form.loading_messages) && form.loading_messages.length > 0
@@ -312,9 +305,6 @@ export function useSaveFormContent() {
         cta_text: content.cta_text || null,
         button_text: content.button_text || null,
         button_url: content.button_url || null,
-        // Generation step
-        gen_title: content.gen_title || null,
-        gen_subtitle: content.gen_subtitle || null,
       }
 
       const { error } = await supabase

@@ -1,9 +1,6 @@
 /**
  * ContactsStep - Этап сбора контактных данных
- * 
  * Показывает форму для ввода email, телефона и чекбокс обратной связи.
- * Элементы оформления (H1, H2, H3, дисклеймер) берутся из динамических полей формы.
- * Настраивается через вкладку "Контакты" в редакторе.
  */
 "use client"
 
@@ -14,8 +11,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
-import { getFormFields, type FormField } from "@/app/actions/form-fields"
 
 interface ContactsStepProps {
   formId: string
@@ -32,11 +27,7 @@ interface FormContent {
   feedback_text?: string
   privacy_url?: string
   email_button?: string
-  gradient_text?: string
 }
-
-// Типы элементов оформления
-const LAYOUT_TYPES = ["h1", "h2", "h3", "disclaimer"]
 
 export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   // Состояние формы
@@ -48,19 +39,8 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   
   // Контент формы
   const [content, setContent] = useState<FormContent>({})
-  
-  // Элементы оформления из динамических полей
-  const [layoutFields, setLayoutFields] = useState<FormField[]>([])
-  
-  // Статические элементы оформления
-  const [staticLayout, setStaticLayout] = useState<{
-    heading?: string | null
-    subheading?: string | null
-    bodyText?: string | null
-    disclaimer?: string | null
-  }>({})
 
-  // Загрузка контента формы и динамических полей (теперь из таблицы forms)
+  // Загрузка контента формы
   useEffect(() => {
     const fetchData = async () => {
       if (!formId) return
@@ -70,7 +50,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
       // Загружаем настройки формы контактов и статические элементы напрямую из forms
       const { data } = await supabase
         .from("forms")
-        .select("email_placeholder, phone_enabled, phone_required, feedback_enabled, feedback_text, privacy_url, email_button, gradient_text, static_heading, static_subheading, static_body_text, static_disclaimer, phone_placeholder")
+        .select("email_placeholder, phone_enabled, phone_required, feedback_enabled, feedback_text, privacy_url, email_button, phone_placeholder")
         .eq("id", formId)
         .single()
 
@@ -84,23 +64,7 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           feedback_text: data.feedback_text || undefined,
           privacy_url: data.privacy_url || undefined,
           email_button: data.email_button || undefined,
-          gradient_text: data.gradient_text || undefined,
         })
-        
-        setStaticLayout({
-          heading: data.static_heading,
-          subheading: data.static_subheading,
-          bodyText: data.static_body_text,
-          disclaimer: data.static_disclaimer,
-        })
-      }
-      
-      // Загружаем динамические поля для элементов оформления
-      const fieldsResult = await getFormFields(formId)
-      if ("fields" in fieldsResult && fieldsResult.fields.length > 0) {
-        // Фильтруем только элементы оформления (не кнопку submit)
-        const layouts = fieldsResult.fields.filter(f => LAYOUT_TYPES.includes(f.field_type))
-        setLayoutFields(layouts)
       }
     }
 
@@ -116,39 +80,6 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
   const feedbackText = content.feedback_text || "Да, свяжитесь со мной"
   const privacyUrl = content.privacy_url || ""
   const submitButtonText = content.email_button || "Сгенерировать"
-  const gradientText = content.gradient_text || "Происходит что-то магическое..."
-  
-  // Рендер элемента оформления
-  const renderLayoutField = (field: FormField) => {
-    switch (field.field_type) {
-      case "h1":
-        return (
-          <h1 key={field.id} className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight text-balance">
-            {field.field_label}
-          </h1>
-        )
-      case "h2":
-        return (
-          <h2 key={field.id} className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight text-balance">
-            {field.field_label}
-          </h2>
-        )
-      case "h3":
-        return (
-          <p key={field.id} className="text-base sm:text-lg md:text-xl text-muted-foreground text-balance">
-            {field.field_label}
-          </p>
-        )
-      case "disclaimer":
-        return (
-          <p key={field.id} className="text-xs sm:text-sm text-muted-foreground">
-            {field.field_label}
-          </p>
-        )
-      default:
-        return null
-    }
-  }
 
   // Валидация email
   const validateEmail = (value: string) => {
@@ -181,81 +112,6 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
 
   return (
     <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in duration-500 w-full px-4 max-w-2xl mx-auto">
-      {/* Статические элементы оформления */}
-      {(staticLayout.heading || staticLayout.subheading || staticLayout.bodyText) && (
-        <div className="space-y-2 sm:space-y-3">
-          {staticLayout.heading && (
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight text-balance">
-              {staticLayout.heading}
-            </h1>
-          )}
-          {staticLayout.subheading && (
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight text-balance">
-              {staticLayout.subheading}
-            </h2>
-          )}
-          {staticLayout.bodyText && (
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground text-balance">
-              {staticLayout.bodyText}
-            </p>
-          )}
-        </div>
-      )}
-      
-      {/* Элементы оформления из динамических полей */}
-      {layoutFields.length > 0 && (
-        <div className="space-y-2 sm:space-y-3">
-          {layoutFields.map(renderLayoutField)}
-        </div>
-      )}
-
-      {/* Блок с анимацией */}
-      <div className="w-full max-w-[500px] sm:max-w-[600px]">
-        <div className="rounded-[20px] sm:rounded-[24px] relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 10' }}>
-          {/* ShaderGradient анимация */}
-          <ShaderGradientCanvas
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              pointerEvents: 'none',
-            }}
-          >
-            <ShaderGradient
-              control='props'
-              animate='on'
-              type='waterPlane'
-              uTime={0}
-              uSpeed={0.15}
-              uStrength={2}
-              uDensity={1.2}
-              uFrequency={5.5}
-              uAmplitude={0}
-              color1='#505050'
-              color2='#808080'
-              color3='#1a1a1a'
-              brightness={1.2}
-              grain='on'
-              grainBlending={0.3}
-              cAzimuthAngle={180}
-              cPolarAngle={90}
-              cDistance={3.6}
-              wireframe={false}
-              shader='defaults'
-            />
-          </ShaderGradientCanvas>
-          
-          {/* Overlay с текстом */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[20px] sm:rounded-[24px]">
-            <p className="text-white font-semibold text-sm sm:text-base px-4 text-center">
-              {gradientText}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Форма email */}
       <div className="w-full max-w-[534px]">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
@@ -308,13 +164,6 @@ export function ContactsStep({ formId, onSubmit }: ContactsStepProps) {
           )}
 
           {submitError && <p className="text-sm text-destructive text-left">{submitError}</p>}
-          
-          {/* Статический дисклеймер перед кнопкой */}
-          {staticLayout.disclaimer && (
-            <p className="text-xs sm:text-sm text-muted-foreground text-center">
-              {staticLayout.disclaimer}
-            </p>
-          )}
           
           <Button 
             type="submit" 

@@ -22,12 +22,6 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
   const { t } = useTranslation()
   
   // Автосохраняемые текстовые поля
-  const gradientText = useAutoSaveField({
-    formId,
-    fieldKey: "gradient_text",
-    initialValue: content.gradient_text || "",
-  })
-
   const emailPlaceholder = useAutoSaveField({
     formId,
     fieldKey: "email_placeholder",
@@ -90,21 +84,6 @@ export function ContactsTab({ formId, content }: ContactsTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 sm:space-y-8">
-          {/* Текст в градиенте */}
-          <AutoSaveFieldWrapper
-            label={t("editor.contactsTab.motivationText")}
-            labelFor="gradient_text"
-            status={gradientText.status}
-          >
-            <Input
-              id="gradient_text"
-              value={gradientText.value}
-              onChange={(e) => gradientText.onChange(e.target.value)}
-              placeholder={t("editor.contactsTab.motivationPlaceholder")}
-              className="h-12 sm:h-[70px] rounded-[18px] bg-[#f4f4f4] dark:bg-muted border-[#f4f4f4] dark:border-muted text-base sm:text-lg px-4 sm:px-6"
-            />
-          </AutoSaveFieldWrapper>
-
           {/* Email (обязательное поле) */}
           <AutoSaveFieldWrapper
             label={t("editor.contactsTab.emailRequired")}
